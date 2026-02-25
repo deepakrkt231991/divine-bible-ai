@@ -29,6 +29,6 @@ export const getBooks = (bibleId: string): Promise<Book[]> => fetchYouVersionAPI
 
 export const getChapters = (bibleId: string, bookId: string): Promise<Chapter[]> => fetchYouVersionAPI<Chapter[]>(`/v1/bibles/${bibleId}/books/${bookId}/chapters`);
 
-export const getPassage = (bibleId: string, chapterId: string): Promise<Passage> => fetchYouVersionAPI<Passage>(`/v1/bibles/${bibleId}/passages/${chapterId}`);
+export const getPassage = (bibleId: string, chapterId: string): Promise<Passage> => fetchYouVersionAPI<Passage>(`/v1/bibles/${bibleId}/chapters/${chapterId}`);
 
 export const getSingleVerse = (bibleId: string, verseId: string): Promise<Passage> => fetchYouVersionAPI<Passage>(`/v1/bibles/${bibleId}/passages/${verseId}`);
