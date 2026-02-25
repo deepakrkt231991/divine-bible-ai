@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
   try {
     const res = await fetch(`${BASE}${path}`, {
       headers: {
-        "X-YVP-App-Key": KEY,
+        "X-YV-App-Key": KEY,
         "Accept": "application/json",
       },
       next: { revalidate: 3600 } // Cache for 1 hour
