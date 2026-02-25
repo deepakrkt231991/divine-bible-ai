@@ -1,13 +1,9 @@
-// src/lib/youversion.ts
-
 /**
  * Utility to fetch data from YouVersion API via the local proxy to avoid CORS issues.
  */
-async function fetchYouVersion(endpoint: string, params: Record<string, string> = {}) {
-  const searchParams = new URLSearchParams(params);
-  searchParams.set('path', endpoint);
-  
-  const res = await fetch(`/api/youversion?${searchParams.toString()}`);
+async function fetchYouVersion(endpoint: string) {
+  // Ensure the endpoint is properly encoded in the query string
+  const res = await fetch(`/api/youversion?path=${encodeURIComponent(endpoint)}`);
 
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
@@ -23,8 +19,8 @@ async function fetchYouVersion(endpoint: string, params: Record<string, string> 
  */
 export async function getBibles() {
   try {
-    const data = await fetchYouVersion('/v1/bibles', { 'language_ranges[]': '*' });
-    // Handle response – usually array ya { data: [...] }
+    const endpoint = '/v1/bibles?language_ranges[]=*';
+    const data = await fetchYouVersion(endpoint);
     return Array.isArray(data) ? data : (data?.data || []);
   } catch (e) {
     console.error("getBibles failed:", e);
@@ -37,7 +33,8 @@ export async function getBibles() {
  */
 export async function getBooks(bibleId: string) {
   try {
-    const data = await fetchYouVersion(`/v1/bibles/${bibleId}/books`);
+    const endpoint = `/v1/bibles/${bibleId}/books`;
+    const data = await fetchYouVersion(endpoint);
     return Array.isArray(data) ? data : (data?.data || []);
   } catch (e) {
     console.error("getBooks failed:", e);
@@ -50,7 +47,8 @@ export async function getBooks(bibleId: string) {
  */
 export async function getChapters(bibleId: string, bookId: string) {
   try {
-    const data = await fetchYouVersion(`/v1/bibles/${bibleId}/books/${bookId}/chapters`);
+    const endpoint = `/v1/bibles/${bibleId}/books/${bookId}/chapters`;
+    const data = await fetchYouVersion(endpoint);
     return Array.isArray(data) ? data : (data?.data || []);
   } catch (e) {
     console.error("getChapters failed:", e);
@@ -65,9 +63,8 @@ export async function getPassage(bibleId: string, passageId: string) {
   try {
     // Normalize passageId (book uppercase + no spaces)
     const normalized = passageId.toUpperCase().replace(/\s/g, '');
-    console.log("Fetching passage:", bibleId, normalized);
-
-    const data = await fetchYouVersion(`/v1/bibles/${bibleId}/passages/${normalized}`);
+    const endpoint = `/v1/bibles/${bibleId}/passages/${normalized}`;
+    const data = await fetchYouVersion(endpoint);
     return data;
   } catch (e) {
     console.error("getPassage failed:", e);

@@ -39,9 +39,6 @@ export default function BibleReader() {
     setLoading(true);
     getBooks(selectedBible).then(list => {
       setBooks(list);
-      if (list.length > 0 && !list.some((b: any) => b.id === selectedBook)) {
-         // Optionally reset book selection
-      }
     }).catch(() => toast({ variant: "destructive", description: "Books nahi load hue" })).finally(() => setLoading(false));
   }, [selectedBible]);
 
@@ -50,7 +47,7 @@ export default function BibleReader() {
     if (!selectedBible || !selectedBook) return;
     setLoading(true);
     getChapters(selectedBible, selectedBook).then(list => {
-      setChapters(list);
+      setChapters(Array.isArray(list) ? list : []);
     }).catch(() => toast({ variant: "destructive", description: "Chapters nahi load hue" })).finally(() => setLoading(false));
   }, [selectedBible, selectedBook]);
 
@@ -61,11 +58,13 @@ export default function BibleReader() {
     const loadPassage = async () => {
       setLoading(true);
       try {
-        // Temporary debug test verse
-        const test = await getPassage("3034", "JHN.3.16");
-        console.log("Test JHN.3.16:", test);
+        // Temporary debug test
+        if (selectedChapter === "JHN.3.16") {
+            const test = await getPassage("3034", "JHN.3.16");
+            console.log("Test JHN.3.16:", test);
+        }
+        
         console.log("Fetching passage for Bible:", selectedBible, "Passage:", selectedChapter);
-
         const data = await getPassage(selectedBible, selectedChapter);
         setPassage(data);
       } catch (error) {
