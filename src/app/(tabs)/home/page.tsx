@@ -48,12 +48,14 @@ export default function HomePage() {
       try {
         const passage: Passage = await getSingleVerse(BIBLE_VERSION_ID, VERSE_OF_THE_DAY_ID);
 
-        if (!passage || !passage.content || !passage.reference) {
+        if (!passage || !passage.content) {
           throw new Error("Failed to fetch verse: API returned invalid data.");
         }
 
         const plainTextContent = passage.content.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
-        const referenceText = typeof passage.reference === 'string' ? passage.reference : passage.reference.human;
+        const referenceText = typeof passage.reference === 'string' 
+          ? passage.reference 
+          : (passage.reference?.human || 'Unknown Reference');
         
         setVerseOfTheDay({
           reference: referenceText,

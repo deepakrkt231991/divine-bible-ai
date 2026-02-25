@@ -30,6 +30,24 @@ export const getBooks = (bibleId: string): Promise<Book[]> => fetchYouVersionAPI
 
 export const getChapters = (bibleId: string, bookId: string): Promise<Chapter[]> => fetchYouVersionAPI<Chapter[]>(`/v1/bibles/${bibleId}/books/${bookId}/chapters`);
 
-export const getPassage = (bibleId: string, chapterId: string): Promise<Passage> => fetchYouVersionAPI<Passage>(`/v1/bibles/${bibleId}/chapters/${chapterId}`);
+export const getPassage = async (bibleId: string, chapterId: string): Promise<Passage> => {
+    let passageData = await fetchYouVersionAPI<any>(`/v1/bibles/${bibleId}/chapters/${chapterId}`);
+    if (Array.isArray(passageData)) {
+        passageData = passageData[0];
+    }
+    if (!passageData || !passageData.content) {
+        throw new Error('Invalid passage response: missing content');
+    }
+    return passageData as Passage;
+};
 
-export const getSingleVerse = (bibleId: string, verseId: string): Promise<Passage> => fetchYouVersionAPI<Passage>(`/v1/bibles/${bibleId}/passages/${verseId}`);
+export const getSingleVerse = async (bibleId: string, verseId: string): Promise<Passage> => {
+    let passageData = await fetchYouVersionAPI<any>(`/v1/bibles/${bibleId}/passages/${verseId}`);
+    if (Array.isArray(passageData)) {
+        passageData = passageData[0];
+    }
+    if (!passageData || !passageData.content) {
+        throw new Error('Invalid verse response: missing content');
+    }
+    return passageData as Passage;
+};

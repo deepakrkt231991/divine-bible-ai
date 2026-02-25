@@ -36,15 +36,16 @@ export interface Chapter {
 
 export interface Passage {
     id: string;
-    bibleId: string;
-    orgId: string;
-    bookId: string;
-    chapterIds: string[];
+    bibleId?: string;
+    orgId?: string;
+    bookId?: string;
+    chapterIds?: string[];
     reference: {
-        human: string;
-        usfm: string[];
+        human?: string;
+        usfm?: string[];
     } | string;
     content: string;
-    verseCount: number;
-    copyright: string;
+    verseCount?: number;
+    copyright?: string;
+    [key: string]: any;
 }
