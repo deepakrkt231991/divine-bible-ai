@@ -1,111 +1,52 @@
-import type { Bible, Book, Chapter, Passage } from "@/types";
+// src/lib/youversion.ts
+const BASE = "https://api.youversion.com";
+const KEY = process.env.NEXT_PUBLIC_YOUVERSION_KEY;
 
-async function fetchYouVersionAPI(path: string): Promise<any> {
-  const url = `/api/youversion?path=${encodeURIComponent(path)}`;
-  console.log('[YouVersion API Request]', { url, keyPrefix: process.env.NEXT_PUBLIC_YOUVERSION_KEY?.slice(0, 10) + '...' });
+async function fetchYouVersion(endpoint: string) {
+  const url = `${BASE}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;
+  
+  console.log("📡 YouVersion Request:", url);
 
-  try {
-      const response = await fetch(url, { cache: 'no-store' });
+  const res = await fetch(url, {
+    headers: {
+      "X-YVP-App-Key": KEY!,
+      "Accept": "application/json",
+    },
+    cache: "no-store",
+  });
 
-      if (!response.ok) {
-          let errorBody = {};
-          try {
-              errorBody = await response.json();
-          } catch {
-              errorBody = { message: await response.text() || 'No body' };
-          }
-          console.error('[YouVersion API Error]', {
-              status: response.status,
-              url,
-              body: errorBody,
-          });
-          throw new Error(`YouVersion API failed: ${response.status} - ${JSON.stringify(errorBody)}`);
-      }
-
-      const json = await response.json();
-      console.log('[YouVersion API Success]', { path, dataKeys: Object.keys(json) });
-      return json;
-  } catch (error) {
-      console.error("Error fetching from YouVersion proxy:", error);
-      if (error instanceof Error) {
-          throw error;
-      }
-      throw new Error("An unknown error occurred while fetching data.");
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    console.error("❌ YouVersion Error:", res.status, err);
+    throw new Error(err.message || `API ${res.status}`);
   }
+
+  return res.json();
 }
 
-export const getBibles = async (): Promise<Bible[]> => {
-    try {
-        const query = new URLSearchParams();
-        query.append('language_ranges[]', '*'); // Use wildcard for all languages
-        const endpoint = `/v1/bibles?${query.toString()}`;
-        const jsonResponse = await fetchYouVersionAPI(endpoint);
-        return Array.isArray(jsonResponse) ? jsonResponse : jsonResponse?.data || [];
-    } catch (err) {
-        console.error('Bibles fetch failed:', err);
-        return []; // Return empty array on failure
-    }
+// ================== BEST UPDATED FUNCTIONS ==================
+
+export async function getBibles() {
+  // language_ranges[]=* → sab languages + Hindi first
+  const data = await fetchYouVersion(`/v1/bibles?language_ranges[]=*&language_ranges[]=hi&language_ranges[]=en&page_size=50`);
+  return Array.isArray(data) ? data : data?.data || [];
 }
 
-export const getBooks = async (bibleId: string): Promise<Book[]> => {
-    if (!bibleId) return [];
-    try {
-        const jsonResponse = await fetchYouVersionAPI(`/v1/bibles/${bibleId}/books`);
-        return jsonResponse?.data || [];
-    } catch (err) {
-        console.error(`Books fetch failed for bibleId ${bibleId}:`, err);
-        return [];
-    }
+export async function getBooks(bibleId: string) {
+  const data = await fetchYouVersion(`/v1/bibles/${bibleId}/books`);
+  return Array.isArray(data) ? data : data?.data || [];
 }
 
-export const getChapters = async (bibleId: string, bookId: string): Promise<Chapter[]> => {
-    if (!bibleId || !bookId) return [];
-    try {
-        const jsonResponse = await fetchYouVersionAPI(`/v1/bibles/${bibleId}/books/${bookId}/chapters`);
-        return jsonResponse?.data || [];
-    } catch (err) {
-        console.error(`Chapters fetch failed for bibleId ${bibleId}, bookId ${bookId}:`, err);
-        return [];
-    }
+export async function getChapters(bibleId: string, bookId: string) {
+  const data = await fetchYouVersion(`/v1/bibles/${bibleId}/books/${bookId}/chapters`);
+  return Array.isArray(data) ? data : data?.data || [];
 }
 
-export const getPassage = async (bibleId: string, chapterId: string): Promise<Passage | null> => {
-    if (!bibleId || !chapterId) {
-        console.error('getPassage: Missing bibleId or chapterId');
-        return null;
-    }
-    try {
-        const jsonResponse = await fetchYouVersionAPI(`/v1/bibles/${bibleId}/chapters/${chapterId}`);
-        const passageData = jsonResponse?.data;
-        if (!passageData || !passageData.content) {
-            console.warn('Invalid passage response: missing content', passageData);
-            return null;
-        }
-        return passageData as Passage;
-    } catch (err) {
-        console.error(`Passage fetch failed for bibleId ${bibleId}, chapterId ${chapterId}:`, err);
-        return null;
-    }
-};
+export async function getPassage(bibleId: string, passageId: string) {
+  // passageId example: JHN.3 ya JHN.3.16
+  const data = await fetchYouVersion(`/v1/bibles/${bibleId}/passages/${passageId}`);
+  return data; // { id, reference, content, copyright, ... }
+}
 
-export const getSingleVerse = async (bibleId: string, verseId: string): Promise<Passage | null> => {
-     if (!bibleId || !verseId) {
-        console.error('getSingleVerse: Missing bibleId or verseId');
-        return null;
-    }
-    try {
-        const jsonResponse = await fetchYouVersionAPI(`/v1/bibles/${bibleId}/passages/${verseId}`);
-        let verseData = jsonResponse;
-        if (jsonResponse.data) verseData = jsonResponse.data;
-        if (Array.isArray(verseData)) verseData = verseData[0];
-
-        if (!verseData || !verseData.content) {
-          console.warn("Invalid VOTD response: missing content", verseData);
-          return null;
-        }
-        return verseData as Passage;
-    } catch(err) {
-         console.error(`Single verse fetch failed for bibleId ${bibleId}, verseId ${verseId}:`, err);
-         return null;
-    }
-};
+// Alias for home page and other single verse requirements
+export const getSingleVerse = getPassage;
