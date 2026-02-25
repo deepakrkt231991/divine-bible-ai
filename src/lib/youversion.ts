@@ -7,9 +7,14 @@ async function fetchYouVersion(endpoint: string) {
   
   console.log("📡 YouVersion Request:", url);
 
+  if (!KEY) {
+    console.error("❌ YouVersion Error: API Key (NEXT_PUBLIC_YOUVERSION_KEY) is missing.");
+    throw new Error("API Key is missing");
+  }
+
   const res = await fetch(url, {
     headers: {
-      "X-YVP-App-Key": KEY!,
+      "X-YVP-App-Key": KEY,
       "Accept": "application/json",
     },
     cache: "no-store",
@@ -27,7 +32,7 @@ async function fetchYouVersion(endpoint: string) {
 // ================== BEST UPDATED FUNCTIONS ==================
 
 export async function getBibles() {
-  // language_ranges[]=* → all languages + Hindi/English priority
+  // language_ranges[]=* is required for listing bibles in the YouVersion API
   const data = await fetchYouVersion(`/v1/bibles?language_ranges[]=*&language_ranges[]=hi&language_ranges[]=en&page_size=50`);
   return Array.isArray(data) ? data : data?.data || [];
 }
@@ -43,13 +48,11 @@ export async function getChapters(bibleId: string, bookId: string) {
 }
 
 export async function getPassage(bibleId: string, passageId: string) {
-  // Determine if passageId refers to a whole chapter (e.g., GEN.1) or a specific verse (e.g., GEN.1.1)
-  // Verse IDs typically have 2 dots, Chapter IDs have 1 dot.
-  const parts = passageId.split('.');
-  const isVerse = parts.length > 2;
-  const resourceType = isVerse ? 'passages' : 'chapters';
-
-  const data = await fetchYouVersion(`/v1/bibles/${bibleId}/${resourceType}/${passageId}`);
+  // Content endpoint is always /passages/ in the YouVersion API for both verses and chapters.
+  // Using the /chapters/ endpoint for content results in a 404.
+  if (!passageId) return null;
+  
+  const data = await fetchYouVersion(`/v1/bibles/${bibleId}/passages/${passageId}`);
   return data; // { id, reference, content, copyright, ... }
 }
 
