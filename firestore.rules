@@ -1,0 +1,210 @@
+/**
+ * This ruleset enforces a security model for the BibleAI Companion application.
+ *
+ * Core Philosophy:
+ * The security model is primarily based on user ownership. Data that is private
+ * to a user is stored within a path structure that includes their unique user ID
+ * (e.g., /users/{userId}/...), and access is strictly limited to the authenticated
+ * owner of that data. Publicly shared data is stored in top-level collections
+ * with rules designed for broader access. A global admin role is supported for
+ * read-only auditing purposes.
+ *
+ * Data Structure:
+ * - /users/{userId}: A user's own profile document.
+ * - /users/{userId}/*: Subcollections containing private, user-owned data like
+ *   bibleNotes, faceSwaps, and socialPosts.
+ * - /prayers: A top-level collection for public prayer requests.
+ * - /vpnSessions: A top-level collection for user session logs, readable only
+ *   by administrators.
+ * - /roles_admin: A collection where the existence of a document grants a user
+ *   admin privileges.
+ *
+ * Key Security Decisions:
+ * - User Isolation: Users can only read and write data within their own
+ *   /users/{userId} data tree. They cannot read other users' profiles or data.
+ * - No User Enumeration: Listing documents in the top-level /users collection
+ *   is explicitly disallowed to prevent scraping of user information.
+ * - Admin Access: Users with a corresponding document in /roles_admin/{userId}
+ *   are granted read-only access to all data for auditing and moderation,
+ *   but are not granted write permissions from the client-side.
+ * - Public Data: The /prayers collection is publicly readable by anyone, but
+ *   creating new prayers requires a user to be signed in. Updates and deletes
+ *   are disabled for security due to a lack of a clear ownership field.
+ * - Default Deny: All paths not explicitly matched are inaccessible.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --------------------------------------------------------------------
+    // Helper Functions
+    // --------------------------------------------------------------------
+
+    /**
+     * Checks if a user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if the currently authenticated user has an admin role.
+     * Admin status is determined by the existence of a document in the
+     * /roles_admin collection with the user's UID as the document ID.
+     */
+    function isAdmin() {
+      return exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+    }
+
+    /**
+     * Checks if the authenticated user's ID matches the provided userId.
+     * This is the primary function for enforcing document ownership.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * Checks if the authenticated user is the owner of an EXISTING document.
+     * This is used for update and delete operations to prevent modifying
+     * documents that don't exist.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * Validates that the user-provided ID in a new document matches the
+     * user's authenticated UID.
+     * This enforces relational integrity on creation.
+     */
+    function newDocHasCorrectUserId(userId) {
+      return request.resource.data.userId == userId;
+    }
+    
+    /**
+     * Validates that the userId field in a document is not being changed
+     * during an update operation.
+     * This makes the ownership link immutable.
+     */
+    function userIdIsImmutable() {
+      return request.resource.data.userId == resource.data.userId;
+    }
+
+    // --------------------------------------------------------------------
+    // User Data
+    // --------------------------------------------------------------------
+
+    /**
+     * @description Controls access to a user's own profile document.
+     * @path /users/{userId}
+     * @allow (create) An authenticated user creating their own profile document for the first time.
+     * @allow (get, update, delete) An authenticated user accessing their own profile.
+     * @deny (get) A user trying to read another user's profile.
+     * @deny (list) Any user trying to list all documents in the /users collection.
+     * @principle Restricts access to a user's own data tree and prevents user enumeration.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if false; // Disallow listing to prevent user enumeration
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Controls access to a user's private Bible notes.
+     * @path /users/{userId}/bibleNotes/{noteId}
+     * @allow (create, get, list, update, delete) An authenticated user managing their own notes.
+     * @deny (get, list, update) A user attempting to access another user's notes.
+     * @principle Enforces strict data ownership within a user's private subcollection.
+     */
+    match /users/{userId}/bibleNotes/{noteId} {
+      allow get, list: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && newDocHasCorrectUserId(userId);
+      allow update: if isExistingOwner(userId) && userIdIsImmutable();
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Controls access to a user's generated face swaps.
+     * @path /users/{userId}/faceSwaps/{faceSwapId}
+     * @allow (create, get, list, update, delete) An authenticated user managing their own face swaps.
+     * @deny (get, list, update) A user attempting to access another user's face swaps.
+     * @principle Enforces strict data ownership within a user's private subcollection.
+     */
+    match /users/{userId}/faceSwaps/{faceSwapId} {
+      allow get, list: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && newDocHasCorrectUserId(userId);
+      allow update: if isExistingOwner(userId) && userIdIsImmutable();
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Controls access to a user's social media posts.
+     * @path /users/{userId}/socialPosts/{postId}
+     * @allow (create, get, list, update, delete) An authenticated user managing their own posts.
+     * @deny (get, list, update) A user attempting to access another user's posts.
+     * @principle Enforces strict data ownership within a user's private subcollection.
+     */
+    match /users/{userId}/socialPosts/{postId} {
+      allow get, list: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && newDocHasCorrectUserId(userId);
+      allow update: if isExistingOwner(userId) && userIdIsImmutable();
+      allow delete: if isExistingOwner(userId);
+    }
+
+    // --------------------------------------------------------------------
+    // Public & Semi-Public Data
+    // --------------------------------------------------------------------
+
+    /**
+     * @description Controls access to the public prayer wall.
+     * @path /prayers/{prayerId}
+     * @allow (get, list) Any client, authenticated or not, reading prayers.
+     * @allow (create) Any authenticated user submitting a new prayer.
+     * @deny (update, delete) Any user trying to modify or delete a prayer.
+     * @principle Allows public read access while restricting creation to signed-in users. Updates are disabled for security.
+     */
+    match /prayers/{prayerId} {
+      allow get, list: if true;
+      allow create: if isSignedIn();
+      // CRITICAL: Cannot implement owner-only writes. The 'Prayer' entity uses 'hashedUserId' instead of a clear 'ownerId' field.
+      allow update, delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+    }
+
+    /**
+     * @description Controls access to VPN session logs. These are sensitive and should not be user-accessible.
+     * @path /vpnSessions/{vpnSessionId}
+     * @allow (get, list) An administrator auditing VPN logs.
+     * @allow (create) An authenticated user creating a log for their own session.
+     * @deny (get, list, update, delete) Any non-admin user trying to access logs.
+     * @principle Protects sensitive log data, allowing creation but restricting all other access to admins.
+     */
+    match /vpnSessions/{vpnSessionId} {
+      allow get, list: if isAdmin();
+      allow create: if isSignedIn() && request.resource.data.userIdOrHash == request.auth.uid;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // --------------------------------------------------------------------
+    // Administrative Collections
+    // --------------------------------------------------------------------
+    
+    /**
+     * @description Controls access to the admin role collection.
+     * @path /roles_admin/{userId}
+     * @allow (get, list) An administrator reading the list of admins.
+     * @deny (get, list) A non-admin user trying to see who the admins are.
+     * @deny (create, update, delete) All client-side writes are forbidden to prevent self-promotion to admin.
+     * @principle Secures administrative roles by making them read-only from the client, requiring a trusted backend for changes.
+     */
+    match /roles_admin/{userId} {
+      allow get, list: if isAdmin();
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+  }
+}
