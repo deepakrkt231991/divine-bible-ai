@@ -27,7 +27,7 @@ async function fetchYouVersion(endpoint: string) {
 // ================== BEST UPDATED FUNCTIONS ==================
 
 export async function getBibles() {
-  // language_ranges[]=* → sab languages + Hindi first
+  // language_ranges[]=* → all languages + Hindi/English priority
   const data = await fetchYouVersion(`/v1/bibles?language_ranges[]=*&language_ranges[]=hi&language_ranges[]=en&page_size=50`);
   return Array.isArray(data) ? data : data?.data || [];
 }
@@ -43,8 +43,13 @@ export async function getChapters(bibleId: string, bookId: string) {
 }
 
 export async function getPassage(bibleId: string, passageId: string) {
-  // passageId example: JHN.3 ya JHN.3.16
-  const data = await fetchYouVersion(`/v1/bibles/${bibleId}/passages/${passageId}`);
+  // Determine if passageId refers to a whole chapter (e.g., GEN.1) or a specific verse (e.g., GEN.1.1)
+  // Verse IDs typically have 2 dots, Chapter IDs have 1 dot.
+  const parts = passageId.split('.');
+  const isVerse = parts.length > 2;
+  const resourceType = isVerse ? 'passages' : 'chapters';
+
+  const data = await fetchYouVersion(`/v1/bibles/${bibleId}/${resourceType}/${passageId}`);
   return data; // { id, reference, content, copyright, ... }
 }
 
