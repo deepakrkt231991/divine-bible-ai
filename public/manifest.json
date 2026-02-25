@@ -1,21 +1,9 @@
 {
   "name": "Divine Compass",
-  "short_name": "DivineCompass",
+  "short_name": "Divine Compass",
+  "description": "Your guide to the scriptures. Read, reflect, and grow in your faith.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0B0C0D",
-  "theme_color": "#1A60E5",
-  "description": "Your guide to the scriptures. Read, reflect, and grow in your faith.",
-  "icons": [
-    {
-      "src": "/icons/icon-192x192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "/icons/icon-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    }
-  ]
+  "background_color": "#18181b",
+  "theme_color": "#07BF7A"
 }
