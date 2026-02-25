@@ -36,7 +36,6 @@ export default function BibleReader() {
       try {
         const data = await getBibles();
         setBibles(data);
-        // Ensure default is selected if available
         if (!selectedBible && data.length > 0) {
             setSelectedBible(data[0].id.toString());
         }
@@ -47,7 +46,7 @@ export default function BibleReader() {
       }
     }
     loadBibles();
-  }, [toast]);
+  }, [toast, selectedBible]);
 
   // 2. Load Books when Bible changes
   useEffect(() => {
@@ -67,7 +66,7 @@ export default function BibleReader() {
       }
     }
     loadBooks();
-  }, [selectedBible]);
+  }, [selectedBible, selectedBook]);
 
   // 3. Load Chapters when Book changes
   useEffect(() => {
@@ -98,6 +97,15 @@ export default function BibleReader() {
     if (!selectedBible || !selectedChapter) return;
     async function loadPassage() {
       console.log("🔍 Fetching passage for Bible:", selectedBible, "Passage:", selectedChapter);
+      
+      // Temporary debug test
+      try {
+          const test = await getPassage("3034", "JHN.3.16");
+          console.log("Test JHN.3.16:", test);
+      } catch (e) {
+          console.error("Test JHN.3.16 debug call failed:", e);
+      }
+
       setLoading(prev => ({ ...prev, passage: true }));
       try {
         const data = await getPassage(selectedBible, selectedChapter);
