@@ -8,6 +8,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { getBibles, getBooks, getChapters, getPassage } from "@/lib/youversion";
 import type { Bible, Book, Chapter, Passage } from "@/types";
 import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
+import { Terminal } from "lucide-react";
 
 export default function BibleReader() {
     const [bibles, setBibles] = useState<Bible[]>([]);
@@ -25,10 +27,17 @@ export default function BibleReader() {
         chapters: true,
         passage: true
     });
+    const [apiKeyMissing, setApiKeyMissing] = useState(false);
 
     const { toast } = useToast();
 
     useEffect(() => {
+        if (!process.env.NEXT_PUBLIC_YOUVERSION_KEY) {
+            setApiKeyMissing(true);
+            setLoading({ bibles: false, books: false, chapters: false, passage: false });
+            return;
+        }
+
         async function fetchBibles() {
             setLoading(l => ({...l, bibles: true}));
             try {
@@ -50,7 +59,7 @@ export default function BibleReader() {
     }, []);
 
     useEffect(() => {
-        if (!selectedBible) return;
+        if (!selectedBible || apiKeyMissing) return;
         async function fetchBooks() {
             setLoading(l => ({...l, books: true, chapters: true, passage: true}));
             try {
@@ -69,10 +78,10 @@ export default function BibleReader() {
         }
         fetchBooks();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedBible]);
+    }, [selectedBible, apiKeyMissing]);
 
     useEffect(() => {
-        if (!selectedBible || !selectedBook) return;
+        if (!selectedBible || !selectedBook || apiKeyMissing) return;
         async function fetchChapters() {
             setLoading(l => ({...l, chapters: true, passage: true}));
             try {
@@ -90,10 +99,10 @@ export default function BibleReader() {
         }
         fetchChapters();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedBible, selectedBook]);
+    }, [selectedBible, selectedBook, apiKeyMissing]);
 
     useEffect(() => {
-        if (!selectedBible || !selectedChapter) return;
+        if (!selectedBible || !selectedChapter || apiKeyMissing) return;
         async function fetchPassage() {
             setLoading(l => ({...l, passage: true}));
             setPassage(null);
@@ -109,8 +118,22 @@ export default function BibleReader() {
         }
         fetchPassage();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedBible, selectedChapter]);
+    }, [selectedBible, selectedChapter, apiKeyMissing]);
     
+    if (apiKeyMissing) {
+        return (
+            <div className="w-full max-w-4xl mx-auto">
+                <Alert variant="destructive">
+                    <Terminal className="h-4 w-4" />
+                    <AlertTitle>YouVersion API Key Missing</AlertTitle>
+                    <AlertDescription>
+                        The Bible reader is disabled because the <code>NEXT_PUBLIC_YOUVERSION_KEY</code> is not set in your environment variables. Please add it to your <code>.env</code> file to enable this feature.
+                    </AlertDescription>
+                </Alert>
+            </div>
+        )
+    }
+
     return (
         <Card className="w-full max-w-4xl mx-auto border-0 shadow-none bg-transparent">
             <CardHeader className="sticky top-0 bg-background/80 backdrop-blur-sm z-10 -mx-6 px-6 pt-6 pb-4 md:top-0">

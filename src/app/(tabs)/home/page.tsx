@@ -32,8 +32,20 @@ export default function HomePage() {
 
   useEffect(() => {
     const fetchVerse = async () => {
+      setVerseLoading(true);
+      // Check for API key. If missing, use fallback and avoid API call.
+      if (!process.env.NEXT_PUBLIC_YOUVERSION_KEY) {
+        console.warn("YouVersion API key not found. Using fallback verse. Please set NEXT_PUBLIC_YOUVERSION_KEY in your .env file.");
+        setVerseOfTheDay({
+          reference: "John 3:16",
+          content: "For God so loved the world, that he gave his only Son, that whoever believes in him should not perish but have eternal life.",
+        });
+        setBibleVersion({ abbreviation: "KJV" });
+        setVerseLoading(false);
+        return;
+      }
+      
       try {
-        setVerseLoading(true);
         const passage: Passage = await getSingleVerse(BIBLE_VERSION_ID, VERSE_OF_THE_DAY_ID);
         const plainTextContent = passage.content.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
         setVerseOfTheDay({
@@ -43,6 +55,7 @@ export default function HomePage() {
         setBibleVersion({ abbreviation: 'KJV' }); // Hardcoding since we requested KJV
       } catch (error) {
         console.error("Failed to fetch verse of the day:", error);
+        // Fallback to a default verse if the API fails
         setVerseOfTheDay({
           reference: "John 3:16",
           content: "For God so loved the world, that he gave his only Son, that whoever believes in him should not perish but have eternal life.",
