@@ -35,8 +35,7 @@ export default function BibleReader() {
       try {
         const data = await getBibles();
         setBibles(data);
-        // Try to pick a good Hindi or English bible by default if 3034 is missing
-        const defaultBible = data.find((b: any) => b.id === "3034") || data[0];
+        const defaultBible = data.find((b: any) => b.id.toString() === "3034") || data[0];
         if (defaultBible) setSelectedBible(defaultBible.id.toString());
       } catch (err) {
         toast({ title: "Error", description: "Bible versions load nahi ho paaye. Please refresh.", variant: "destructive" });
@@ -56,16 +55,17 @@ export default function BibleReader() {
         const data = await getBooks(selectedBible);
         setBooks(data);
         if (data && data.length > 0) {
-          setSelectedBook(data[0].id);
+          // If the book was already set manually or we need to default
+          if (!selectedBook) setSelectedBook(data[0].id);
         }
       } catch (err) {
-        toast({ title: "Error", description: "Books list load nahi ho payi.", variant: "destructive" });
+        console.error("Books load error:", err);
       } finally {
         setLoading(prev => ({ ...prev, books: false }));
       }
     }
     loadBooks();
-  }, [selectedBible, toast]);
+  }, [selectedBible]);
 
   // 3. Load Chapters when Book changes
   useEffect(() => {
@@ -77,9 +77,13 @@ export default function BibleReader() {
         setChapters(data);
         if (data && data.length > 0) {
           setSelectedChapter(data[0].id);
+        } else {
+          setSelectedChapter("");
         }
       } catch (err) {
-        toast({ title: "Error", description: "Chapters load nahi ho paaye.", variant: "destructive" });
+        toast({ title: "Error", description: "Is book ke chapters nahi mil paye.", variant: "destructive" });
+        setChapters([]);
+        setSelectedChapter("");
       } finally {
         setLoading(prev => ({ ...prev, chapters: false }));
       }
@@ -104,6 +108,20 @@ export default function BibleReader() {
     loadPassage();
   }, [selectedBible, selectedChapter]);
 
+  const handleBibleChange = (val: string) => {
+    setSelectedBible(val);
+    setSelectedBook("");
+    setSelectedChapter("");
+    setBooks([]);
+    setChapters([]);
+  };
+
+  const handleBookChange = (val: string) => {
+    setSelectedBook(val);
+    setSelectedChapter("");
+    setChapters([]);
+  };
+
   return (
     <Card className="w-full max-w-4xl mx-auto border-0 shadow-none bg-transparent">
       <CardHeader className="sticky top-0 bg-zinc-950/90 backdrop-blur-md z-20 -mx-6 px-6 pt-6 pb-4 border-b border-zinc-800">
@@ -118,7 +136,7 @@ export default function BibleReader() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {/* Bible Version */}
-          <Select value={selectedBible} onValueChange={setSelectedBible} disabled={loading.bibles}>
+          <Select value={selectedBible} onValueChange={handleBibleChange} disabled={loading.bibles}>
             <SelectTrigger className="bg-zinc-900 border-zinc-800">
               {loading.bibles ? <Skeleton className="h-5 w-full" /> : <SelectValue placeholder="Version" />}
             </SelectTrigger>
@@ -132,7 +150,7 @@ export default function BibleReader() {
           </Select>
 
           {/* Book */}
-          <Select value={selectedBook} onValueChange={setSelectedBook} disabled={loading.books}>
+          <Select value={selectedBook} onValueChange={handleBookChange} disabled={loading.books || !selectedBible}>
             <SelectTrigger className="bg-zinc-900 border-zinc-800">
               {loading.books ? <Skeleton className="h-5 w-full" /> : <SelectValue placeholder="Book" />}
             </SelectTrigger>
@@ -144,7 +162,7 @@ export default function BibleReader() {
           </Select>
 
           {/* Chapter */}
-          <Select value={selectedChapter} onValueChange={setSelectedChapter} disabled={loading.chapters}>
+          <Select value={selectedChapter} onValueChange={setSelectedChapter} disabled={loading.chapters || !selectedBook}>
             <SelectTrigger className="bg-zinc-900 border-zinc-800">
               {loading.chapters ? <Skeleton className="h-5 w-full" /> : <SelectValue placeholder="Chapter" />}
             </SelectTrigger>

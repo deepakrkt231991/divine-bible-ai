@@ -1,11 +1,12 @@
 // src/lib/youversion.ts
 
 /**
- * Helper to normalize USFM reference (e.g., 'gen.1' → 'GEN.1')
+ * Helper to normalize USFM reference (e.g., 'jhn.1' → 'JHN.1')
  */
 function normalizeUSFM(ref: string): string {
   if (!ref) return '';
   const parts = ref.split('.');
+  // Uppercase the book part (the first part)
   if (parts.length >= 1) {
     parts[0] = parts[0].toUpperCase();
   }
@@ -47,9 +48,28 @@ export async function getBooks(bibleId: string) {
 
 export async function getChapters(bibleId: string, bookId: string) {
   if (!bibleId || !bookId) return [];
-  const endpoint = `/v1/bibles/${bibleId}/books/${bookId}/chapters`;
-  const data = await fetchYouVersion(endpoint);
-  return Array.isArray(data) ? data : data?.data || [];
+  
+  const normalizedBookId = bookId.toUpperCase();
+  
+  // Try the standard nested endpoint first
+  const endpoint = `/v1/bibles/${bibleId}/books/${normalizedBookId}/chapters`;
+  
+  try {
+    const data = await fetchYouVersion(endpoint);
+    return Array.isArray(data) ? data : data?.data || [];
+  } catch (err) {
+    console.warn(`Standard chapter fetch failed for ${normalizedBookId}, trying fallback...`);
+    
+    // Fallback: Some versions use a query parameter for the book
+    try {
+      const fallbackEndpoint = `/v1/bibles/${bibleId}/chapters?book_id=${normalizedBookId}`;
+      const data = await fetchYouVersion(fallbackEndpoint);
+      return Array.isArray(data) ? data : data?.data || [];
+    } catch (fallbackErr) {
+      console.error("All chapter fetch attempts failed:", fallbackErr);
+      throw fallbackErr;
+    }
+  }
 }
 
 export async function getPassage(bibleId: string, passageId: string) {
@@ -70,5 +90,5 @@ export async function getPassage(bibleId: string, passageId: string) {
   }
 }
 
-// Alias for consistency with older imports
+// Alias for consistency
 export const getSingleVerse = getPassage;
