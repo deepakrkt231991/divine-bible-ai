@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { getSingleVerse } from '@/lib/youversion';
 import type { Passage } from '@/types';
 
-const BIBLE_VERSION_ID = '1'; // KJV
+const BIBLE_VERSION_ID = '3034'; // ID from working cURL example
 const VERSE_OF_THE_DAY_ID = 'JHN.3.16';
 
 const QuickLink = ({ href, icon: Icon, title, description }: { href: string, icon: React.ElementType, title: string, description: string }) => (
@@ -52,7 +52,7 @@ export default function HomePage() {
           reference: passage.reference.human,
           content: plainTextContent,
         });
-        setBibleVersion({ abbreviation: 'KJV' }); // Hardcoding since we requested KJV
+        setBibleVersion({ abbreviation: 'NIV' }); // Assuming NIV based on text
       } catch (error) {
         console.error("Failed to fetch verse of the day:", error);
         // Fallback to a default verse if the API fails
