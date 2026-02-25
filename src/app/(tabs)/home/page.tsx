@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import VerseCard from '@/components/layout/VerseCard';
-import { useAuth } from '@/components/auth/AuthProvider';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BookOpen, Sparkles, ClipboardList } from 'lucide-react';
 import Link from 'next/link';
@@ -27,7 +26,6 @@ const QuickLink = ({ href, icon: Icon, title, description }: { href: string, ico
 )
 
 export default function HomePage() {
-  const { userData, loading: authLoading } = useAuth();
   const [verseOfTheDay, setVerseOfTheDay] = useState<{ reference: string; content: string } | null>(null);
   const [bibleVersion, setBibleVersion] = useState<{ abbreviation: string } | null>(null);
   const [verseLoading, setVerseLoading] = useState(true);
@@ -62,19 +60,10 @@ export default function HomePage() {
       <div className="bg-background">
           <div className="container mx-auto px-4 py-8">
             <div className="space-y-2 mb-8">
-                {authLoading ? (
-                    <>
-                        <Skeleton className="h-8 w-64" />
-                        <Skeleton className="h-6 w-48" />
-                    </>
-                ) : (
-                    <>
-                        <h1 className="text-3xl font-serif">
-                            Welcome, {userData?.name?.split(' ')[0] || 'friend'}
-                        </h1>
-                        <p className="text-muted-foreground">Let's dive into the Word today.</p>
-                    </>
-                )}
+                <h1 className="text-3xl font-serif">
+                    Welcome, friend
+                </h1>
+                <p className="text-muted-foreground">Let's dive into the Word today.</p>
             </div>
             
             <h2 className="text-xl font-serif font-bold text-accent mb-4">Verse of the Day</h2>
