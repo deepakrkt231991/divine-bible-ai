@@ -1,46 +1,57 @@
 import type { Bible, Book, Chapter, Passage } from "@/types";
 
-async function fetchYouVersionAPI<T>(path: string): Promise<T> {
+async function fetchYouVersionAPI(path: string): Promise<any> {
+  const url = `/api/youversion?path=${encodeURIComponent(path)}`;
+  console.log('[YouVersion API Request]', { url, keyPrefix: process.env.NEXT_PUBLIC_YOUVERSION_KEY?.slice(0, 10) + '...' });
+
   try {
-    const response = await fetch(`/api/youversion?path=${encodeURIComponent(path)}`);
+      const response = await fetch(url, { cache: 'no-store' });
 
-    if (!response.ok) {
-      const errorBody = await response.json().catch(() => ({ error: "An unknown API error occurred" }));
-      console.error(`API Error (${response.status}):`, errorBody);
-      throw new Error(errorBody.error || `Request failed with status ${response.status}`);
-    }
-    
-    const jsonResponse = await response.json();
-    
-    // The YouVersion API sometimes wraps its response in a 'data' object.
-    // Handle different possible structures as per user feedback.
-    let responseData = jsonResponse;
-    if (responseData.data) responseData = responseData.data;
-    if (Array.isArray(responseData)) responseData = responseData[0];
+      if (!response.ok) {
+          let errorBody = {};
+          try {
+              errorBody = await response.json();
+          } catch {
+              errorBody = { message: await response.text() || 'No body' };
+          }
+          console.error('[YouVersion API Error]', {
+              status: response.status,
+              url,
+              body: errorBody,
+          });
+          throw new Error(`YouVersion API failed: ${response.status} - ${JSON.stringify(errorBody)}`);
+      }
 
-    if (!responseData) {
-      throw new Error("Invalid API response: data is null or undefined after processing");
-    }
-
-    return responseData as T;
-
+      const json = await response.json();
+      console.log('[YouVersion API Success]', { path, dataKeys: Object.keys(json) });
+      return json;
   } catch (error) {
-    console.error("Error fetching from YouVersion proxy:", error);
-    if (error instanceof Error) {
-        throw error;
-    }
-    throw new Error("An unknown error occurred while fetching data.");
+      console.error("Error fetching from YouVersion proxy:", error);
+      if (error instanceof Error) {
+          throw error;
+      }
+      throw new Error("An unknown error occurred while fetching data.");
   }
 }
 
-export const getBibles = (): Promise<Bible[]> => fetchYouVersionAPI<Bible[]>('/v1/bibles');
+export const getBibles = async (): Promise<Bible[]> => {
+    const jsonResponse = await fetchYouVersionAPI('/v1/bibles');
+    return jsonResponse?.data || [];
+}
 
-export const getBooks = (bibleId: string): Promise<Book[]> => fetchYouVersionAPI<Book[]>(`/v1/bibles/${bibleId}/books`);
+export const getBooks = async (bibleId: string): Promise<Book[]> => {
+    const jsonResponse = await fetchYouVersionAPI(`/v1/bibles/${bibleId}/books`);
+    return jsonResponse?.data || [];
+}
 
-export const getChapters = (bibleId: string, bookId: string): Promise<Chapter[]> => fetchYouVersionAPI<Chapter[]>(`/v1/bibles/${bibleId}/books/${bookId}/chapters`);
+export const getChapters = async (bibleId: string, bookId: string): Promise<Chapter[]> => {
+    const jsonResponse = await fetchYouVersionAPI(`/v1/bibles/${bibleId}/books/${bookId}/chapters`);
+    return jsonResponse?.data || [];
+}
 
 export const getPassage = async (bibleId: string, chapterId: string): Promise<Passage> => {
-    const passageData = await fetchYouVersionAPI<any>(`/v1/bibles/${bibleId}/chapters/${chapterId}`);
+    const jsonResponse = await fetchYouVersionAPI(`/v1/bibles/${bibleId}/chapters/${chapterId}`);
+    const passageData = jsonResponse?.data;
     if (!passageData || !passageData.content) {
         throw new Error('Invalid passage response: missing content');
     }
@@ -48,9 +59,13 @@ export const getPassage = async (bibleId: string, chapterId: string): Promise<Pa
 };
 
 export const getSingleVerse = async (bibleId: string, verseId: string): Promise<Passage> => {
-    const passageData = await fetchYouVersionAPI<any>(`/v1/bibles/${bibleId}/passages/${verseId}`);
-    if (!passageData || !passageData.content) {
-        throw new Error('Invalid verse response: missing content');
+    const jsonResponse = await fetchYouVersionAPI(`/v1/bibles/${bibleId}/passages/${verseId}`);
+    // This endpoint returns the object directly, sometimes wrapped in `data`.
+    let verseData = jsonResponse?.data || jsonResponse;
+    if (Array.isArray(verseData)) verseData = verseData[0];
+
+    if (!verseData || !verseData.content) {
+      throw new Error("Invalid VOTD response: missing content");
     }
-    return passageData as Passage;
+    return verseData as Passage;
 };

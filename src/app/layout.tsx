@@ -18,11 +18,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
+    <html lang="en" className="dark">
       <head>
         <link rel="manifest" href="/manifest.json" />
       </head>
-      <body className={`${inter.variable} ${playfair.variable} font-sans bg-zinc-950 text-zinc-100 selection:bg-emerald-500/30`}>
+      <body
+        suppressHydrationWarning
+        className={`${inter.variable} ${playfair.variable} font-sans bg-zinc-950 text-zinc-100 selection:bg-emerald-500/30`}
+      >
         {children}
         <Toaster />
       </body>

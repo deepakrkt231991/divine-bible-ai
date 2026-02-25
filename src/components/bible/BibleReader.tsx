@@ -154,7 +154,17 @@ export default function BibleReader() {
                     <Select value={selectedChapter} onValueChange={setSelectedChapter} disabled={loading.chapters}>
                         <SelectTrigger className="w-full">{loading.chapters ? <Skeleton className="h-5 w-full" /> : <SelectValue placeholder="Select Chapter" />}</SelectTrigger>
                         <SelectContent className="max-h-72">
-                            {chapters.map(chapter => <SelectItem key={chapter.id} value={chapter.id}>{chapter.number}</SelectItem>)}
+                            {Array.isArray(chapters) && chapters.length > 0 ? (
+                                chapters.map(chapter => (
+                                <SelectItem key={chapter.id} value={chapter.id}>
+                                    {chapter.number}
+                                </SelectItem>
+                                ))
+                            ) : (
+                                <SelectItem value="loading" disabled>
+                                No chapters available
+                                </SelectItem>
+                            )}
                         </SelectContent>
                     </Select>
                 </div>
