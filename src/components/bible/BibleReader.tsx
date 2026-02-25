@@ -43,9 +43,9 @@ export default function BibleReader() {
             try {
                 const data = await getBibles();
                 setBibles(data);
-                const defaultBible = data.find(b => b.id === '59') || data.find(b => b.id === '1') || data[0];
+                const defaultBible = data.find(b => b.id.toString() === '59') || data.find(b => b.id.toString() === '1') || data[0];
                 if (defaultBible) {
-                    setSelectedBible(defaultBible.id);
+                    setSelectedBible(defaultBible.id.toString());
                 }
             } catch (error) {
                 console.error(error);
@@ -142,7 +142,7 @@ export default function BibleReader() {
                     <Select value={selectedBible} onValueChange={setSelectedBible} disabled={loading.bibles}>
                         <SelectTrigger className="w-full">{loading.bibles ? <Skeleton className="h-5 w-full" /> : <SelectValue placeholder="Select Bible" />}</SelectTrigger>
                         <SelectContent>
-                            {bibles.map(bible => <SelectItem key={bible.id} value={bible.id}>{bible.nameLocal} ({bible.abbreviationLocal})</SelectItem>)}
+                            {bibles.map(bible => <SelectItem key={bible.id} value={bible.id.toString()}>{bible.nameLocal} ({bible.abbreviationLocal})</SelectItem>)}
                         </SelectContent>
                     </Select>
                      <Select value={selectedBook} onValueChange={setSelectedBook} disabled={loading.books}>
@@ -183,7 +183,7 @@ export default function BibleReader() {
                 ) : (
                     passage && (
                         <div>
-                            <h2 className="text-2xl font-serif mb-4">{passage.reference.human}</h2>
+                            <h2 className="text-2xl font-serif mb-4">{typeof passage.reference === 'string' ? passage.reference : passage.reference.human}</h2>
                             <div 
                                 className="prose-xl dark:prose-invert font-serif max-w-none 
                                            [&_h3]:font-serif [&_h3]:text-accent [&_h3]:mb-2

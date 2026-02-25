@@ -35,37 +35,76 @@ async function fetchYouVersionAPI(path: string): Promise<any> {
 }
 
 export const getBibles = async (): Promise<Bible[]> => {
-    const jsonResponse = await fetchYouVersionAPI('/v1/bibles');
-    return jsonResponse?.data || [];
+    try {
+        const query = new URLSearchParams();
+        query.append('language_ranges[]', '*'); // Use wildcard for all languages
+        const endpoint = `/v1/bibles?${query.toString()}`;
+        const jsonResponse = await fetchYouVersionAPI(endpoint);
+        return Array.isArray(jsonResponse) ? jsonResponse : jsonResponse?.data || [];
+    } catch (err) {
+        console.error('Bibles fetch failed:', err);
+        return []; // Return empty array on failure
+    }
 }
 
 export const getBooks = async (bibleId: string): Promise<Book[]> => {
-    const jsonResponse = await fetchYouVersionAPI(`/v1/bibles/${bibleId}/books`);
-    return jsonResponse?.data || [];
+    if (!bibleId) return [];
+    try {
+        const jsonResponse = await fetchYouVersionAPI(`/v1/bibles/${bibleId}/books`);
+        return jsonResponse?.data || [];
+    } catch (err) {
+        console.error(`Books fetch failed for bibleId ${bibleId}:`, err);
+        return [];
+    }
 }
 
 export const getChapters = async (bibleId: string, bookId: string): Promise<Chapter[]> => {
-    const jsonResponse = await fetchYouVersionAPI(`/v1/bibles/${bibleId}/books/${bookId}/chapters`);
-    return jsonResponse?.data || [];
+    if (!bibleId || !bookId) return [];
+    try {
+        const jsonResponse = await fetchYouVersionAPI(`/v1/bibles/${bibleId}/books/${bookId}/chapters`);
+        return jsonResponse?.data || [];
+    } catch (err) {
+        console.error(`Chapters fetch failed for bibleId ${bibleId}, bookId ${bookId}:`, err);
+        return [];
+    }
 }
 
-export const getPassage = async (bibleId: string, chapterId: string): Promise<Passage> => {
-    const jsonResponse = await fetchYouVersionAPI(`/v1/bibles/${bibleId}/chapters/${chapterId}`);
-    const passageData = jsonResponse?.data;
-    if (!passageData || !passageData.content) {
-        throw new Error('Invalid passage response: missing content');
+export const getPassage = async (bibleId: string, chapterId: string): Promise<Passage | null> => {
+    if (!bibleId || !chapterId) {
+        console.error('getPassage: Missing bibleId or chapterId');
+        return null;
     }
-    return passageData as Passage;
+    try {
+        const jsonResponse = await fetchYouVersionAPI(`/v1/bibles/${bibleId}/chapters/${chapterId}`);
+        const passageData = jsonResponse?.data;
+        if (!passageData || !passageData.content) {
+            console.warn('Invalid passage response: missing content', passageData);
+            return null;
+        }
+        return passageData as Passage;
+    } catch (err) {
+        console.error(`Passage fetch failed for bibleId ${bibleId}, chapterId ${chapterId}:`, err);
+        return null;
+    }
 };
 
-export const getSingleVerse = async (bibleId: string, verseId: string): Promise<Passage> => {
-    const jsonResponse = await fetchYouVersionAPI(`/v1/bibles/${bibleId}/passages/${verseId}`);
-    // This endpoint returns the object directly, sometimes wrapped in `data`.
-    let verseData = jsonResponse?.data || jsonResponse;
-    if (Array.isArray(verseData)) verseData = verseData[0];
-
-    if (!verseData || !verseData.content) {
-      throw new Error("Invalid VOTD response: missing content");
+export const getSingleVerse = async (bibleId: string, verseId: string): Promise<Passage | null> => {
+     if (!bibleId || !verseId) {
+        console.error('getSingleVerse: Missing bibleId or verseId');
+        return null;
     }
-    return verseData as Passage;
+    try {
+        const jsonResponse = await fetchYouVersionAPI(`/v1/bibles/${bibleId}/passages/${verseId}`);
+        let verseData = jsonResponse?.data || jsonResponse;
+        if (Array.isArray(verseData)) verseData = verseData[0];
+
+        if (!verseData || !verseData.content) {
+          console.warn("Invalid VOTD response: missing content", verseData);
+          return null;
+        }
+        return verseData as Passage;
+    } catch(err) {
+         console.error(`Single verse fetch failed for bibleId ${bibleId}, verseId ${verseId}:`, err);
+         return null;
+    }
 };

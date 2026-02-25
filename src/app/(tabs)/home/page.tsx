@@ -28,7 +28,7 @@ export default function BibleHomePage() {
       }
       
       try {
-        const passage: Passage = await getSingleVerse(BIBLE_VERSION_ID, VERSE_OF_THE_DAY_ID);
+        const passage = await getSingleVerse(BIBLE_VERSION_ID, VERSE_OF_THE_DAY_ID);
 
         if (!passage || !passage.content) {
           throw new Error("Failed to fetch verse: API returned invalid data.");
