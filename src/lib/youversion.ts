@@ -1,60 +1,74 @@
 // src/lib/youversion.ts
-const BASE = "https://api.youversion.com";
-const KEY = process.env.NEXT_PUBLIC_YOUVERSION_KEY;
 
-async function fetchYouVersion(endpoint: string) {
-  const url = `${BASE}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;
-  
-  console.log("📡 YouVersion Request:", url);
-
-  if (!KEY) {
-    console.error("❌ YouVersion Error: API Key (NEXT_PUBLIC_YOUVERSION_KEY) is missing.");
-    throw new Error("API Key is missing");
+/**
+ * Helper to normalize USFM reference (e.g., 'gen.1' → 'GEN.1')
+ */
+function normalizeUSFM(ref: string): string {
+  if (!ref) return '';
+  const parts = ref.split('.');
+  if (parts.length >= 1) {
+    parts[0] = parts[0].toUpperCase();
   }
-
-  const res = await fetch(url, {
-    headers: {
-      "X-YVP-App-Key": KEY,
-      "Accept": "application/json",
-    },
-    cache: "no-store",
-  });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    console.error("❌ YouVersion Error:", res.status, err);
-    throw new Error(err.message || `API ${res.status}`);
-  }
-
-  return res.json();
+  return parts.join('.');
 }
 
-// ================== BEST UPDATED FUNCTIONS ==================
+/**
+ * Routes all YouVersion API requests through our local proxy to avoid CORS issues.
+ */
+async function fetchYouVersion(endpoint: string) {
+  // We use the internal API proxy to avoid CORS and keep the key secure
+  const url = `/api/youversion?path=${encodeURIComponent(endpoint)}`;
+  
+  const res = await fetch(url);
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    console.error("❌ YouVersion Proxy Error:", res.status, errorData);
+    throw new Error(errorData.error || `API ${res.status}`);
+  }
+
+  return await res.json();
+}
 
 export async function getBibles() {
-  // language_ranges[]=* is required for listing bibles in the YouVersion API
-  const data = await fetchYouVersion(`/v1/bibles?language_ranges[]=*&language_ranges[]=hi&language_ranges[]=en&page_size=50`);
-  return Array.isArray(data) ? data : data?.data || [];
+  // Required: language_ranges[] param for the API to return a list
+  const endpoint = `/v1/bibles?language_ranges[]=*&page_size=100`;
+  const data = await fetchYouVersion(endpoint);
+  // The API usually returns an array directly or inside a 'data' key
+  return Array.isArray(data) ? data : data?.data || data?.bibles || [];
 }
 
 export async function getBooks(bibleId: string) {
-  const data = await fetchYouVersion(`/v1/bibles/${bibleId}/books`);
+  if (!bibleId) return [];
+  const endpoint = `/v1/bibles/${bibleId}/books`;
+  const data = await fetchYouVersion(endpoint);
   return Array.isArray(data) ? data : data?.data || [];
 }
 
 export async function getChapters(bibleId: string, bookId: string) {
-  const data = await fetchYouVersion(`/v1/bibles/${bibleId}/books/${bookId}/chapters`);
+  if (!bibleId || !bookId) return [];
+  const endpoint = `/v1/bibles/${bibleId}/books/${bookId}/chapters`;
+  const data = await fetchYouVersion(endpoint);
   return Array.isArray(data) ? data : data?.data || [];
 }
 
 export async function getPassage(bibleId: string, passageId: string) {
-  // Content endpoint is always /passages/ in the YouVersion API for both verses and chapters.
-  // Using the /chapters/ endpoint for content results in a 404.
-  if (!passageId) return null;
-  
-  const data = await fetchYouVersion(`/v1/bibles/${bibleId}/passages/${passageId}`);
-  return data; // { id, reference, content, copyright, ... }
+  if (!bibleId || !passageId) return null;
+
+  const normalizedId = normalizeUSFM(passageId);
+  try {
+    const data = await fetchYouVersion(`/v1/bibles/${bibleId}/passages/${normalizedId}`);
+    return data;
+  } catch (err) {
+    console.warn(`Failed to fetch passage ${normalizedId}:`, err);
+    return {
+      id: normalizedId,
+      reference: normalizedId,
+      content: "<p>Vachan load nahi ho paaya. Please try a different Bible version or chapter.</p>",
+      copyright: "Error loading content"
+    };
+  }
 }
 
-// Alias for home page and other single verse requirements
+// Alias for consistency with older imports
 export const getSingleVerse = getPassage;
