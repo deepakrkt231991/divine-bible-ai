@@ -11,9 +11,18 @@ async function fetchYouVersionAPI<T>(path: string): Promise<T> {
     }
     
     const jsonResponse = await response.json();
+    
     // The YouVersion API sometimes wraps its response in a 'data' object.
-    // If the data wrapper exists, return it, otherwise return the whole response.
-    return (jsonResponse.data ?? jsonResponse) as T;
+    // Handle different possible structures as per user feedback.
+    let responseData = jsonResponse;
+    if (responseData.data) responseData = responseData.data;
+    if (Array.isArray(responseData)) responseData = responseData[0];
+
+    if (!responseData) {
+      throw new Error("Invalid API response: data is null or undefined after processing");
+    }
+
+    return responseData as T;
 
   } catch (error) {
     console.error("Error fetching from YouVersion proxy:", error);
@@ -31,10 +40,7 @@ export const getBooks = (bibleId: string): Promise<Book[]> => fetchYouVersionAPI
 export const getChapters = (bibleId: string, bookId: string): Promise<Chapter[]> => fetchYouVersionAPI<Chapter[]>(`/v1/bibles/${bibleId}/books/${bookId}/chapters`);
 
 export const getPassage = async (bibleId: string, chapterId: string): Promise<Passage> => {
-    let passageData = await fetchYouVersionAPI<any>(`/v1/bibles/${bibleId}/chapters/${chapterId}`);
-    if (Array.isArray(passageData)) {
-        passageData = passageData[0];
-    }
+    const passageData = await fetchYouVersionAPI<any>(`/v1/bibles/${bibleId}/chapters/${chapterId}`);
     if (!passageData || !passageData.content) {
         throw new Error('Invalid passage response: missing content');
     }
@@ -42,10 +48,7 @@ export const getPassage = async (bibleId: string, chapterId: string): Promise<Pa
 };
 
 export const getSingleVerse = async (bibleId: string, verseId: string): Promise<Passage> => {
-    let passageData = await fetchYouVersionAPI<any>(`/v1/bibles/${bibleId}/passages/${verseId}`);
-    if (Array.isArray(passageData)) {
-        passageData = passageData[0];
-    }
+    const passageData = await fetchYouVersionAPI<any>(`/v1/bibles/${bibleId}/passages/${verseId}`);
     if (!passageData || !passageData.content) {
         throw new Error('Invalid verse response: missing content');
     }

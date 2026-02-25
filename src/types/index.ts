@@ -35,7 +35,7 @@ export interface Chapter {
 }
 
 export interface Passage {
-    id: string;
+    id?: string;
     bibleId?: string;
     orgId?: string;
     bookId?: string;
