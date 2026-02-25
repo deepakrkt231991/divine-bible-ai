@@ -86,7 +86,7 @@ export default function AiChat() {
                          <AvatarFallback><Sparkles size={16} className="text-accent"/></AvatarFallback>
                     </Avatar>
                 </div>
-                <CardTitle className="text-lg font-headline">Scripture AI</CardTitle>
+                <CardTitle className="text-lg font-serif">Scripture AI</CardTitle>
             </div>
             <div className='flex items-center gap-1 rounded-full bg-muted p-1'>
                  <Button size="sm" variant={mode === 'question' ? 'secondary' : 'ghost'} className='rounded-full h-7 px-3 text-xs' onClick={() => setMode('question')}>Question</Button>

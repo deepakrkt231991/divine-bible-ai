@@ -7,8 +7,8 @@ export default function TabsLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="relative min-h-screen bg-background">
-      <main className="pb-24">{children}</main>
+    <div className="relative">
+      <main className="pb-20 min-h-screen">{children}</main>
       <BottomNav />
     </div>
   );

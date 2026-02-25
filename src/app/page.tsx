@@ -68,7 +68,7 @@ export default function LoginPage() {
         <div className="mb-6 inline-block p-4 bg-primary/10 rounded-full border-8 border-background/50 shadow-lg">
             <BookOpen className="w-12 h-12 text-primary" />
         </div>
-        <h1 className="text-4xl md:text-5xl font-headline text-foreground mb-3">
+        <h1 className="text-4xl md:text-5xl font-serif text-foreground mb-3">
           Divine Compass
         </h1>
         <p className="text-lg text-muted-foreground max-w-md mx-auto">

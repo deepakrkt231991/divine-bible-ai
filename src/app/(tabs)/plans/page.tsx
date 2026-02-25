@@ -6,7 +6,7 @@ export default function PlansPage() {
       <div className="p-6 bg-primary/10 rounded-full mb-6">
         <ClipboardList className="w-12 h-12 text-primary" />
       </div>
-      <h1 className="text-3xl font-headline mb-4">Reading Plans</h1>
+      <h1 className="text-3xl font-serif mb-4">Reading Plans</h1>
       <p className="text-muted-foreground max-w-md">Coming soon! We're preparing curated plans to guide your study and help you grow in your faith journey.</p>
     </div>
   );

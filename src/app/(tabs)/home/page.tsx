@@ -69,7 +69,7 @@ export default function HomePage() {
                     </>
                 ) : (
                     <>
-                        <h1 className="text-3xl font-headline">
+                        <h1 className="text-3xl font-serif">
                             Welcome, {userData?.name?.split(' ')[0] || 'friend'}
                         </h1>
                         <p className="text-muted-foreground">Let's dive into the Word today.</p>
@@ -77,7 +77,7 @@ export default function HomePage() {
                 )}
             </div>
             
-            <h2 className="text-xl font-headline font-bold text-accent mb-4">Verse of the Day</h2>
+            <h2 className="text-xl font-serif font-bold text-accent mb-4">Verse of the Day</h2>
              {verseLoading || !verseOfTheDay || !bibleVersion ? (
               <Skeleton className="h-48 w-full rounded-lg" />
             ) : (
@@ -87,7 +87,7 @@ export default function HomePage() {
       </div>
 
       <div className="container mx-auto px-4 pb-8 space-y-6">
-        <h2 className="text-xl font-headline font-bold">Get Started</h2>
+        <h2 className="text-xl font-serif font-bold">Get Started</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <QuickLink href="/read" icon={BookOpen} title="Read Scripture" description="Explore the Bible chapter by chapter." />
             <QuickLink href="/ai" icon={Sparkles} title="AI Assistant" description="Ask questions and get insights." />

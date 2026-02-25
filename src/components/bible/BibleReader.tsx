@@ -114,7 +114,7 @@ export default function BibleReader() {
     return (
         <Card className="w-full max-w-4xl mx-auto border-0 shadow-none bg-transparent">
             <CardHeader className="sticky top-0 bg-background/80 backdrop-blur-sm z-10 -mx-6 px-6 pt-6 pb-4 md:top-0">
-                <CardTitle className="text-3xl font-headline text-center">Read the Bible</CardTitle>
+                <CardTitle className="text-3xl font-serif text-center">Read the Bible</CardTitle>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
                     <Select value={selectedBible} onValueChange={setSelectedBible} disabled={loading.bibles}>
                         <SelectTrigger className="w-full">{loading.bibles ? <Skeleton className="h-5 w-full" /> : <SelectValue placeholder="Select Bible" />}</SelectTrigger>
@@ -150,10 +150,10 @@ export default function BibleReader() {
                 ) : (
                     passage && (
                         <div>
-                            <h2 className="text-2xl font-headline mb-4">{passage.reference.human}</h2>
+                            <h2 className="text-2xl font-serif mb-4">{passage.reference.human}</h2>
                             <div 
-                                className="prose-xl dark:prose-invert font-headline max-w-none 
-                                           [&_h3]:font-headline [&_h3]:text-accent [&_h3]:mb-2
+                                className="prose-xl dark:prose-invert font-serif max-w-none 
+                                           [&_h3]:font-serif [&_h3]:text-accent [&_h3]:mb-2
                                            [&_p]:mb-4
                                            [&_.v]:font-bold [&_.v]:pr-2 [&_.v]:text-primary
                                            "

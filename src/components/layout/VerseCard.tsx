@@ -23,7 +23,7 @@ export default function VerseCard({ verse, bible }: VerseCardProps) {
         </div>
       </div>
       
-      <p className="mt-4 text-2xl leading-relaxed font-headline text-card-foreground">
+      <p className="mt-4 text-2xl leading-relaxed font-serif text-card-foreground">
         {verse.content}
       </p>
       

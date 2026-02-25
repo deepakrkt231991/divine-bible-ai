@@ -1,7 +1,12 @@
 import type {Metadata} from 'next';
+import { Inter, Playfair_Display } from "next/font/google";
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { AuthProvider } from '@/components/auth/AuthProvider';
+
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
+const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-serif", weight: ['400', '700'] });
+
 
 export const metadata: Metadata = {
   title: 'Divine Compass',
@@ -16,12 +21,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet" />
         <link rel="manifest" href="/manifest.json" />
       </head>
-      <body className="font-body antialiased">
+      <body className={`${inter.variable} ${playfair.variable} font-sans bg-zinc-950 text-zinc-100 selection:bg-emerald-500/30`}>
         <AuthProvider>
           {children}
           <Toaster />
