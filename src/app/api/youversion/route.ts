@@ -16,17 +16,27 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const res = await fetch(`${BASE}${path}`, {
+    // Construct the YouVersion URL with forwarded search params (except 'path')
+    const url = new URL(path.startsWith('/') ? path : `/${path}`, BASE);
+    searchParams.forEach((value, key) => {
+      if (key !== 'path') {
+        url.searchParams.append(key, value);
+      }
+    });
+
+    console.log("📡 Proxying to YouVersion:", url.toString());
+
+    const res = await fetch(url.toString(), {
       headers: {
         "X-YVP-App-Key": KEY,
         "Accept": "application/json",
       },
-      next: { revalidate: 3600 } // Cache for 1 hour
+      next: { revalidate: 3600 } 
     });
 
     if (!res.ok) {
         const errorData = await res.text();
-        console.error("YouVersion API Error:", errorData);
+        console.error("❌ YouVersion API Error:", res.status, errorData);
         return NextResponse.json({ error: "Failed to fetch from YouVersion API", details: errorData }, { status: res.status });
     }
 

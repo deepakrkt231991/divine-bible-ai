@@ -15,7 +15,8 @@ export default function BibleReader() {
   const [chapters, setChapters] = useState<any[]>([]);
   const [passage, setPassage] = useState<any>(null);
 
-  const [selectedBible, setSelectedBible] = useState<string>("3034"); // Default BSB
+  // Default to 3034 (Berean Standard Bible) as it's known to work
+  const [selectedBible, setSelectedBible] = useState<string>("3034");
   const [selectedBook, setSelectedBook] = useState<string>("");
   const [selectedChapter, setSelectedChapter] = useState<string>("");
 
@@ -35,8 +36,10 @@ export default function BibleReader() {
       try {
         const data = await getBibles();
         setBibles(data);
-        const defaultBible = data.find((b: any) => b.id.toString() === "3034") || data[0];
-        if (defaultBible) setSelectedBible(defaultBible.id.toString());
+        // Ensure default is selected if available
+        if (!selectedBible && data.length > 0) {
+            setSelectedBible(data[0].id.toString());
+        }
       } catch (err) {
         toast({ title: "Error", description: "Bible versions load nahi ho paaye. Please refresh.", variant: "destructive" });
       } finally {
@@ -54,9 +57,8 @@ export default function BibleReader() {
       try {
         const data = await getBooks(selectedBible);
         setBooks(data);
-        if (data && data.length > 0) {
-          // If the book was already set manually or we need to default
-          if (!selectedBook) setSelectedBook(data[0].id);
+        if (data && data.length > 0 && !selectedBook) {
+          setSelectedBook(data[0].id);
         }
       } catch (err) {
         console.error("Books load error:", err);
@@ -95,6 +97,7 @@ export default function BibleReader() {
   useEffect(() => {
     if (!selectedBible || !selectedChapter) return;
     async function loadPassage() {
+      console.log("🔍 Fetching passage for Bible:", selectedBible, "Passage:", selectedChapter);
       setLoading(prev => ({ ...prev, passage: true }));
       try {
         const data = await getPassage(selectedBible, selectedChapter);
