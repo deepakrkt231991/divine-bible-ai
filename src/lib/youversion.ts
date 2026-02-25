@@ -95,7 +95,8 @@ export const getSingleVerse = async (bibleId: string, verseId: string): Promise<
     }
     try {
         const jsonResponse = await fetchYouVersionAPI(`/v1/bibles/${bibleId}/passages/${verseId}`);
-        let verseData = jsonResponse?.data || jsonResponse;
+        let verseData = jsonResponse;
+        if (jsonResponse.data) verseData = jsonResponse.data;
         if (Array.isArray(verseData)) verseData = verseData[0];
 
         if (!verseData || !verseData.content) {
