@@ -47,9 +47,16 @@ export default function HomePage() {
       
       try {
         const passage: Passage = await getSingleVerse(BIBLE_VERSION_ID, VERSE_OF_THE_DAY_ID);
+
+        if (!passage || !passage.content || !passage.reference) {
+          throw new Error("Failed to fetch verse: API returned invalid data.");
+        }
+
         const plainTextContent = passage.content.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
+        const referenceText = typeof passage.reference === 'string' ? passage.reference : passage.reference.human;
+        
         setVerseOfTheDay({
-          reference: passage.reference.human,
+          reference: referenceText,
           content: plainTextContent,
         });
         setBibleVersion({ abbreviation: 'NIV' }); // Assuming NIV based on text

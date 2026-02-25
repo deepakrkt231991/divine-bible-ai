@@ -10,9 +10,10 @@ async function fetchYouVersionAPI<T>(path: string): Promise<T> {
       throw new Error(errorBody.error || `Request failed with status ${response.status}`);
     }
     
-    // The YouVersion API wraps its response in a 'data' object
     const jsonResponse = await response.json();
-    return jsonResponse.data as T;
+    // The YouVersion API sometimes wraps its response in a 'data' object.
+    // If the data wrapper exists, return it, otherwise return the whole response.
+    return (jsonResponse.data ?? jsonResponse) as T;
 
   } catch (error) {
     console.error("Error fetching from YouVersion proxy:", error);

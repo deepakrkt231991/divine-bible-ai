@@ -43,7 +43,7 @@ export interface Passage {
     reference: {
         human: string;
         usfm: string[];
-    };
+    } | string;
     content: string;
     verseCount: number;
     copyright: string;
