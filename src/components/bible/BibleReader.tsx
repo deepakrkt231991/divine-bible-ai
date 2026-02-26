@@ -14,79 +14,83 @@ export default function BibleReader() {
   const [chapters, setChapters] = useState<any[]>([]);
   const [passage, setPassage] = useState<any>(null);
 
-  const [selectedBible, setSelectedBible] = useState("3034"); // BSB - Reliable default
+  const [selectedBible, setSelectedBible] = useState("3034"); // BSB - Default safe ID
   const [selectedBook, setSelectedBook] = useState("GEN");
   const [selectedChapter, setSelectedChapter] = useState("GEN.1");
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState({
+    bibles: true,
+    books: false,
+    chapters: false,
+    passage: false
+  });
   const { toast } = useToast();
 
-  // Load Bibles
+  // Load Bibles on mount
   useEffect(() => {
-    setLoading(true);
+    setLoading(prev => ({ ...prev, bibles: true }));
     getBibles().then(list => {
-      setBibles(list);
-      setLoading(false);
+      setBibles(Array.isArray(list) ? list : []);
+      setLoading(prev => ({ ...prev, bibles: false }));
     }).catch(() => {
       toast({ variant: "destructive", title: "Error", description: "Bible versions load nahi hue" });
-      setLoading(false);
+      setLoading(prev => ({ ...prev, bibles: false }));
     });
-  }, []);
+  }, [toast]);
 
-  // Load Books
+  // Load Books when Bible changes
   useEffect(() => {
     if (!selectedBible) return;
-    setLoading(true);
+    setLoading(prev => ({ ...prev, books: true }));
     getBooks(selectedBible).then(list => {
-      setBooks(list);
-    }).catch(() => toast({ variant: "destructive", description: "Books nahi load hue" })).finally(() => setLoading(false));
-  }, [selectedBible]);
+      setBooks(Array.isArray(list) ? list : []);
+      // Reset book and chapter selections to prevent mismatches
+      if (list.length > 0 && !list.find((b: any) => b.id === selectedBook)) {
+        setSelectedBook(list[0].id);
+      }
+    }).catch(() => toast({ variant: "destructive", description: "Books load nahi hue" }))
+    .finally(() => setLoading(prev => ({ ...prev, books: false })));
+  }, [selectedBible, toast]);
 
-  // Load Chapters
+  // Load Chapters when Book changes
   useEffect(() => {
     if (!selectedBible || !selectedBook) return;
-    setLoading(true);
+    setLoading(prev => ({ ...prev, chapters: true }));
     getChapters(selectedBible, selectedBook).then(list => {
-      setChapters(Array.isArray(list) ? list : []);
-    }).catch(() => toast({ variant: "destructive", description: "Chapters nahi load hue" })).finally(() => setLoading(false));
-  }, [selectedBible, selectedBook]);
+      const chapterList = Array.isArray(list) ? list : [];
+      setChapters(chapterList);
+      if (chapterList.length > 0) {
+        setSelectedChapter(chapterList[0].id);
+      }
+    }).catch(() => toast({ variant: "destructive", description: "Chapters load nahi hue" }))
+    .finally(() => setLoading(prev => ({ ...prev, chapters: false })));
+  }, [selectedBible, selectedBook, toast]);
 
-  // Load Passage
+  // Load Passage when Chapter changes
   useEffect(() => {
     if (!selectedBible || !selectedChapter) return;
     
     const loadPassage = async () => {
-      setLoading(true);
+      setLoading(prev => ({ ...prev, passage: true }));
       try {
-        // Temporary debug test
-        if (selectedChapter === "JHN.3.16") {
-            const test = await getPassage("3034", "JHN.3.16");
-            console.log("Test JHN.3.16:", test);
-        }
-        
-        console.log("Fetching passage for Bible:", selectedBible, "Passage:", selectedChapter);
         const data = await getPassage(selectedBible, selectedChapter);
         setPassage(data);
       } catch (error) {
-        toast({ variant: "destructive", description: "Passage nahi mila" });
+        toast({ variant: "destructive", description: "Passage load nahi ho saka" });
       } finally {
-        setLoading(false);
+        setLoading(prev => ({ ...prev, passage: false }));
       }
     };
     
     loadPassage();
-  }, [selectedBible, selectedChapter]);
-
-  if (loading && bibles.length === 0) {
-    return <div className="text-center p-10">Loading Bible data... 🙏</div>;
-  }
+  }, [selectedBible, selectedChapter, toast]);
 
   return (
     <Card className="border-0 shadow-none bg-transparent">
       <CardHeader className="sticky top-0 bg-zinc-950/90 backdrop-blur z-10">
         <CardTitle className="text-3xl font-serif text-center">📖 Read the Bible</CardTitle>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-          <Select value={selectedBible} onValueChange={setSelectedBible}>
+          <Select value={selectedBible} onValueChange={setSelectedBible} disabled={loading.bibles}>
             <SelectTrigger><SelectValue placeholder="Bible Version" /></SelectTrigger>
             <SelectContent>
               {bibles.map(b => (
@@ -97,7 +101,7 @@ export default function BibleReader() {
             </SelectContent>
           </Select>
 
-          <Select value={selectedBook} onValueChange={setSelectedBook}>
+          <Select value={selectedBook} onValueChange={setSelectedBook} disabled={loading.books || bibles.length === 0}>
             <SelectTrigger><SelectValue placeholder="Book" /></SelectTrigger>
             <SelectContent>
               {books.map(b => (
@@ -106,7 +110,7 @@ export default function BibleReader() {
             </SelectContent>
           </Select>
 
-          <Select value={selectedChapter} onValueChange={setSelectedChapter}>
+          <Select value={selectedChapter} onValueChange={setSelectedChapter} disabled={loading.chapters || books.length === 0}>
             <SelectTrigger><SelectValue placeholder="Chapter" /></SelectTrigger>
             <SelectContent>
               {Array.isArray(chapters) && chapters.length > 0 ? (
@@ -131,7 +135,7 @@ export default function BibleReader() {
             </div>
           ) : (
             <div className="text-center text-zinc-400 py-10">
-              {loading ? <Skeleton className="h-40 w-full" /> : "Select Bible, Book & Chapter to read"}
+              {loading.passage ? <Skeleton className="h-40 w-full" /> : "Select Bible, Book & Chapter to read"}
             </div>
           )}
         </ScrollArea>

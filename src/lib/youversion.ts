@@ -3,11 +3,17 @@
  */
 async function fetchYouVersion(endpoint: string) {
   // Ensure the endpoint is properly encoded in the query string
+  // We use the local proxy /api/youversion to handle the actual request
   const res = await fetch(`/api/youversion?path=${encodeURIComponent(endpoint)}`);
 
   if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    console.error("❌ YouVersion Proxy Error:", res.status, errorData);
+    let errorData: any = {};
+    try {
+      errorData = await res.json();
+    } catch {
+      errorData = { error: `API ${res.status}` };
+    }
+    console.error("❌ YouVersion API Error:", res.status, errorData);
     throw new Error(errorData.error || `API ${res.status}`);
   }
 
@@ -15,15 +21,17 @@ async function fetchYouVersion(endpoint: string) {
 }
 
 /**
- * Fetches a list of available Bibles. Requires language_ranges[] param.
+ * Fetches a list of available Bibles. Required param: language_ranges[]
  */
 export async function getBibles() {
+  // language_ranges[] is required - use * for all or specify e.g. hi,en
+  const endpoint = '/v1/bibles?language_ranges%5B%5D=*';
   try {
-    const endpoint = '/v1/bibles?language_ranges[]=*';
     const data = await fetchYouVersion(endpoint);
-    return Array.isArray(data) ? data : (data?.data || []);
-  } catch (e) {
-    console.error("getBibles failed:", e);
+    // Robust handling of different response shapes
+    return Array.isArray(data) ? data : (data?.data || data?.bibles || []);
+  } catch (err) {
+    console.error("getBibles failed:", err);
     return [];
   }
 }
@@ -60,6 +68,8 @@ export async function getChapters(bibleId: string, bookId: string) {
  * Fetches the content of a specific Bible passage (verse or chapter).
  */
 export async function getPassage(bibleId: string, passageId: string) {
+  if (!bibleId || !passageId) return { reference: "Error", content: "Invalid reference." };
+
   try {
     // Normalize passageId (book uppercase + no spaces)
     const normalized = passageId.toUpperCase().replace(/\s/g, '');
@@ -70,14 +80,14 @@ export async function getPassage(bibleId: string, passageId: string) {
     console.error("getPassage failed:", e);
     return {
       reference: passageId || "Error",
-      content: "<p>Passage nahi mila. Reference check kijiye.</p>",
+      content: "<p>Passage load nahi ho saka. Kripya reference check karein.</p>",
       copyright: ""
     };
   }
 }
 
 /**
- * Alias for getPassage used in the home page for the Verse of the Day.
+ * Export getSingleVerse to prevent home page build from breaking.
  */
 export async function getSingleVerse(bibleId: string, passageId: string) {
   return getPassage(bibleId, passageId);
