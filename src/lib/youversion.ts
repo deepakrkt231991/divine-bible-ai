@@ -1,48 +1,48 @@
 /**
  * Utility to fetch data from YouVersion API via the local proxy.
  */
-async function fetchYouVersion(endpoint: string, params: Record<string, string> = {}) {
-  const query = new URLSearchParams();
-  query.append("path", endpoint);
-  Object.entries(params).forEach(([key, value]) => {
-    query.append(key, value);
-  });
-
-  const res = await fetch(`/api/youversion?${query.toString()}`);
+async function fetchYouVersionAPI(endpoint: string) {
+  // Ensure path starts with /
+  const path = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  
+  // Call local proxy
+  const url = `/api/youversion?path=${encodeURIComponent(path)}`;
+  
+  const res = await fetch(url, { cache: "no-store" });
 
   if (!res.ok) {
-    let errorData: any = {};
-    try {
-      errorData = await res.json();
-    } catch {
-      errorData = { error: `API ${res.status}` };
-    }
-    console.error("❌ YouVersion Proxy Error:", res.status, errorData);
-    throw new Error(errorData.error || `API ${res.status}`);
+    let errBody: any = {};
+    try { errBody = await res.json(); } 
+    catch { errBody = { message: await res.text() }; }
+    
+    console.error('[YouVersion Lib Error]', { status: res.status, body: errBody });
+    throw new Error(`API failed: ${res.status} - ${JSON.stringify(errBody)}`);
   }
 
   return res.json();
 }
 
 /**
- * Fetches a list of available Bibles. Required param: language_ranges[]
+ * Get Bibles (Fixed 422 with language_ranges[])
  */
 export async function getBibles() {
+  // language_ranges[] is REQUIRED for listing bibles
+  const path = "/v1/bibles?language_ranges%5B%5D=*"; 
   try {
-    const data = await fetchYouVersion('/v1/bibles', { "language_ranges[]": "*" });
-    return Array.isArray(data) ? data : (data?.data || data?.bibles || []);
+    const data = await fetchYouVersionAPI(path);
+    return Array.isArray(data) ? data : data?.data || data?.bibles || [];
   } catch (err) {
-    console.error("getBibles failed:", err);
+    console.error('getBibles error', err);
     return [];
   }
 }
 
 /**
- * Fetches books for a specific Bible version.
+ * Get Books for a Bible ID
  */
 export async function getBooks(bibleId: string) {
   try {
-    const data = await fetchYouVersion(`/v1/bibles/${bibleId}/books`);
+    const data = await fetchYouVersionAPI(`/v1/bibles/${bibleId}/books`);
     return Array.isArray(data) ? data : (data?.data || []);
   } catch (e) {
     console.error("getBooks failed:", e);
@@ -51,11 +51,11 @@ export async function getBooks(bibleId: string) {
 }
 
 /**
- * Fetches chapters for a specific book in a Bible version.
+ * Get Chapters for a Book
  */
 export async function getChapters(bibleId: string, bookId: string) {
   try {
-    const data = await fetchYouVersion(`/v1/bibles/${bibleId}/books/${bookId}/chapters`);
+    const data = await fetchYouVersionAPI(`/v1/bibles/${bibleId}/books/${bookId}/chapters`);
     return Array.isArray(data) ? data : (data?.data || []);
   } catch (e) {
     console.error("getChapters failed:", e);
@@ -64,28 +64,28 @@ export async function getChapters(bibleId: string, bookId: string) {
 }
 
 /**
- * Fetches the content of a specific Bible passage (verse or chapter).
+ * Get Passage Content
  */
-export async function getPassage(bibleId: string, passageId: string) {
-  if (!bibleId || !passageId) return { reference: "Error", content: "Invalid reference." };
-
+export async function getPassage(bibleId: string, usfm: string) {
+  if (!bibleId || !usfm) throw new Error("Missing bibleId or usfm");
+  
+  const endpoint = `/v1/bibles/${bibleId}/passages/${encodeURIComponent(usfm)}`;
   try {
-    const normalized = passageId.toUpperCase().replace(/\s/g, '');
-    const data = await fetchYouVersion(`/v1/bibles/${bibleId}/passages/${normalized}`);
+    const data = await fetchYouVersionAPI(endpoint);
     return data;
-  } catch (e) {
-    console.error("getPassage failed:", e);
-    return {
-      reference: passageId || "Error",
-      content: "<p>Unable to load content. Please check your connection.</p>",
-      copyright: ""
+  } catch (err) {
+    console.error('getPassage error', err);
+    return { 
+      id: usfm, 
+      content: "Unable to load verse. Please try again.", 
+      reference: "Error" 
     };
   }
 }
 
 /**
- * Export getSingleVerse to support Home Page build.
+ * Helper for Home Page / Single Verse fetches
  */
-export async function getSingleVerse(bibleId: string, passageId: string) {
-  return getPassage(bibleId, passageId);
+export async function getSingleVerse(bibleId: string, verseUsfm: string) {
+  return getPassage(bibleId, verseUsfm);
 }
