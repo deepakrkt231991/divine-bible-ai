@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getBibles, getPassage, getBooks, getChapters } from "@/lib/youversion";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Bible, Loader2, BookOpen } from "lucide-react";
+import { Book, Loader2, BookOpen } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function BibleReader() {
@@ -190,7 +190,7 @@ export default function BibleReader() {
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-20 text-center opacity-40">
-                <Bible className="w-16 h-16 mb-4" />
+                <Book className="w-16 h-16 mb-4" />
                 <p className="text-lg font-serif italic">Prabhu ka vachan padhne ke liye chapter select kijiye.</p>
               </div>
             )}
