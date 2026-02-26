@@ -8,25 +8,29 @@ async function fetchYouVersionAPI(endpoint: string) {
   // Call local proxy
   const url = `/api/youversion?path=${encodeURIComponent(path)}`;
   
-  const res = await fetch(url, { cache: "no-store" });
+  try {
+    const res = await fetch(url, { cache: "no-store" });
 
-  if (!res.ok) {
-    let errBody: any = {};
-    try { errBody = await res.json(); } 
-    catch { errBody = { message: await res.text() }; }
-    
-    console.error('[YouVersion Lib Error]', { status: res.status, body: errBody, path });
-    throw new Error(`API failed: ${res.status} - ${JSON.stringify(errBody)}`);
+    if (!res.ok) {
+      let errBody: any = {};
+      try { errBody = await res.json(); } 
+      catch { errBody = { message: await res.text() }; }
+      
+      console.error('[YouVersion Lib Error]', { status: res.status, body: errBody, path });
+      return null;
+    }
+
+    return res.json();
+  } catch (err) {
+    console.error('[YouVersion Fetch Error]', err);
+    return null;
   }
-
-  return res.json();
 }
 
 /**
  * Get Bibles (Fixed 422 with language_ranges[])
  */
 export async function getBibles() {
-  // language_ranges[] is REQUIRED for listing bibles
   const path = "/v1/bibles?language_ranges%5B%5D=*"; 
   try {
     const data = await fetchYouVersionAPI(path);
@@ -44,7 +48,6 @@ export async function getBooks(bibleId: string) {
   if (!bibleId) return [];
   try {
     const data = await fetchYouVersionAPI(`/v1/bibles/${bibleId}/books`);
-    // Handle different API response shapes
     if (Array.isArray(data)) return data;
     if (data?.data && Array.isArray(data.data)) return data.data;
     if (data?.books && Array.isArray(data.books)) return data.books;
@@ -62,7 +65,6 @@ export async function getChapters(bibleId: string, bookId: string) {
   if (!bibleId || !bookId) return [];
   try {
     const data = await fetchYouVersionAPI(`/v1/bibles/${bibleId}/books/${bookId}/chapters`);
-    // Handle different API response shapes
     if (Array.isArray(data)) return data;
     if (data?.data && Array.isArray(data.data)) return data.data;
     if (data?.chapters && Array.isArray(data.chapters)) return data.chapters;
@@ -77,12 +79,16 @@ export async function getChapters(bibleId: string, bookId: string) {
  * Get Passage Content
  */
 export async function getPassage(bibleId: string, usfm: string) {
-  if (!bibleId || !usfm) throw new Error("Missing bibleId or usfm");
+  if (!bibleId || !usfm) return { content: "Missing selection", reference: "" };
   
   const endpoint = `/v1/bibles/${bibleId}/passages/${encodeURIComponent(usfm)}`;
   try {
     const data = await fetchYouVersionAPI(endpoint);
-    return data;
+    return data || { 
+      id: usfm, 
+      content: "Scripture load nahi ho paya. Please working version select kijiye.", 
+      reference: "Error" 
+    };
   } catch (err) {
     console.error('getPassage error', err);
     return { 

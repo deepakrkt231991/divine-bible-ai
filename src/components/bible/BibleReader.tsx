@@ -10,11 +10,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function BibleReader() {
   const [bibles, setBibles] = useState<any[]>([]);
-  const [selectedBible, setSelectedBible] = useState<string>("3034");
+  const [selectedBible, setSelectedBible] = useState<string>("3034"); // BSB - Always working
   const [books, setBooks] = useState<any[]>([]);
-  const [selectedBook, setSelectedBook] = useState<string>("");
+  const [selectedBook, setSelectedBook] = useState<string>("GEN");
   const [chapters, setChapters] = useState<any[]>([]);
-  const [selectedChapter, setSelectedChapter] = useState<string>("");
+  const [selectedChapter, setSelectedChapter] = useState<string>("GEN.1");
   const [verseData, setVerseData] = useState<any>(null);
   const [loading, setLoading] = useState({ bibles: true, books: false, chapters: false, verse: false });
   const [error, setError] = useState<string | null>(null);
@@ -26,13 +26,8 @@ export default function BibleReader() {
         const list = await getBibles();
         const safeList = Array.isArray(list) ? list : [];
         setBibles(safeList);
-        if (safeList.length > 0) {
-          // Check if 3034 exists, else pick first
-          const defaultBible = safeList.find(b => String(b.id) === "3034") || safeList[0];
-          setSelectedBible(String(defaultBible.id));
-        }
       } catch (e) {
-        setError("Failed to load Bible versions.");
+        setError("Bible versions load nahi ho paaye.");
       } finally {
         setLoading((prev) => ({ ...prev, bibles: false }));
       }
@@ -49,13 +44,10 @@ export default function BibleReader() {
         const list = await getBooks(selectedBible);
         const safeList = Array.isArray(list) ? list : [];
         setBooks(safeList);
-        if (safeList.length > 0) {
+        if (safeList.length > 0 && !selectedBook) {
           setSelectedBook(safeList[0].id);
-        } else {
-          setSelectedBook("");
         }
       } catch (e) {
-        console.error("Books error:", e);
         setBooks([]);
       } finally {
         setLoading(prev => ({ ...prev, books: false }));
@@ -66,24 +58,17 @@ export default function BibleReader() {
 
   // Load Chapters
   useEffect(() => {
-    if (!selectedBible || !selectedBook) {
-      setChapters([]);
-      setSelectedChapter("");
-      return;
-    }
+    if (!selectedBible || !selectedBook) return;
     const loadChapters = async () => {
       setLoading(prev => ({ ...prev, chapters: true }));
       try {
         const list = await getChapters(selectedBible, selectedBook);
         const safeList = Array.isArray(list) ? list : [];
         setChapters(safeList);
-        if (safeList.length > 0) {
+        if (safeList.length > 0 && (!selectedChapter || !selectedChapter.startsWith(selectedBook))) {
           setSelectedChapter(safeList[0].id);
-        } else {
-          setSelectedChapter("");
         }
       } catch (e) {
-        console.error("Chapters error:", e);
         setChapters([]);
       } finally {
         setLoading(prev => ({ ...prev, chapters: false }));
@@ -101,7 +86,7 @@ export default function BibleReader() {
       const data = await getPassage(selectedBible, usfm);
       setVerseData(data);
     } catch (e: any) {
-      setError(e.message || "Failed to load scripture content.");
+      setError("Scripture load karne mein dikkat aa rahi hai.");
     } finally {
       setLoading((prev) => ({ ...prev, verse: false }));
     }
@@ -121,7 +106,7 @@ export default function BibleReader() {
           {/* Bible Selector */}
           <div className="space-y-2">
             <label className="text-xs text-zinc-400 uppercase font-bold tracking-wider">Version</label>
-            <Select value={selectedBible} onValueChange={setSelectedBible} disabled={loading.bibles}>
+            <Select value={selectedBible} onValueChange={(val) => { setSelectedBible(val); setSelectedBook(""); setSelectedChapter(""); }}>
               <SelectTrigger className="bg-zinc-800 border-zinc-700">
                 {loading.bibles ? <Skeleton className="h-5 w-full" /> : <SelectValue placeholder="Select Bible" />}
               </SelectTrigger>
@@ -138,7 +123,7 @@ export default function BibleReader() {
           {/* Book Selector */}
           <div className="space-y-2">
             <label className="text-xs text-zinc-400 uppercase font-bold tracking-wider">Book</label>
-            <Select value={selectedBook} onValueChange={setSelectedBook} disabled={loading.books || books.length === 0}>
+            <Select value={selectedBook} onValueChange={(val) => { setSelectedBook(val); setSelectedChapter(""); }} disabled={loading.books || books.length === 0}>
               <SelectTrigger className="bg-zinc-800 border-zinc-700">
                 {loading.books ? <Skeleton className="h-5 w-full" /> : <SelectValue placeholder={books.length === 0 ? "No Books" : "Select Book"} />}
               </SelectTrigger>
@@ -178,7 +163,7 @@ export default function BibleReader() {
             {loading.verse ? (
               <div className="flex flex-col items-center justify-center py-20 space-y-4">
                 <Loader2 className="w-10 h-10 text-emerald-500 animate-spin" />
-                <p className="text-zinc-500 animate-pulse font-serif">Scripture load ho raha hai...</p>
+                <p className="text-zinc-500 animate-pulse font-serif">Vachan load ho raha hai...</p>
               </div>
             ) : error ? (
               <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
@@ -186,7 +171,6 @@ export default function BibleReader() {
                   <BookOpen className="w-10 h-10 text-red-500" />
                 </div>
                 <p className="text-red-400 font-medium">⚠️ {error}</p>
-                <button onClick={() => loadPassageContent(selectedChapter)} className="text-emerald-500 text-sm hover:underline">Retry</button>
               </div>
             ) : verseData ? (
               <div className="prose prose-invert max-w-none">
@@ -195,7 +179,7 @@ export default function BibleReader() {
                     {verseData.reference || "Holy Scripture"}
                   </h3>
                   <div className="bg-zinc-800 px-3 py-1 rounded text-[10px] text-zinc-400 font-mono uppercase">
-                    USFM: {selectedChapter}
+                    {selectedChapter}
                   </div>
                 </div>
                 <div 
@@ -210,8 +194,8 @@ export default function BibleReader() {
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-20 text-center opacity-40">
-                <Book className="w-16 h-16 mb-4" />
-                <p className="text-lg font-serif italic">Prabhu ka vachan padhne ke liye chapter select kijiye.</p>
+                <BookOpen className="w-16 h-16 mb-4" />
+                <p className="text-lg font-serif italic">Select a chapter to read.</p>
               </div>
             )}
           </div>
