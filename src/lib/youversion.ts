@@ -43,43 +43,7 @@ export async function getBibles() {
 }
 
 /**
- * Get Books for a Bible ID
- */
-export async function getBooks(bibleId: string) {
-  if (!bibleId) return [];
-  try {
-    const data = await fetchYouVersionAPI(`/v1/bibles/${bibleId}/books`);
-    if (!data) return [];
-    if (Array.isArray(data)) return data;
-    if (data?.data && Array.isArray(data.data)) return data.data;
-    if (data?.books && Array.isArray(data.books)) return data.books;
-    return [];
-  } catch (e) {
-    console.error("getBooks failed:", e);
-    return [];
-  }
-}
-
-/**
- * Get Chapters for a Book
- */
-export async function getChapters(bibleId: string, bookId: string) {
-  if (!bibleId || !bookId) return [];
-  try {
-    const data = await fetchYouVersionAPI(`/v1/bibles/${bibleId}/books/${bookId}/chapters`);
-    if (!data) return [];
-    if (Array.isArray(data)) return data;
-    if (data?.data && Array.isArray(data.data)) return data.data;
-    if (data?.chapters && Array.isArray(data.chapters)) return data.chapters;
-    return [];
-  } catch (e) {
-    console.error("getChapters failed:", e);
-    return [];
-  }
-}
-
-/**
- * Get Passage Content
+ * Get Passage Content (Chapter or Verse)
  */
 export async function getPassage(bibleId: string, usfm: string) {
   if (!bibleId || !usfm) return { content: "Missing selection", reference: "" };
@@ -93,7 +57,7 @@ export async function getPassage(bibleId: string, usfm: string) {
     console.error('getPassage error', err);
     return { 
       id: usfm, 
-      content: "Scripture load nahi ho paya. Please working version select kijiye.", 
+      content: "Scripture load nahi ho paya. Please USFM format (e.g., JHN.3.16) check karein.", 
       reference: "Error" 
     };
   }

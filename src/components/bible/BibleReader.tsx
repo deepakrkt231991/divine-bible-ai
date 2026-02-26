@@ -3,20 +3,19 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getBibles, getPassage, getBooks, getChapters } from "@/lib/youversion";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { getBibles, getPassage } from "@/lib/youversion";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BookOpen, Loader2 } from "lucide-react";
+import { BookOpen, Loader2, Search, PlayCircle } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function BibleReader() {
   const [bibles, setBibles] = useState<any[]>([]);
   const [selectedBible, setSelectedBible] = useState<string>("3034"); // BSB - Always working default
-  const [books, setBooks] = useState<any[]>([]);
-  const [selectedBook, setSelectedBook] = useState<string>("GEN");
-  const [chapters, setChapters] = useState<any[]>([]);
-  const [selectedChapter, setSelectedChapter] = useState<string>("GEN.1");
+  const [verseInput, setVerseInput] = useState<string>("JHN.3.16");
   const [verseData, setVerseData] = useState<any>(null);
-  const [loading, setLoading] = useState({ bibles: true, books: false, chapters: false, verse: false });
+  const [loading, setLoading] = useState({ bibles: true, verse: false });
   const [error, setError] = useState<string | null>(null);
 
   // Load Bibles
@@ -35,51 +34,9 @@ export default function BibleReader() {
     loadBibles();
   }, []);
 
-  // Load Books
-  useEffect(() => {
-    if (!selectedBible) return;
-    const loadBooks = async () => {
-      setLoading(prev => ({ ...prev, books: true }));
-      try {
-        const list = await getBooks(selectedBible);
-        const safeList = Array.isArray(list) ? list : [];
-        setBooks(safeList);
-        // Don't auto-reset if we already have a selection
-        if (safeList.length > 0 && !selectedBook) {
-          setSelectedBook(safeList[0].id);
-        }
-      } catch (e) {
-        setBooks([]);
-      } finally {
-        setLoading(prev => ({ ...prev, books: false }));
-      }
-    };
-    loadBooks();
-  }, [selectedBible]);
-
-  // Load Chapters
-  useEffect(() => {
-    if (!selectedBible || !selectedBook) return;
-    const loadChapters = async () => {
-      setLoading(prev => ({ ...prev, chapters: true }));
-      try {
-        const list = await getChapters(selectedBible, selectedBook);
-        const safeList = Array.isArray(list) ? list : [];
-        setChapters(safeList);
-        if (safeList.length > 0 && (!selectedChapter || !selectedChapter.startsWith(selectedBook))) {
-          setSelectedChapter(safeList[0].id);
-        }
-      } catch (e) {
-        setChapters([]);
-      } finally {
-        setLoading(prev => ({ ...prev, chapters: false }));
-      }
-    };
-    loadChapters();
-  }, [selectedBible, selectedBook]);
-
   // Load Verse Content
-  const loadPassageContent = useCallback(async (usfm: string) => {
+  const loadPassageContent = useCallback(async (usfmOverride?: string) => {
+    const usfm = usfmOverride || verseInput;
     if (!selectedBible || !usfm) return;
     setLoading((prev) => ({ ...prev, verse: true }));
     setError(null);
@@ -91,23 +48,21 @@ export default function BibleReader() {
     } finally {
       setLoading((prev) => ({ ...prev, verse: false }));
     }
-  }, [selectedBible]);
+  }, [selectedBible, verseInput]);
 
-  // Trigger content load when chapter changes
+  // Initial load
   useEffect(() => {
-    if (selectedChapter) {
-      loadPassageContent(selectedChapter);
-    }
-  }, [selectedChapter, loadPassageContent]);
+    loadPassageContent("JHN.3.16");
+  }, []);
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       <Card className="p-4 bg-zinc-900 border-zinc-800 shadow-2xl">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Bible Selector */}
           <div className="space-y-2">
             <label className="text-xs text-zinc-400 uppercase font-bold tracking-wider">Version</label>
-            <Select value={selectedBible} onValueChange={(val) => { setSelectedBible(val); setSelectedBook(""); setSelectedChapter(""); }}>
+            <Select value={selectedBible} onValueChange={setSelectedBible}>
               <SelectTrigger className="bg-zinc-800 border-zinc-700">
                 {loading.bibles ? <Skeleton className="h-5 w-full" /> : <SelectValue placeholder="Select Bible" />}
               </SelectTrigger>
@@ -121,44 +76,40 @@ export default function BibleReader() {
             </Select>
           </div>
 
-          {/* Book Selector */}
+          {/* Verse Input */}
           <div className="space-y-2">
-            <label className="text-xs text-zinc-400 uppercase font-bold tracking-wider">Book</label>
-            <Select value={selectedBook} onValueChange={(val) => { setSelectedBook(val); setSelectedChapter(""); }} disabled={loading.books || books.length === 0}>
-              <SelectTrigger className="bg-zinc-800 border-zinc-700">
-                {loading.books ? <Skeleton className="h-5 w-full" /> : <SelectValue placeholder={books.length === 0 ? "No Books" : "Select Book"} />}
-              </SelectTrigger>
-              <SelectContent className="max-h-60 bg-zinc-900 border-zinc-700">
-                {Array.isArray(books) && books.map((bk) => (
-                  <SelectItem key={bk.id} value={bk.id}>
-                    {bk.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <label className="text-xs text-zinc-400 uppercase font-bold tracking-wider">Verse (USFM Format)</label>
+            <div className="flex gap-2">
+              <Input 
+                value={verseInput}
+                onChange={(e) => setVerseInput(e.target.value)}
+                placeholder="e.g., JHN.3.16 or GEN.1"
+                className="bg-zinc-800 border-zinc-700"
+                onKeyDown={(e) => e.key === 'Enter' && loadPassageContent()}
+              />
+              <Button onClick={() => loadPassageContent()} disabled={loading.verse} className="bg-emerald-600 hover:bg-emerald-500">
+                {loading.verse ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+              </Button>
+            </div>
           </div>
+        </div>
 
-          {/* Chapter Selector */}
-          <div className="space-y-2">
-            <label className="text-xs text-zinc-400 uppercase font-bold tracking-wider">Chapter</label>
-            <Select value={selectedChapter} onValueChange={setSelectedChapter} disabled={loading.chapters || chapters.length === 0}>
-              <SelectTrigger className="bg-zinc-800 border-zinc-700">
-                {loading.chapters ? <Skeleton className="h-5 w-full" /> : <SelectValue placeholder={chapters.length === 0 ? "No Chapters" : "Select Chapter"} />}
-              </SelectTrigger>
-              <SelectContent className="max-h-60 bg-zinc-900 border-zinc-700">
-                {Array.isArray(chapters) && chapters.map((ch) => (
-                  <SelectItem key={ch.id} value={ch.id}>
-                    Chapter {ch.number || ch.id.split('.').pop()}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        {/* Quick Tests */}
+        <div className="flex flex-wrap gap-2 mt-4">
+          <Button variant="outline" size="sm" onClick={() => { setVerseInput("PSA.23.1"); loadPassageContent("PSA.23.1"); }} className="text-xs border-zinc-700 hover:bg-zinc-800">
+            Psalm 23:1
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => { setVerseInput("GEN.1"); loadPassageContent("GEN.1"); }} className="text-xs border-zinc-700 hover:bg-zinc-800">
+            Genesis 1
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => { setVerseInput("ROM.8.28"); loadPassageContent("ROM.8.28"); }} className="text-xs border-zinc-700 hover:bg-zinc-800">
+            Romans 8:28
+          </Button>
         </div>
       </Card>
 
       {/* Content Section */}
-      <Card className="min-h-[50vh] bg-zinc-900 border-zinc-800 overflow-hidden relative">
+      <Card className="min-h-[50vh] bg-zinc-900 border-zinc-800 overflow-hidden relative shadow-2xl">
         <ScrollArea className="h-full max-h-[70vh]">
           <div className="p-8">
             {loading.verse ? (
@@ -179,8 +130,10 @@ export default function BibleReader() {
                   <h3 className="text-3xl font-serif text-emerald-500 m-0">
                     {verseData.reference || "Holy Scripture"}
                   </h3>
-                  <div className="bg-zinc-800 px-3 py-1 rounded text-[10px] text-zinc-400 font-mono uppercase">
-                    {selectedChapter}
+                  <div className="flex gap-2">
+                    <Button variant="ghost" size="icon" className="text-zinc-500 hover:text-emerald-500">
+                      <PlayCircle className="w-5 h-5" />
+                    </Button>
                   </div>
                 </div>
                 <div 
@@ -196,7 +149,7 @@ export default function BibleReader() {
             ) : (
               <div className="flex flex-col items-center justify-center py-20 text-center opacity-40">
                 <BookOpen className="w-16 h-16 mb-4" />
-                <p className="text-lg font-serif italic">Select a chapter to read.</p>
+                <p className="text-lg font-serif italic">USFM format mein verse search kijiye.</p>
               </div>
             )}
           </div>
