@@ -12,13 +12,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function BibleReader() {
   const [bibles, setBibles] = useState<any[]>([]);
-  const [selectedBible, setSelectedBible] = useState<string>("3034"); // BSB - Always working default
+  const [selectedBible, setSelectedBible] = useState<string>("3034"); // BSB - Known working ID
   const [verseInput, setVerseInput] = useState<string>("JHN.3.16");
   const [verseData, setVerseData] = useState<any>(null);
   const [loading, setLoading] = useState({ bibles: true, verse: false });
   const [error, setError] = useState<string | null>(null);
 
-  // Load Bibles
+  // Load Bibles on mount
   useEffect(() => {
     const loadBibles = async () => {
       try {
@@ -34,7 +34,7 @@ export default function BibleReader() {
     loadBibles();
   }, []);
 
-  // Load Verse Content
+  // Load Passage Content
   const loadPassageContent = useCallback(async (usfmOverride?: string) => {
     const usfm = usfmOverride || verseInput;
     if (!selectedBible || !usfm) return;
@@ -50,10 +50,10 @@ export default function BibleReader() {
     }
   }, [selectedBible, verseInput]);
 
-  // Initial load
+  // Initial load of John 3:16
   useEffect(() => {
     loadPassageContent("JHN.3.16");
-  }, []);
+  }, [loadPassageContent]);
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
@@ -94,7 +94,7 @@ export default function BibleReader() {
           </div>
         </div>
 
-        {/* Quick Tests */}
+        {/* Quick Test Shortcuts */}
         <div className="flex flex-wrap gap-2 mt-4">
           <Button variant="outline" size="sm" onClick={() => { setVerseInput("PSA.23.1"); loadPassageContent("PSA.23.1"); }} className="text-xs border-zinc-700 hover:bg-zinc-800">
             Psalm 23:1

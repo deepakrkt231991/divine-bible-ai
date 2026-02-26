@@ -28,14 +28,14 @@ async function fetchYouVersionAPI(endpoint: string) {
 }
 
 /**
- * Get Bibles (Fixed 422 with language_ranges[])
+ * Get Bibles (Fixed 422 with language_ranges[] required by YouVersion)
  */
 export async function getBibles() {
   const path = "/v1/bibles?language_ranges%5B%5D=*"; 
   try {
     const data = await fetchYouVersionAPI(path);
     if (!data) return [];
-    // The API sometimes returns data inside a 'data' or 'bibles' property
+    // Handle different response shapes
     return Array.isArray(data) ? data : data?.data || data?.bibles || [];
   } catch (err) {
     console.error('getBibles error', err);
@@ -71,6 +71,6 @@ export async function getSingleVerse(bibleId: string, verseUsfm: string) {
   return getPassage(bibleId, verseUsfm);
 }
 
-// Dummy empty functions to prevent build errors in case they are imported
+// Dummy empty functions to prevent build errors
 export async function getBooks(bibleId: string) { return []; }
 export async function getChapters(bibleId: string, bookId: string) { return []; }
