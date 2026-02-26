@@ -34,6 +34,7 @@ export async function getBibles() {
   const path = "/v1/bibles?language_ranges%5B%5D=*"; 
   try {
     const data = await fetchYouVersionAPI(path);
+    if (!data) return [];
     return Array.isArray(data) ? data : data?.data || data?.bibles || [];
   } catch (err) {
     console.error('getBibles error', err);
@@ -48,6 +49,7 @@ export async function getBooks(bibleId: string) {
   if (!bibleId) return [];
   try {
     const data = await fetchYouVersionAPI(`/v1/bibles/${bibleId}/books`);
+    if (!data) return [];
     if (Array.isArray(data)) return data;
     if (data?.data && Array.isArray(data.data)) return data.data;
     if (data?.books && Array.isArray(data.books)) return data.books;
@@ -65,6 +67,7 @@ export async function getChapters(bibleId: string, bookId: string) {
   if (!bibleId || !bookId) return [];
   try {
     const data = await fetchYouVersionAPI(`/v1/bibles/${bibleId}/books/${bookId}/chapters`);
+    if (!data) return [];
     if (Array.isArray(data)) return data;
     if (data?.data && Array.isArray(data.data)) return data.data;
     if (data?.chapters && Array.isArray(data.chapters)) return data.chapters;
@@ -84,17 +87,14 @@ export async function getPassage(bibleId: string, usfm: string) {
   const endpoint = `/v1/bibles/${bibleId}/passages/${encodeURIComponent(usfm)}`;
   try {
     const data = await fetchYouVersionAPI(endpoint);
-    return data || { 
-      id: usfm, 
-      content: "Scripture load nahi ho paya. Please working version select kijiye.", 
-      reference: "Error" 
-    };
+    if (!data) throw new Error("No data returned");
+    return data;
   } catch (err) {
     console.error('getPassage error', err);
     return { 
       id: usfm, 
-      content: "Unable to load scripture. Path might be invalid for this version.", 
-      reference: "Not Found" 
+      content: "Scripture load nahi ho paya. Please working version select kijiye.", 
+      reference: "Error" 
     };
   }
 }

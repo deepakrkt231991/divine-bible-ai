@@ -5,12 +5,12 @@ import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getBibles, getPassage, getBooks, getChapters } from "@/lib/youversion";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BookOpen, Loader2, Book } from "lucide-react";
+import { BookOpen, Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function BibleReader() {
   const [bibles, setBibles] = useState<any[]>([]);
-  const [selectedBible, setSelectedBible] = useState<string>("3034"); // BSB - Always working
+  const [selectedBible, setSelectedBible] = useState<string>("3034"); // BSB - Always working default
   const [books, setBooks] = useState<any[]>([]);
   const [selectedBook, setSelectedBook] = useState<string>("GEN");
   const [chapters, setChapters] = useState<any[]>([]);
@@ -44,6 +44,7 @@ export default function BibleReader() {
         const list = await getBooks(selectedBible);
         const safeList = Array.isArray(list) ? list : [];
         setBooks(safeList);
+        // Don't auto-reset if we already have a selection
         if (safeList.length > 0 && !selectedBook) {
           setSelectedBook(safeList[0].id);
         }
@@ -111,7 +112,7 @@ export default function BibleReader() {
                 {loading.bibles ? <Skeleton className="h-5 w-full" /> : <SelectValue placeholder="Select Bible" />}
               </SelectTrigger>
               <SelectContent className="max-h-60 bg-zinc-900 border-zinc-700">
-                {bibles.map((b) => (
+                {Array.isArray(bibles) && bibles.map((b) => (
                   <SelectItem key={b.id} value={String(b.id)}>
                     {b.name}
                   </SelectItem>
@@ -128,7 +129,7 @@ export default function BibleReader() {
                 {loading.books ? <Skeleton className="h-5 w-full" /> : <SelectValue placeholder={books.length === 0 ? "No Books" : "Select Book"} />}
               </SelectTrigger>
               <SelectContent className="max-h-60 bg-zinc-900 border-zinc-700">
-                {books.map((bk) => (
+                {Array.isArray(books) && books.map((bk) => (
                   <SelectItem key={bk.id} value={bk.id}>
                     {bk.name}
                   </SelectItem>
@@ -145,7 +146,7 @@ export default function BibleReader() {
                 {loading.chapters ? <Skeleton className="h-5 w-full" /> : <SelectValue placeholder={chapters.length === 0 ? "No Chapters" : "Select Chapter"} />}
               </SelectTrigger>
               <SelectContent className="max-h-60 bg-zinc-900 border-zinc-700">
-                {chapters.map((ch) => (
+                {Array.isArray(chapters) && chapters.map((ch) => (
                   <SelectItem key={ch.id} value={ch.id}>
                     Chapter {ch.number || ch.id.split('.').pop()}
                   </SelectItem>
