@@ -15,7 +15,7 @@ async function fetchYouVersionAPI(endpoint: string) {
     try { errBody = await res.json(); } 
     catch { errBody = { message: await res.text() }; }
     
-    console.error('[YouVersion Lib Error]', { status: res.status, body: errBody });
+    console.error('[YouVersion Lib Error]', { status: res.status, body: errBody, path });
     throw new Error(`API failed: ${res.status} - ${JSON.stringify(errBody)}`);
   }
 
@@ -41,9 +41,14 @@ export async function getBibles() {
  * Get Books for a Bible ID
  */
 export async function getBooks(bibleId: string) {
+  if (!bibleId) return [];
   try {
     const data = await fetchYouVersionAPI(`/v1/bibles/${bibleId}/books`);
-    return Array.isArray(data) ? data : (data?.data || []);
+    // Handle different API response shapes
+    if (Array.isArray(data)) return data;
+    if (data?.data && Array.isArray(data.data)) return data.data;
+    if (data?.books && Array.isArray(data.books)) return data.books;
+    return [];
   } catch (e) {
     console.error("getBooks failed:", e);
     return [];
@@ -54,9 +59,14 @@ export async function getBooks(bibleId: string) {
  * Get Chapters for a Book
  */
 export async function getChapters(bibleId: string, bookId: string) {
+  if (!bibleId || !bookId) return [];
   try {
     const data = await fetchYouVersionAPI(`/v1/bibles/${bibleId}/books/${bookId}/chapters`);
-    return Array.isArray(data) ? data : (data?.data || []);
+    // Handle different API response shapes
+    if (Array.isArray(data)) return data;
+    if (data?.data && Array.isArray(data.data)) return data.data;
+    if (data?.chapters && Array.isArray(data.chapters)) return data.chapters;
+    return [];
   } catch (e) {
     console.error("getChapters failed:", e);
     return [];
@@ -77,8 +87,8 @@ export async function getPassage(bibleId: string, usfm: string) {
     console.error('getPassage error', err);
     return { 
       id: usfm, 
-      content: "Unable to load verse. Please try again.", 
-      reference: "Error" 
+      content: "Unable to load scripture. Path might be invalid for this version.", 
+      reference: "Not Found" 
     };
   }
 }
