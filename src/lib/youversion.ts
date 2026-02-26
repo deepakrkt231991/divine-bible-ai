@@ -1,5 +1,5 @@
 /**
- * Utility to fetch data from YouVersion API via the local proxy to avoid CORS issues.
+ * Utility to fetch data from YouVersion API via the local proxy.
  */
 async function fetchYouVersion(endpoint: string, params: Record<string, string> = {}) {
   const query = new URLSearchParams();
@@ -17,7 +17,7 @@ async function fetchYouVersion(endpoint: string, params: Record<string, string> 
     } catch {
       errorData = { error: `API ${res.status}` };
     }
-    console.error("❌ YouVersion API Error:", res.status, errorData);
+    console.error("❌ YouVersion Proxy Error:", res.status, errorData);
     throw new Error(errorData.error || `API ${res.status}`);
   }
 
@@ -28,7 +28,6 @@ async function fetchYouVersion(endpoint: string, params: Record<string, string> 
  * Fetches a list of available Bibles. Required param: language_ranges[]
  */
 export async function getBibles() {
-  // language_ranges[] is required - use * for all or specify e.g. hi,en
   try {
     const data = await fetchYouVersion('/v1/bibles', { "language_ranges[]": "*" });
     return Array.isArray(data) ? data : (data?.data || data?.bibles || []);
@@ -78,14 +77,14 @@ export async function getPassage(bibleId: string, passageId: string) {
     console.error("getPassage failed:", e);
     return {
       reference: passageId || "Error",
-      content: "<p>Passage load nahi ho saka. Kripya reference check karein.</p>",
+      content: "<p>Unable to load content. Please check your connection.</p>",
       copyright: ""
     };
   }
 }
 
 /**
- * Export getSingleVerse to prevent home page build from breaking.
+ * Export getSingleVerse to support Home Page build.
  */
 export async function getSingleVerse(bibleId: string, passageId: string) {
   return getPassage(bibleId, passageId);

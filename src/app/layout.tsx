@@ -6,7 +6,6 @@ import { Toaster } from "@/components/ui/toaster"
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-serif", weight: ['400', '700'] });
 
-
 export const metadata: Metadata = {
   title: 'Divine Compass',
   description: 'Your guide to the scriptures. Read, reflect, and grow in your faith.',

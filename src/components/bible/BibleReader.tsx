@@ -14,7 +14,7 @@ export default function BibleReader() {
   const [chapters, setChapters] = useState<any[]>([]);
   const [passage, setPassage] = useState<any>(null);
 
-  const [selectedBible, setSelectedBible] = useState("3034"); // BSB - Default safe ID
+  const [selectedBible, setSelectedBible] = useState("3034"); // Default: BSB
   const [selectedBook, setSelectedBook] = useState("GEN");
   const [selectedChapter, setSelectedChapter] = useState("GEN.1");
 
@@ -26,124 +26,122 @@ export default function BibleReader() {
   });
   const { toast } = useToast();
 
-  // Load Bibles on mount
+  // Initial Load
   useEffect(() => {
-    setLoading(prev => ({ ...prev, bibles: true }));
-    getBibles().then(list => {
-      setBibles(Array.isArray(list) ? list : []);
-      setLoading(prev => ({ ...prev, bibles: false }));
-    }).catch(() => {
-      toast({ variant: "destructive", title: "Error", description: "Bible versions load nahi hue" });
-      setLoading(prev => ({ ...prev, bibles: false }));
-    });
+    const init = async () => {
+      setLoading(prev => ({ ...prev, bibles: true }));
+      try {
+        const list = await getBibles();
+        setBibles(Array.isArray(list) ? list : []);
+        
+        // Debug test JHN.3.16
+        const test = await getPassage("3034", "JHN.3.16");
+        console.log("Debug Test JHN.3.16:", test);
+      } catch (e) {
+        toast({ variant: "destructive", title: "API Error", description: "Bibles load nahi hui" });
+      } finally {
+        setLoading(prev => ({ ...prev, bibles: false }));
+      }
+    };
+    init();
   }, [toast]);
 
-  // Load Books when Bible changes
+  // Load Books
   useEffect(() => {
     if (!selectedBible) return;
     setLoading(prev => ({ ...prev, books: true }));
     getBooks(selectedBible).then(list => {
-      const bookList = Array.isArray(list) ? list : [];
-      setBooks(bookList);
-      if (bookList.length > 0 && !bookList.find((b: any) => b.id === selectedBook)) {
-        setSelectedBook(bookList[0].id);
-      }
-    }).catch(() => toast({ variant: "destructive", description: "Books load nahi hue" }))
-    .finally(() => setLoading(prev => ({ ...prev, books: false })));
-  }, [selectedBible, selectedBook, toast]);
+      setBooks(Array.isArray(list) ? list : []);
+    }).finally(() => setLoading(prev => ({ ...prev, books: false })));
+  }, [selectedBible]);
 
-  // Load Chapters when Book changes
+  // Load Chapters
   useEffect(() => {
     if (!selectedBible || !selectedBook) return;
     setLoading(prev => ({ ...prev, chapters: true }));
     getChapters(selectedBible, selectedBook).then(list => {
-      const chapterList = Array.isArray(list) ? list : [];
-      setChapters(chapterList);
-      if (chapterList.length > 0) {
-        setSelectedChapter(chapterList[0].id);
+      setChapters(Array.isArray(list) ? list : []);
+      if (Array.isArray(list) && list.length > 0) {
+        setSelectedChapter(list[0].id);
       }
-    }).catch(() => toast({ variant: "destructive", description: "Chapters load nahi hue" }))
-    .finally(() => setLoading(prev => ({ ...prev, chapters: false })));
-  }, [selectedBible, selectedBook, toast]);
+    }).finally(() => setLoading(prev => ({ ...prev, chapters: false })));
+  }, [selectedBible, selectedBook]);
 
-  // Load Passage when Chapter changes
+  // Load Passage
   useEffect(() => {
     if (!selectedBible || !selectedChapter) return;
-    
-    const loadPassage = async () => {
-      setLoading(prev => ({ ...prev, passage: true }));
-      try {
-        const data = await getPassage(selectedBible, selectedChapter);
-        setPassage(data);
-      } catch (error) {
-        toast({ variant: "destructive", description: "Passage load nahi ho saka" });
-      } finally {
-        setLoading(prev => ({ ...prev, passage: false }));
-      }
-    };
-    
-    loadPassage();
-  }, [selectedBible, selectedChapter, toast]);
+    setLoading(prev => ({ ...prev, passage: true }));
+    getPassage(selectedBible, selectedChapter).then(data => {
+      setPassage(data);
+    }).finally(() => setLoading(prev => ({ ...prev, passage: false })));
+  }, [selectedBible, selectedChapter]);
 
   return (
-    <Card className="border-0 shadow-none bg-transparent">
-      <CardHeader className="sticky top-0 bg-zinc-950/90 backdrop-blur z-10">
-        <CardTitle className="text-3xl font-serif text-center">📖 Read the Bible</CardTitle>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+    <Card className="border-zinc-800 bg-zinc-900/50 shadow-xl overflow-hidden">
+      <CardHeader className="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur sticky top-0 z-20">
+        <CardTitle className="text-2xl font-serif text-emerald-500 text-center mb-4">📖 Holy Scriptures</CardTitle>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <Select value={selectedBible} onValueChange={setSelectedBible} disabled={loading.bibles}>
-            <SelectTrigger><SelectValue placeholder="Bible Version" /></SelectTrigger>
-            <SelectContent>
+            <SelectTrigger className="bg-zinc-950 border-zinc-800"><SelectValue placeholder="Version" /></SelectTrigger>
+            <SelectContent className="bg-zinc-900 border-zinc-800">
               {Array.isArray(bibles) && bibles.length > 0 ? (
                 bibles.map(b => (
-                  <SelectItem key={b.id} value={b.id.toString()}>
-                    {b.nameLocal || b.name} ({b.abbreviationLocal || b.abbreviation})
-                  </SelectItem>
+                  <SelectItem key={b.id} value={b.id.toString()}>{b.nameLocal || b.name}</SelectItem>
                 ))
               ) : (
-                <SelectItem value="none" disabled>No versions found</SelectItem>
+                <SelectItem value="loading" disabled>Loading...</SelectItem>
               )}
             </SelectContent>
           </Select>
 
-          <Select value={selectedBook} onValueChange={setSelectedBook} disabled={loading.books || bibles.length === 0}>
-            <SelectTrigger><SelectValue placeholder="Book" /></SelectTrigger>
-            <SelectContent>
+          <Select value={selectedBook} onValueChange={setSelectedBook} disabled={loading.books}>
+            <SelectTrigger className="bg-zinc-950 border-zinc-800"><SelectValue placeholder="Book" /></SelectTrigger>
+            <SelectContent className="bg-zinc-900 border-zinc-800">
               {Array.isArray(books) && books.length > 0 ? (
                 books.map(b => (
                   <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
                 ))
               ) : (
-                <SelectItem value="none" disabled>No books found</SelectItem>
+                <SelectItem value="loading" disabled>Loading...</SelectItem>
               )}
             </SelectContent>
           </Select>
 
-          <Select value={selectedChapter} onValueChange={setSelectedChapter} disabled={loading.chapters || books.length === 0}>
-            <SelectTrigger><SelectValue placeholder="Chapter" /></SelectTrigger>
-            <SelectContent>
+          <Select value={selectedChapter} onValueChange={setSelectedChapter} disabled={loading.chapters}>
+            <SelectTrigger className="bg-zinc-950 border-zinc-800"><SelectValue placeholder="Chapter" /></SelectTrigger>
+            <SelectContent className="bg-zinc-900 border-zinc-800">
               {Array.isArray(chapters) && chapters.length > 0 ? (
                 chapters.map(c => (
                   <SelectItem key={c.id} value={c.id}>{c.number}</SelectItem>
                 ))
               ) : (
-                <SelectItem value="none" disabled>No chapters available</SelectItem>
+                <SelectItem value="loading" disabled>No chapters</SelectItem>
               )}
             </SelectContent>
           </Select>
         </div>
       </CardHeader>
 
-      <CardContent className="pt-6">
-        <ScrollArea className="h-[60vh]">
-          {passage ? (
-            <div className="prose dark:prose-invert max-w-none">
-              <h2 className="text-2xl mb-4">{passage.reference || selectedChapter}</h2>
-              <div dangerouslySetInnerHTML={{ __html: passage.content || "No content available" }} />
-              <p className="text-xs text-muted-foreground mt-4">{passage.copyright || ""}</p>
+      <CardContent className="p-0">
+        <ScrollArea className="h-[65vh] p-6">
+          {loading.passage ? (
+            <div className="space-y-4">
+              <Skeleton className="h-8 w-3/4 bg-zinc-800" />
+              <Skeleton className="h-4 w-full bg-zinc-800" />
+              <Skeleton className="h-4 w-5/6 bg-zinc-800" />
+              <Skeleton className="h-4 w-full bg-zinc-800" />
+            </div>
+          ) : passage ? (
+            <div className="prose prose-invert max-w-none prose-emerald prose-p:leading-relaxed prose-p:text-zinc-300">
+              <h2 className="text-3xl font-serif text-white mb-6 border-b border-zinc-800 pb-2">
+                {typeof passage.reference === 'string' ? passage.reference : (passage.reference?.human || selectedChapter)}
+              </h2>
+              <div dangerouslySetInnerHTML={{ __html: passage.content || "<p>No content available.</p>" }} />
+              {passage.copyright && <p className="text-[10px] text-zinc-500 mt-12 italic">{passage.copyright}</p>}
             </div>
           ) : (
-            <div className="text-center text-zinc-400 py-10">
-              {loading.passage ? <Skeleton className="h-40 w-full" /> : "Select Bible, Book & Chapter to read"}
+            <div className="flex flex-col items-center justify-center h-full text-zinc-500 py-20">
+              <p>Selection kijiye scripture padhne ke liye.</p>
             </div>
           )}
         </ScrollArea>
