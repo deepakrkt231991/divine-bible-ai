@@ -1,4 +1,3 @@
-// app/api/youversion/route.ts
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
@@ -8,14 +7,22 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "No path provided" }, { status: 400 });
   }
 
-  const fullUrl = `https://api.youversion.com${path}`;
+  // Forward all other query params to YouVersion
+  const query = new URLSearchParams();
+  searchParams.forEach((value, key) => {
+    if (key !== "path") query.append(key, value);
+  });
+
+  const queryString = query.toString() ? `?${query.toString()}` : "";
+  const fullUrl = `https://api.youversion.com${path}${queryString}`;
+
   try {
     const res = await fetch(fullUrl, {
       headers: {
-        "X-YVP-App-Key": process.env.NEXT_PUBLIC_YOUVERSION_KEY!,
+        "X-YVP-App-Key": process.env.NEXT_PUBLIC_YOUVERSION_KEY || "",
         "Accept": "application/json",
       },
-      next: { revalidate: 60 } // 1 minute cache
+      next: { revalidate: 3600 } // Cache for 1 hour
     });
 
     if (!res.ok) {

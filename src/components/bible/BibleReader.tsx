@@ -43,14 +43,14 @@ export default function BibleReader() {
     if (!selectedBible) return;
     setLoading(prev => ({ ...prev, books: true }));
     getBooks(selectedBible).then(list => {
-      setBooks(Array.isArray(list) ? list : []);
-      // Reset book and chapter selections to prevent mismatches
-      if (list.length > 0 && !list.find((b: any) => b.id === selectedBook)) {
-        setSelectedBook(list[0].id);
+      const bookList = Array.isArray(list) ? list : [];
+      setBooks(bookList);
+      if (bookList.length > 0 && !bookList.find((b: any) => b.id === selectedBook)) {
+        setSelectedBook(bookList[0].id);
       }
     }).catch(() => toast({ variant: "destructive", description: "Books load nahi hue" }))
     .finally(() => setLoading(prev => ({ ...prev, books: false })));
-  }, [selectedBible, toast]);
+  }, [selectedBible, selectedBook, toast]);
 
   // Load Chapters when Book changes
   useEffect(() => {
@@ -93,20 +93,28 @@ export default function BibleReader() {
           <Select value={selectedBible} onValueChange={setSelectedBible} disabled={loading.bibles}>
             <SelectTrigger><SelectValue placeholder="Bible Version" /></SelectTrigger>
             <SelectContent>
-              {bibles.map(b => (
-                <SelectItem key={b.id} value={b.id.toString()}>
-                  {b.nameLocal || b.name} ({b.abbreviationLocal || b.abbreviation})
-                </SelectItem>
-              ))}
+              {Array.isArray(bibles) && bibles.length > 0 ? (
+                bibles.map(b => (
+                  <SelectItem key={b.id} value={b.id.toString()}>
+                    {b.nameLocal || b.name} ({b.abbreviationLocal || b.abbreviation})
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem value="none" disabled>No versions found</SelectItem>
+              )}
             </SelectContent>
           </Select>
 
           <Select value={selectedBook} onValueChange={setSelectedBook} disabled={loading.books || bibles.length === 0}>
             <SelectTrigger><SelectValue placeholder="Book" /></SelectTrigger>
             <SelectContent>
-              {books.map(b => (
-                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-              ))}
+              {Array.isArray(books) && books.length > 0 ? (
+                books.map(b => (
+                  <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                ))
+              ) : (
+                <SelectItem value="none" disabled>No books found</SelectItem>
+              )}
             </SelectContent>
           </Select>
 
