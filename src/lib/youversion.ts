@@ -35,6 +35,7 @@ export async function getBibles() {
   try {
     const data = await fetchYouVersionAPI(path);
     if (!data) return [];
+    // The API sometimes returns data inside a 'data' or 'bibles' property
     return Array.isArray(data) ? data : data?.data || data?.bibles || [];
   } catch (err) {
     console.error('getBibles error', err);
@@ -69,3 +70,7 @@ export async function getPassage(bibleId: string, usfm: string) {
 export async function getSingleVerse(bibleId: string, verseUsfm: string) {
   return getPassage(bibleId, verseUsfm);
 }
+
+// Dummy empty functions to prevent build errors in case they are imported
+export async function getBooks(bibleId: string) { return []; }
+export async function getChapters(bibleId: string, bookId: string) { return []; }

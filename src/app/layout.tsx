@@ -23,7 +23,7 @@ export default function RootLayout({
       </head>
       <body
         suppressHydrationWarning
-        className={`${inter.variable} ${playfair.variable} font-sans bg-zinc-950 text-zinc-100 selection:bg-emerald-500/30`}
+        className={`${inter.variable} ${playfair.variable} font-sans bg-zinc-950 text-zinc-100 selection:bg-emerald-500/30 overflow-x-hidden`}
       >
         {children}
         <Toaster />
