@@ -56,9 +56,9 @@ export default function MorePage() {
           <button className="text-[10px] font-black uppercase tracking-widest text-emerald-500 px-4 py-2 border border-emerald-500/30 rounded-full">
             Register
           </button>
-          <button className="flex items-center justify-center size-10 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400">
+          <Link href="/profile" className="flex items-center justify-center size-10 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400">
             <User className="w-5 h-5" />
-          </button>
+          </Link>
         </div>
       </header>
 
@@ -104,7 +104,7 @@ export default function MorePage() {
           </div>
           
           <div className="grid grid-cols-1 gap-4">
-            <div className="relative group overflow-hidden rounded-[2rem] aspect-[21/9] border border-zinc-800 cursor-pointer shadow-2xl">
+            <Link href="/ai" className="relative group overflow-hidden rounded-[2rem] aspect-[21/9] border border-zinc-800 cursor-pointer shadow-2xl block">
               <div 
                 className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110"
                 style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1755150427184-5707e795f22e?q=80&w=1080")' }}
@@ -121,10 +121,10 @@ export default function MorePage() {
                   </div>
                 </div>
               </div>
-            </div>
+            </Link>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-zinc-900 border border-zinc-800 rounded-[1.5rem] p-6 flex flex-col gap-4 hover:border-emerald-500/40 transition-all cursor-pointer group">
+              <div onClick={() => toast({ title: "Coming Soon", description: "AI Voice narration is being prepared." })} className="bg-zinc-900 border border-zinc-800 rounded-[1.5rem] p-6 flex flex-col gap-4 hover:border-emerald-500/40 transition-all cursor-pointer group">
                 <div className="size-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center group-hover:bg-emerald-500/20 transition-all">
                   <Mic className="w-6 h-6 text-emerald-500" />
                 </div>
@@ -133,7 +133,7 @@ export default function MorePage() {
                   <p className="text-[10px] text-zinc-500 uppercase tracking-[0.2em] font-black mt-1">Narration</p>
                 </div>
               </div>
-              <div className="bg-zinc-900 border border-zinc-800 rounded-[1.5rem] p-6 flex flex-col gap-4 hover:border-emerald-500/40 transition-all cursor-pointer group">
+              <div onClick={() => toast({ title: "Coming Soon", description: "AI Video reflections feature is in development." })} className="bg-zinc-900 border border-zinc-800 rounded-[1.5rem] p-6 flex flex-col gap-4 hover:border-emerald-500/40 transition-all cursor-pointer group">
                 <div className="size-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center group-hover:bg-emerald-500/20 transition-all">
                   <Video className="w-6 h-6 text-emerald-500" />
                 </div>
@@ -173,7 +173,7 @@ export default function MorePage() {
               <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-emerald-500 transition-all" />
             </Link>
 
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 flex items-center justify-between hover:bg-zinc-900/50 transition-colors cursor-pointer group">
+            <Link href="/profile" className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 flex items-center justify-between hover:bg-zinc-900/50 transition-colors cursor-pointer group block">
               <div className="flex items-center gap-4">
                 <div className="size-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
                   <Bookmark className="w-5 h-5 text-emerald-500" />
@@ -181,7 +181,7 @@ export default function MorePage() {
                 <span className="font-bold text-sm">Saved Bookmarks</span>
               </div>
               <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-emerald-500 transition-all" />
-            </div>
+            </Link>
           </div>
         </section>
 
@@ -200,6 +200,16 @@ export default function MorePage() {
                 <span className="font-bold text-sm">Prayer Requests</span>
               </div>
               <div className="bg-emerald-500/20 text-emerald-500 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest">Active Feed</div>
+            </Link>
+
+            <Link href="/profile" className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 flex items-center justify-between hover:bg-zinc-900/50 transition-colors cursor-pointer group block">
+              <div className="flex items-center gap-4">
+                <div className="size-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-emerald-500" />
+                </div>
+                <span className="font-bold text-sm">Personal Notes</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-emerald-500 transition-all" />
             </Link>
 
             <Link href="/profile" className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 flex items-center justify-between hover:bg-zinc-900/50 transition-colors cursor-pointer group block">
