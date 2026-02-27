@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -17,10 +18,10 @@ export default function CommunityPage() {
     <div className="min-h-screen bg-zinc-950 text-zinc-100 pb-32">
       {/* Top Bar */}
       <header className="sticky top-0 z-40 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-800/50 px-4 py-4">
-        <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <h1 className="font-serif text-2xl font-bold text-primary italic">Divine Compass</h1>
+        <div className="max-w-3xl mx-auto flex items-center justify-between">
+          <h1 className="font-serif text-2xl font-bold text-emerald-500 italic">Divine Compass</h1>
           <div className="flex items-center gap-3">
-            <button className="text-[10px] font-black uppercase tracking-widest text-primary hover:text-emerald-400 transition-colors px-3 py-1.5 border border-primary/30 rounded-full">
+            <button className="text-[10px] font-black uppercase tracking-widest text-emerald-500 hover:text-emerald-400 transition-colors px-3 py-1.5 border border-emerald-500/30 rounded-full">
               Register
             </button>
             <button className="flex items-center justify-center size-10 rounded-full hover:bg-zinc-800 transition-colors text-slate-100">
@@ -35,12 +36,12 @@ export default function CommunityPage() {
         <section>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-500">Prayer Circles</h3>
-            <button className="text-xs text-primary font-medium">View all</button>
+            <button className="text-xs text-emerald-500 font-medium">View all</button>
           </div>
           <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
             {circles.map((circle, i) => (
               <div key={i} className="flex-shrink-0 flex flex-col items-center gap-2 w-20">
-                <div className={`size-16 rounded-full p-1 border-2 border-primary`}>
+                <div className={`size-16 rounded-full p-1 border-2 ${i < 2 ? 'border-emerald-500' : 'border-zinc-800'}`}>
                   <div 
                     className="w-full h-full rounded-full bg-cover bg-center" 
                     style={{ backgroundImage: `url('${circle.image}')` }}
@@ -55,8 +56,8 @@ export default function CommunityPage() {
         {/* Create Post Area */}
         <section className="bg-zinc-900 border border-white/5 rounded-2xl p-4 shadow-xl">
           <div className="flex gap-4">
-            <div className="size-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-              <User className="w-5 h-5 text-primary" />
+            <div className="size-10 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
+              <User className="w-5 h-5 text-emerald-500" />
             </div>
             <div className="flex-1">
               <textarea 
@@ -75,7 +76,7 @@ export default function CommunityPage() {
                     <Calendar className="w-5 h-5" />
                   </button>
                 </div>
-                <button className="bg-primary hover:bg-primary/90 text-zinc-950 font-bold px-6 py-2 rounded-xl text-sm transition-all transform active:scale-95 shadow-lg shadow-primary/20">
+                <button className="bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold px-6 py-2 rounded-xl text-sm transition-all transform active:scale-95 shadow-lg shadow-emerald-500/20">
                   Post
                 </button>
               </div>
@@ -103,23 +104,23 @@ export default function CommunityPage() {
                 <p className="text-zinc-300 leading-relaxed italic font-serif text-lg">
                   "The light we seek is not found in the noise of the world, but in the stillness of our own breathing. Today, I found peace in the morning mist."
                 </p>
-                <p className="text-primary text-sm font-medium">#QuietReflection #InnerPeace #DivinePath</p>
+                <p className="text-emerald-500 text-sm font-medium">#QuietReflection #InnerPeace #DivinePath</p>
               </div>
               <div className="rounded-xl overflow-hidden mb-4 border border-white/5">
                 <img src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=800&q=80" alt="Mountain" className="w-full aspect-video object-cover" />
               </div>
               <div className="flex items-center justify-between pt-4 border-t border-white/5">
                 <div className="flex items-center gap-6">
-                  <button className="flex items-center gap-2 text-zinc-400 hover:text-primary transition-colors">
+                  <button className="flex items-center gap-2 text-zinc-400 hover:text-emerald-500 transition-colors">
                     <Heart className="w-5 h-5" />
                     <span className="text-xs font-medium">124</span>
                   </button>
-                  <button className="flex items-center gap-2 text-zinc-400 hover:text-primary transition-colors">
+                  <button className="flex items-center gap-2 text-zinc-400 hover:text-emerald-500 transition-colors">
                     <MessageCircle className="w-5 h-5" />
                     <span className="text-xs font-medium">32</span>
                   </button>
                 </div>
-                <button className="flex items-center gap-2 text-zinc-400 hover:text-primary transition-colors">
+                <button className="flex items-center gap-2 text-zinc-400 hover:text-emerald-500 transition-colors">
                   <Share2 className="w-5 h-5" />
                   <span className="text-xs font-medium">Share</span>
                 </button>

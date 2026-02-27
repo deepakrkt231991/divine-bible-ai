@@ -46,7 +46,7 @@ export default function BibleIndexPage() {
             <div className="bg-emerald-500/20 p-2 rounded-lg">
               <BookOpen className="w-6 h-6 text-emerald-500" />
             </div>
-            <h2 className="text-xl font-serif font-bold tracking-tight italic">Divine Compass</h2>
+            <h2 className="text-xl font-serif font-bold tracking-tight italic text-white">Divine Compass</h2>
           </div>
           <div className="flex items-center gap-3">
             <button 

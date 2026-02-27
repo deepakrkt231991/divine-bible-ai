@@ -64,11 +64,9 @@ export default function BibleHomePage() {
                 <button className="flex items-center gap-2 px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold rounded-full transition-all active:scale-95 text-sm shadow-lg shadow-emerald-500/20">
                   <Share2 className="w-4 h-4" /> Share
                 </button>
-                <Link href="/quiz">
-                  <button className="flex items-center gap-2 px-6 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 font-bold rounded-full transition-all text-sm border border-emerald-500/20">
-                    <Sparkles className="w-4 h-4 text-emerald-500" /> Start Quiz
-                  </button>
-                </Link>
+                <button className="flex items-center gap-2 px-6 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 font-bold rounded-full transition-all text-sm border border-emerald-500/20">
+                  <Bookmark className="w-4 h-4" /> Save
+                </button>
               </div>
             </div>
           </div>

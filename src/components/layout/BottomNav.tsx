@@ -2,7 +2,7 @@
 'use client';
 
 import React from 'react';
-import { Home, BookOpen, Sparkles, Users, LayoutGrid, HelpCircle } from 'lucide-react';
+import { Home, BookOpen, Sparkles, Users, LayoutGrid } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -14,7 +14,7 @@ export default function BottomNav() {
     { name: 'Home', href: '/home', icon: Home },
     { name: 'Bible', href: '/read', icon: BookOpen },
     { name: 'AI Magic', href: '/ai', icon: Sparkles, center: true },
-    { name: 'Quiz', href: '/quiz', icon: HelpCircle },
+    { name: 'Community', href: '/community', icon: Users },
     { name: 'More', href: '/more', icon: LayoutGrid },
   ];
 
