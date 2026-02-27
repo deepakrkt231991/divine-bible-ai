@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -81,16 +82,26 @@ export default function BibleReaderPage() {
     });
   }, []);
 
-  // Fetch Full Book List with Local Fallback
+  // Fetch Full Book List with Robust Error Handling
   const fetchBookList = useCallback(async () => {
     try {
       const res = await fetch(`https://bolls.life/get-books/${state.translation}/`);
-      if (!res.ok) throw new Error("API Error");
+      if (!res.ok) {
+        console.warn(`Book list API failed with status: ${res.status}`);
+        return; // Don't crash, keep existing list or show empty
+      }
+      
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        console.warn("Book list API returned non-JSON response");
+        return;
+      }
+
       const books = await res.json();
       setState(prev => ({ ...prev, bookList: Array.isArray(books) ? books : [] }));
     } catch (e) {
-      console.error("Book list error:", e);
-      // Optional: Add hardcoded fallback for 81 books if API fails
+      console.error("Book list fetch error:", e);
+      // Fallback: stay on current list or show error message via toast if needed
     }
   }, [state.translation]);
 
@@ -155,7 +166,7 @@ export default function BibleReaderPage() {
       console.error("Fetch Error:", e);
       setVerses([]);
       toast({ 
-        title: "Error", 
+        title: "Connection Issue", 
         description: e.message?.includes("Not JSON") 
           ? "Is chapter ka data available nahi hai." 
           : "Network error! Internet check karein.", 
@@ -206,7 +217,7 @@ export default function BibleReaderPage() {
     }
     const bookmarkId = `${state.bookId}_${state.chapter}_${v.verse}`;
     const ref = doc(firestore, 'users', user.uid, 'bookmarks', bookmarkId);
-    await setDoc(ref, {
+    setDoc(ref, {
       userId: user.uid,
       verseId: bookmarkId,
       verseText: v.text,
@@ -215,7 +226,7 @@ export default function BibleReaderPage() {
       verseNumber: v.verse,
       translation: state.translation,
       createdAt: serverTimestamp()
-    });
+    }, { merge: true });
     toast({ title: "Vachan Saved", description: "Added to your Divine Library." });
   };
 
