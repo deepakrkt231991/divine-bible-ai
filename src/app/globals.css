@@ -33,11 +33,20 @@
   }
   html, body {
     height: 100%;
-    overflow: hidden;
-  }
-  body {
+    margin: 0;
+    overflow: hidden; /* Screen ko hilne se rokega */
     @apply bg-[#09090b] text-zinc-100 antialiased selection:bg-emerald-500/30 font-sans;
   }
+}
+
+.main-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100%;
+  max-width: 448px; /* Mobile width constraint */
+  margin: 0 auto;
+  position: relative;
 }
 
 .glass-panel {
@@ -61,4 +70,8 @@
 
 .highlight-emerald {
   @apply bg-emerald-500/10 border-l-4 border-emerald-500 rounded-r-xl transition-all duration-300;
+}
+
+.verse-row {
+  @apply cursor-pointer transition-all p-2 rounded-lg hover:bg-zinc-800/30;
 }

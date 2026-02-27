@@ -10,10 +10,7 @@ import {
   Share2,
   Layers,
   Search,
-  History,
   Settings2,
-  Minus,
-  Plus,
   ArrowRight,
   RefreshCw
 } from 'lucide-react';
@@ -39,6 +36,8 @@ const BIBLE_BOOKS = [
   { id: 43, name: "John", hindi: "Yuhanna", chapters: 21, canon: "standard", section: "New Testament" },
   { id: 66, name: "Revelation", hindi: "Prakashitvakya", chapters: 22, canon: "standard", section: "New Testament" },
   { id: 67, name: "Tobit", hindi: "Tobit", chapters: 14, canon: "full", section: "Deuterocanonical" },
+  { id: 68, name: "Judith", hindi: "Judith", chapters: 16, canon: "full", section: "Deuterocanonical" },
+  { id: 71, name: "Sirach", hindi: "Sirach", chapters: 51, canon: "full", section: "Deuterocanonical" },
   { id: 81, name: "Psalm 151", hindi: "Bhajan 151", chapters: 1, canon: "full", section: "Orthodox Extra" }
 ];
 
@@ -101,27 +100,33 @@ export default function BibleReaderPage() {
     setLoading(true);
     setVerses([]);
     try {
-      const safeBookId = parseInt(bId.toString()) || 1;
-      const safeChapter = parseInt(chap.toString()) || 1;
-      const safeTrans = trans || 'IRV_HIN';
+      const b = parseInt(bId.toString()) || 1;
+      const c = parseInt(chap.toString()) || 1;
+      const t = trans || 'IRV_HIN';
 
-      const url = `https://bolls.life/get-chapter/${safeTrans}/${safeBookId}/${safeChapter}/`;
+      const url = `https://bolls.life/get-chapter/${t}/${b}/${c}/`;
       const response = await fetch(url);
-      if (!response.ok) throw new Error("Connection error");
+      
+      if (!response.ok) throw new Error("API Connection Error");
       
       const data = await response.json();
-      if (data.length === 0) throw new Error("No verses found");
       
-      setVerses(data);
-      localStorage.setItem('bible_book_id', safeBookId.toString());
-      localStorage.setItem('bible_chapter', safeChapter.toString());
-      localStorage.setItem('bible_version', safeTrans);
+      if (!data || data.length === 0) {
+        toast({ title: "Content Unavailable", description: "Ye chapter abhi available nahi hai." });
+        setVerses([]);
+      } else {
+        setVerses(data);
+        localStorage.setItem('bible_book_id', b.toString());
+        localStorage.setItem('bible_chapter', c.toString());
+        localStorage.setItem('bible_version', t);
+      }
     } catch (e) {
       console.error("Fetch Error:", e);
-      toast({ title: "Bible load nahi ho payi", description: "Internet check karein aur fallback IRV_HIN par reset karein.", variant: "destructive" });
-      if (trans !== 'IRV_HIN') {
-        setState(prev => ({ ...prev, translation: 'IRV_HIN' }));
-      }
+      toast({ 
+        title: "Error", 
+        description: "Vachan load nahi ho paye. Try again button click karein.", 
+        variant: "destructive" 
+      });
     } finally {
       setLoading(false);
     }
@@ -175,7 +180,8 @@ export default function BibleReaderPage() {
   };
 
   return (
-    <div className="h-full bg-[#09090b] text-zinc-100 flex flex-col overflow-hidden">
+    <div className="h-screen flex flex-col overflow-hidden bg-[#09090b]">
+      {/* Top Header */}
       <header className="flex-none bg-[#09090b]/90 backdrop-blur-xl border-b border-white/5 px-4 py-3 z-40">
         <div className="max-w-2xl mx-auto space-y-3">
           <div className="flex items-center gap-3">
@@ -187,7 +193,7 @@ export default function BibleReaderPage() {
                 onKeyDown={(e) => e.key === 'Enter' && handleGlobalSearch()}
                 onFocus={() => setState(prev => ({ ...prev, isSearchOpen: true }))}
                 placeholder="Dukh mein shanti, Love, or verse..."
-                className="bg-zinc-950 border-zinc-800 rounded-2xl pl-12 h-12 text-sm"
+                className="bg-zinc-950 border-zinc-800 rounded-2xl pl-12 h-12 text-sm focus-visible:ring-emerald-500/20"
               />
               {state.isSearchOpen && (
                 <button onClick={() => setState(prev => ({ ...prev, isSearchOpen: false }))} className="absolute right-4 top-1/2 -translate-y-1/2">
@@ -229,7 +235,8 @@ export default function BibleReaderPage() {
         </div>
       </header>
 
-      <main className="flex-1 overflow-y-auto px-6 py-10 pb-48 relative scroll-smooth hide-scrollbar">
+      {/* Main Content Area (Fixed with pb-32/120px) */}
+      <main className="flex-1 overflow-y-auto px-6 py-10 pb-[120px] scroll-smooth hide-scrollbar relative">
         {state.isSearchOpen && (
           <div className="absolute inset-0 bg-[#09090b] z-30 p-6 space-y-8 animate-in slide-in-from-top-4 overflow-y-auto">
             {aiSearchLoading ? (
@@ -264,7 +271,14 @@ export default function BibleReaderPage() {
         {loading ? (
           <div className="flex flex-col items-center py-32 gap-6 opacity-40">
             <RefreshCw className="w-14 h-14 text-emerald-500 animate-spin" />
-            <p className="text-emerald-500 font-serif italic text-xl animate-pulse">Pavitra Vachan load ho rahe hain...</p>
+            <p className="text-emerald-500 font-serif italic text-xl animate-pulse">Vachan load ho rahe hain...</p>
+          </div>
+        ) : verses.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-32 text-center space-y-6">
+            <p className="text-zinc-500 italic font-serif text-lg">Vachan nahi mile. Check internet or version.</p>
+            <Button variant="outline" onClick={() => fetchBibleContent(state.bookId, state.chapter, state.translation)} className="border-emerald-500/30 text-emerald-500">
+              Try Again
+            </Button>
           </div>
         ) : (
           <div className="max-w-2xl mx-auto space-y-12">
@@ -278,17 +292,17 @@ export default function BibleReaderPage() {
                 <div 
                   key={v.pk} 
                   onClick={() => setState(prev => ({ ...prev, selectedVerse: v }))}
-                  className={cn("group relative pb-6 transition-all duration-300", state.selectedVerse?.pk === v.pk && "highlight-emerald px-4 py-4")}
+                  className={cn("verse-row group relative", state.selectedVerse?.pk === v.pk && "highlight-emerald")}
                 >
                   <p style={{ fontSize: `${fontSize}px` }} className="leading-[1.9] text-zinc-200 font-serif">
-                    <span className="text-emerald-500/40 font-black text-[0.6em] align-top mr-4">#{v.verse}</span>
-                    {v.text}
+                    <span className="text-emerald-500 font-bold mr-3">{v.verse}</span>
+                    <span className="text-slate-200">{v.text}</span>
                   </p>
                   {state.selectedVerse?.pk === v.pk && (
                     <div className="flex items-center gap-2 mt-6 animate-in slide-in-from-top-2">
-                      <button className="p-3.5 bg-zinc-900 border border-zinc-800 rounded-2xl hover:text-emerald-500 transition-all"><Bookmark className="w-4 h-4" /></button>
-                      <button onClick={() => handleSpeak(v.text)} className="p-3.5 bg-zinc-900 border border-zinc-800 rounded-2xl hover:text-emerald-500"><Volume2 className="w-4 h-4" /></button>
-                      <button className="p-3.5 bg-zinc-900 border border-zinc-800 rounded-2xl hover:text-emerald-500"><Share2 className="w-4 h-4" /></button>
+                      <button className="p-3.5 bg-zinc-900 border border-zinc-800 rounded-2xl hover:text-emerald-500 transition-all shadow-xl"><Bookmark className="w-4 h-4" /></button>
+                      <button onClick={() => handleSpeak(v.text)} className="p-3.5 bg-zinc-900 border border-zinc-800 rounded-2xl hover:text-emerald-500 shadow-xl"><Volume2 className="w-4 h-4" /></button>
+                      <button className="p-3.5 bg-zinc-900 border border-zinc-800 rounded-2xl hover:text-emerald-500 shadow-xl"><Share2 className="w-4 h-4" /></button>
                     </div>
                   )}
                 </div>
@@ -297,7 +311,10 @@ export default function BibleReaderPage() {
 
             {state.chapter < currentBook.chapters && (
               <button 
-                onClick={() => setState(prev => ({ ...prev, chapter: prev.chapter + 1, selectedVerse: null }))}
+                onClick={() => {
+                  setState(prev => ({ ...prev, chapter: prev.chapter + 1, selectedVerse: null }));
+                  window.scrollTo(0,0);
+                }}
                 className="w-full py-8 bg-zinc-900/50 border border-white/5 rounded-[2.5rem] flex items-center justify-center gap-4 text-emerald-500 hover:bg-emerald-500/10 transition-all group"
               >
                 <span className="text-[10px] font-black uppercase tracking-[0.4em]">Next: Chapter {state.chapter + 1}</span>
@@ -308,10 +325,11 @@ export default function BibleReaderPage() {
         )}
       </main>
 
+      {/* Settings FAB */}
       <div className="fixed bottom-24 right-6 z-50">
         <Dialog>
           <DialogTrigger asChild>
-            <button className="size-14 rounded-full bg-emerald-500 text-black shadow-2xl flex items-center justify-center active:scale-90 transition-all">
+            <button className="size-14 rounded-full bg-emerald-500 text-black shadow-2xl flex items-center justify-center active:scale-90 transition-all glow-primary">
               <Settings2 className="w-6 h-6" />
             </button>
           </DialogTrigger>
