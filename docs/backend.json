@@ -1,0 +1,44 @@
+
+{
+  "entities": {
+    "UserProgress": {
+      "title": "User Reading Progress",
+      "description": "Tracks the user's progress through various Bible reading plans.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "planId": { "type": "string", "enum": ["canonical", "chronological", "historical"] },
+        "currentDay": { "type": "number" },
+        "completedVerses": { "type": "array", "items": { "type": "string" } },
+        "startDate": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "planId", "currentDay"]
+    },
+    "QuizScore": {
+      "title": "Bible Quiz Score",
+      "description": "Stores user scores from AI-generated Bible quizzes.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "score": { "type": "number" },
+        "totalQuestions": { "type": "number" },
+        "date": { "type": "string", "format": "date-time" },
+        "verseReference": { "type": "string" }
+      },
+      "required": ["userId", "score", "totalQuestions"]
+    }
+  },
+  "auth": {
+    "providers": ["google.com", "password"]
+  },
+  "firestore": {
+    "/users/{userId}/readingProgress/{progressId}": {
+      "schema": "UserProgress",
+      "description": "User's progress in specific reading plans."
+    },
+    "/users/{userId}/quizScores/{scoreId}": {
+      "schema": "QuizScore",
+      "description": "History of user's quiz performance."
+    }
+  }
+}

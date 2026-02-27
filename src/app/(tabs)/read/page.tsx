@@ -1,12 +1,17 @@
+
 'use client';
 
 import React, { useState } from 'react';
-import { Search, BookOpen, ChevronRight, User } from 'lucide-react';
+import { Search, BookOpen, ChevronRight, User, PlayCircle, Minus, Plus, Settings2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { Card } from '@/components/ui/card';
+import { Slider } from '@/components/ui/slider';
 
 export default function BibleIndexPage() {
   const [testament, setTestament] = useState<'old' | 'new'>('old');
+  const [fontSize, setFontSize] = useState(20);
+  const [showSettings, setShowSettings] = useState(false);
 
   const books = [
     { name: "Genesis", short: "Ge", chapters: 50, snippet: "In the beginning God created the heavens...", progress: 32 },
@@ -21,8 +26,18 @@ export default function BibleIndexPage() {
     { name: "Ruth", short: "Ru", chapters: 4, type: "Historical" },
   ];
 
+  // Browser-based TTS (Marathi/Hindi Support)
+  const playVerse = (text: string) => {
+    const utterance = new SpeechSynthesisUtterance(text);
+    // Find Hindi or Marathi voice if available
+    const voices = window.speechSynthesis.getVoices();
+    const voice = voices.find(v => v.lang === 'hi-IN' || v.lang === 'mr-IN') || voices[0];
+    if (voice) utterance.voice = voice;
+    window.speechSynthesis.speak(utterance);
+  };
+
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 pb-32">
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 pb-32 selection:bg-emerald-500/30">
       {/* Header Section */}
       <header className="sticky top-0 z-50 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-800/50">
         <div className="flex items-center p-4 justify-between max-w-2xl mx-auto">
@@ -33,6 +48,12 @@ export default function BibleIndexPage() {
             <h2 className="text-xl font-serif font-bold tracking-tight italic">Divine Compass</h2>
           </div>
           <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setShowSettings(!showSettings)}
+              className={cn("p-2 rounded-full transition-colors", showSettings && "bg-primary/10 text-primary")}
+            >
+              <Settings2 className="w-5 h-5" />
+            </button>
             <button className="text-[10px] font-black uppercase tracking-widest text-primary hover:text-emerald-400 transition-colors px-3 py-1.5 border border-primary/30 rounded-full">
               Register
             </button>
@@ -55,14 +76,38 @@ export default function BibleIndexPage() {
           </div>
         </div>
 
+        {/* Font Settings Overlay */}
+        {showSettings && (
+          <div className="px-4 pb-4 max-w-2xl mx-auto animate-in fade-in slide-in-from-top-2">
+            <Card className="bg-zinc-900 p-6 rounded-2xl border border-primary/20 shadow-2xl">
+              <div className="space-y-4">
+                <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                  <span>Font Size</span>
+                  <span className="text-primary">{fontSize}px</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <Minus className="w-4 h-4 text-zinc-500" />
+                  <Slider 
+                    value={[fontSize]} 
+                    onValueChange={(val) => setFontSize(val[0])} 
+                    min={14} max={32} step={1}
+                    className="flex-1"
+                  />
+                  <Plus className="w-4 h-4 text-zinc-500" />
+                </div>
+              </div>
+            </Card>
+          </div>
+        )}
+
         {/* Testament Tabs */}
         <div className="px-4 pb-4 max-w-2xl mx-auto">
           <div className="flex gap-1 p-1 bg-zinc-900/80 rounded-lg border border-zinc-800/50">
             <button 
               onClick={() => setTestament('old')}
               className={cn(
-                "flex-1 py-2 text-sm font-bold rounded-md transition-all",
-                testament === 'old' ? "bg-primary text-zinc-950 shadow-lg shadow-primary/20" : "text-zinc-500 hover:text-zinc-100"
+                "flex-1 py-2 text-xs font-black uppercase tracking-widest rounded-md transition-all",
+                testament === 'old' ? "bg-primary text-zinc-950" : "text-zinc-500 hover:text-zinc-100"
               )}
             >
               Old Testament
@@ -70,8 +115,8 @@ export default function BibleIndexPage() {
             <button 
               onClick={() => setTestament('new')}
               className={cn(
-                "flex-1 py-2 text-sm font-bold rounded-md transition-all",
-                testament === 'new' ? "bg-primary text-zinc-950 shadow-lg shadow-primary/20" : "text-zinc-500 hover:text-zinc-100"
+                "flex-1 py-2 text-xs font-black uppercase tracking-widest rounded-md transition-all",
+                testament === 'new' ? "bg-primary text-zinc-950" : "text-zinc-500 hover:text-zinc-100"
               )}
             >
               New Testament
@@ -94,11 +139,19 @@ export default function BibleIndexPage() {
                 <div className="size-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-serif text-xl font-bold group-hover:scale-110 transition-transform">
                   {book.short}
                 </div>
-                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest bg-zinc-800/50 px-2 py-1 rounded border border-white/5">
-                  {book.chapters} Chapters
-                </span>
+                <div className="flex gap-1">
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); playVerse(book.snippet); }}
+                    className="size-8 rounded-full bg-zinc-800 flex items-center justify-center hover:bg-primary/20 transition-colors"
+                  >
+                    <PlayCircle className="w-4 h-4 text-zinc-400 group-hover:text-primary" />
+                  </button>
+                  <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest bg-zinc-800/50 px-2 py-1 rounded border border-white/5">
+                    {book.chapters} Chapters
+                  </span>
+                </div>
               </div>
-              <h4 className="text-lg font-bold text-zinc-100 mb-1">{book.name}</h4>
+              <h4 className="text-lg font-bold text-zinc-100 mb-1" style={{ fontSize: `${fontSize}px` }}>{book.name}</h4>
               <p className="text-sm text-zinc-400 line-clamp-1 italic">{book.snippet}</p>
               
               <div className="mt-5 flex items-center gap-3">

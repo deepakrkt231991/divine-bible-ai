@@ -1,45 +1,22 @@
+
 'use server';
 /**
- * @fileOverview An AI agent that provides intelligent and contextual answers to questions about Bible passages.
- *
- * - aiScriptureQuestion - A function that handles the scripture question and answering process.
- * - AiScriptureQuestionInput - The input type for the aiScriptureQuestion function.
- * - AiScriptureQuestionOutput - The return type for the aiScriptureQuestion function.
+ * @fileOverview An AI agent that provides wise biblical answers using only scripture references.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const AiScriptureQuestionInputSchema = z.object({
-  passage: z
-    .string()
-    .describe(
-      'The specific Bible passage or verse the user is currently reading. E.g., "John 3:16" or "Psalm 23".'
-    ),
-  question: z
-    .string()
-    .describe(
-      'The user\'s question about the provided Bible passage. E.g., "What does this verse mean?" or "How does this apply to modern life?".'
-    ),
+  passage: z.string().describe('The context passage.'),
+  question: z.string().describe('The user\'s spiritual question.')
 });
-export type AiScriptureQuestionInput = z.infer<
-  typeof AiScriptureQuestionInputSchema
->;
 
 const AiScriptureQuestionOutputSchema = z.object({
-  answer: z
-    .string()
-    .describe(
-      'An intelligent and contextual answer to the user\'s question about the Bible passage.'
-    ),
+  answer: z.string().describe('A wise answer using scripture references.')
 });
-export type AiScriptureQuestionOutput = z.infer<
-  typeof AiScriptureQuestionOutputSchema
->;
 
-export async function aiScriptureQuestion(
-  input: AiScriptureQuestionInput
-): Promise<AiScriptureQuestionOutput> {
+export async function aiScriptureQuestion(input: z.infer<typeof AiScriptureQuestionInputSchema>) {
   return aiScriptureQuestionFlow(input);
 }
 
@@ -47,12 +24,14 @@ const aiScriptureQuestionPrompt = ai.definePrompt({
   name: 'aiScriptureQuestionPrompt',
   input: {schema: AiScriptureQuestionInputSchema},
   output: {schema: AiScriptureQuestionOutputSchema},
-  prompt: `You are an expert theologian and biblical scholar, known for your deep understanding of scripture and ability to explain complex concepts clearly and contextually. Your task is to provide an intelligent and contextual answer to a user's question about a specific Bible passage.
+  prompt: `You are a wise Bible scholar. Your task is to provide spiritual guidance and answers to users.
+IMPORTANT: You must answer only using scripture references and biblical principles. 
+If a user asks about a general life topic, relate it back to the Bible.
 
-Bible Passage: {{{passage}}}
+Current Context (if any): {{{passage}}}
 User's Question: {{{question}}}
 
-Provide a comprehensive and insightful answer that directly addresses the user's question, drawing upon your biblical knowledge. Focus on the meaning, historical context, and potential applications of the passage.`,
+Provide a comprehensive and insightful answer that directly addresses the user's question, drawing upon your deep biblical knowledge.`,
 });
 
 const aiScriptureQuestionFlow = ai.defineFlow(

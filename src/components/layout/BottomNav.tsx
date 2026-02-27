@@ -2,7 +2,7 @@
 'use client';
 
 import React from 'react';
-import { Home, BookOpen, Sparkles, Users, MoreHorizontal } from 'lucide-react';
+import { Home, BookOpen, Sparkles, Users, LayoutGrid, HelpCircle } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -14,8 +14,8 @@ export default function BottomNav() {
     { name: 'Home', href: '/home', icon: Home },
     { name: 'Bible', href: '/read', icon: BookOpen },
     { name: 'AI Magic', href: '/ai', icon: Sparkles, center: true },
-    { name: 'Community', href: '/community', icon: Users },
-    { name: 'More', href: '/more', icon: MoreHorizontal },
+    { name: 'Quiz', href: '/quiz', icon: HelpCircle },
+    { name: 'More', href: '/more', icon: LayoutGrid },
   ];
 
   return (
@@ -34,13 +34,13 @@ export default function BottomNav() {
                     isActive && "ring-2 ring-primary ring-offset-2 ring-offset-zinc-950"
                   )}
                 >
-                  <item.icon className="w-7 h-7 font-bold fill-current" />
+                  <item.icon className="w-7 h-7 font-bold" />
                 </Link>
                 <span className={cn(
-                  "text-[10px] font-bold tracking-widest text-center block mt-2 uppercase",
+                  "text-[10px] font-black tracking-widest text-center block mt-2 uppercase",
                   isActive ? "text-primary" : "text-zinc-500"
                 )}>
-                  {item.name}
+                  AI
                 </span>
               </div>
             );
@@ -61,7 +61,7 @@ export default function BottomNav() {
                 )}
                 <item.icon className={cn("w-6 h-6", isActive && "fill-current")} />
               </div>
-              <span className="text-[10px] font-bold uppercase tracking-widest leading-normal">
+              <span className="text-[10px] font-black uppercase tracking-widest leading-normal">
                 {item.name}
               </span>
             </Link>
