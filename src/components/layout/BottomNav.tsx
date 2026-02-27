@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -19,26 +18,26 @@ export default function BottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-50 px-6 pb-6 pt-3 bg-zinc-950/80 backdrop-blur-xl border-t border-white/10">
+    <nav className="fixed bottom-0 inset-x-0 z-50 px-6 pb-6 pt-3 bg-[#09090b]/80 backdrop-blur-2xl border-t border-white/10">
       <div className="max-w-md mx-auto flex items-center justify-between relative">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
 
           if (item.center) {
             return (
-              <div key={item.name} className="relative -top-8">
+              <div key={item.name} className="relative -top-10">
                 <Link
                   href={item.href}
                   className={cn(
-                    "size-14 bg-emerald-500 text-zinc-950 rounded-full shadow-lg shadow-emerald-500/40 flex items-center justify-center hover:scale-105 transition-transform border-4 border-zinc-950",
-                    isActive && "ring-2 ring-emerald-500 ring-offset-2 ring-offset-zinc-950"
+                    "size-16 bg-emerald-500 text-black rounded-[1.75rem] shadow-[0_10px_30px_rgba(16,185,129,0.4)] flex items-center justify-center hover:scale-110 transition-all border-[6px] border-[#09090b] active:scale-95 group",
+                    isActive && "ring-2 ring-emerald-500 ring-offset-4 ring-offset-[#09090b]"
                   )}
                 >
-                  <item.icon className="w-7 h-7 font-bold" />
+                  <item.icon className="w-8 h-8 font-bold group-hover:animate-pulse" />
                 </Link>
                 <span className={cn(
-                  "text-[10px] font-black tracking-widest text-center block mt-2 uppercase",
-                  isActive ? "text-emerald-500" : "text-zinc-500"
+                  "text-[9px] font-black tracking-[0.2em] text-center block mt-2 uppercase",
+                  isActive ? "text-emerald-500" : "text-zinc-600"
                 )}>
                   AI
                 </span>
@@ -51,17 +50,17 @@ export default function BottomNav() {
               key={item.name}
               href={item.href}
               className={cn(
-                "flex flex-col items-center gap-1 transition-all duration-300",
-                isActive ? "text-emerald-500" : "text-zinc-500 hover:text-zinc-300"
+                "flex flex-col items-center gap-1.5 transition-all duration-300 px-2",
+                isActive ? "text-emerald-500" : "text-zinc-600 hover:text-zinc-400"
               )}
             >
               <div className="relative">
                 {isActive && (
-                  <div className="absolute -inset-2 bg-emerald-500/20 blur-md rounded-full -z-10" />
+                  <div className="absolute -inset-3 bg-emerald-500/20 blur-xl rounded-full -z-10" />
                 )}
-                <item.icon className={cn("w-6 h-6", isActive && "fill-current")} />
+                <item.icon className={cn("w-6 h-6 transition-all", isActive && "scale-110")} />
               </div>
-              <span className="text-[10px] font-black uppercase tracking-widest leading-normal">
+              <span className="text-[9px] font-black uppercase tracking-[0.1em] leading-normal">
                 {item.name}
               </span>
             </Link>

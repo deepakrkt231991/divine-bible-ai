@@ -32,15 +32,15 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground antialiased selection:bg-primary/30;
+    @apply bg-[#09090b] text-zinc-100 antialiased selection:bg-emerald-500/30 font-sans;
   }
 }
 
-.glass-nav {
+.glass-panel {
   background: rgba(15, 15, 15, 0.7);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .hide-scrollbar::-webkit-scrollbar {
@@ -49,4 +49,8 @@
 .hide-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+.glow-primary {
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
 }
