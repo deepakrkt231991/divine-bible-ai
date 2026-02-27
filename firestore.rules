@@ -5,42 +5,23 @@ service cloud.firestore {
     /**
      * CORE PHILOSOPHY:
      * This ruleset implements a strict User-Ownership model for personal data and a Database-Based Access Control (DBAC) 
-     * model for administrative content. Personal data (bookmarks, highlights, prayers, progress) is nested under 
-     * specific user paths to ensure performance and security through Path-Based Authorization.
-     *
-     * DATA STRUCTURE:
-     * - /users/{userId}: Private user profiles and subcollections for personal study data.
-     * - /reading_plans: Global content available to all authenticated users but only editable by admins.
-     * - /audio_files: Global media library available to all authenticated users, editable only by admins.
-     * - /roles_admin: Internal collection used to designate administrative users.
-     *
-     * KEY SECURITY DECISIONS:
-     * 1. Authorization Independence: User-owned data rules rely on the {userId} path segment, avoiding slow cross-document lookups.
-     * 2. Administrative DBAC: Global roles are managed in a dedicated `/roles_admin` collection. The presence of a 
-     *    document here grants full write access to global content.
-     * 3. Prototyping Flexibility: Rules strictly enforce 'who' can write, but not the specific 'shape' of the data 
-     *    (excluding relational IDs), allowing for rapid schema evolution.
-     * 4. Listing Security: User-specific subcollections are listable only by the owner. Global content is listable by all authenticated users.
+     * model for administrative content. 
      */
 
     // --- HELPER FUNCTIONS ---
 
-    /** @description Checks if the request is from an authenticated user. */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /** @description Checks if the authenticated user's UID matches the provided userId. */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    /** @description Verifies ownership and ensures the document exists before modification. */
     function isExistingOwner(userId) {
       return isOwner(userId) && resource != null;
     }
 
-    /** @description Checks if the user has an admin record in the roles_admin collection. */
     function isAdmin() {
       return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
     }
@@ -48,11 +29,7 @@ service cloud.firestore {
     // --- COLLECTION RULES ---
 
     /**
-     * @description Rules for user profile documents. Restricts access to the account owner.
-     * @path /users/{userId}
-     * @allow (get, update) if isOwner(userId)
-     * @deny (list) to prevent user enumeration.
-     * @principle Ownership and Self-Creation.
+     * @description Rules for user profile documents.
      */
     match /users/{userId} {
       allow get: if isOwner(userId);
@@ -61,12 +38,6 @@ service cloud.firestore {
       allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner(userId);
 
-      /**
-       * @description User-specific Bible bookmarks.
-       * @path /users/{userId}/bookmarks/{bookmarkId}
-       * @allow (create) if path userId matches auth UID and internal userId field.
-       * @principle Path-based authorization for user-scoped data.
-       */
       match /bookmarks/{bookmarkId} {
         allow get, list: if isOwner(userId);
         allow create: if isOwner(userId) && request.resource.data.userId == userId;
@@ -74,88 +45,53 @@ service cloud.firestore {
         allow delete: if isExistingOwner(userId);
       }
 
-      /**
-       * @description User-specific Bible verse highlights.
-       * @path /users/{userId}/highlights/{highlightId}
-       * @allow (list) if current user is path owner.
-       * @principle Relational integrity through immutable owner IDs.
-       */
-      match /highlights/{highlightId} {
+      match /notes/{noteId} {
         allow get, list: if isOwner(userId);
         allow create: if isOwner(userId) && request.resource.data.userId == userId;
         allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
         allow delete: if isExistingOwner(userId);
       }
 
-      /**
-       * @description Private prayer journal entries.
-       * @path /users/{userId}/prayers/{prayerId}
-       * @allow (delete) if existing owner.
-       * @principle Strict ownership for private journal data.
-       */
-      match /prayers/{prayerId} {
-        allow get, list: if isOwner(userId);
-        allow create: if isOwner(userId) && request.resource.data.userId == userId;
-        allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
-        allow delete: if isExistingOwner(userId);
-      }
-
-      /**
-       * @description Tracking progress for specific reading plans.
-       * @path /users/{userId}/reading_progress/{readingPlanId}
-       * @allow (update) if path matches owner and plan ID is unchanged.
-       * @principle Path-based access for efficient user progress tracking.
-       */
       match /reading_progress/{readingPlanId} {
         allow get, list: if isOwner(userId);
         allow create: if isOwner(userId) && request.resource.data.userId == userId;
         allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
         allow delete: if isExistingOwner(userId);
       }
-    }
-
-    /**
-     * @description Global Bible reading plans. Readable by all, writable only by admins.
-     * @path /reading_plans/{readingPlanId}
-     * @allow (list) if authenticated.
-     * @deny (write) if not an admin.
-     * @principle DBAC for global content management.
-     */
-    match /reading_plans/{readingPlanId} {
-      allow get, list: if isSignedIn();
-      allow create, update, delete: if isAdmin();
-
-      /**
-       * @description Daily details for reading plans.
-       * @path /reading_plans/{readingPlanId}/day_details/{dayNumber}
-       * @allow (get) if authenticated.
-       * @principle Inherited administrative write permissions.
-       */
-      match /day_details/{dayNumber} {
-        allow get, list: if isSignedIn();
-        allow create, update, delete: if isAdmin();
+      
+      match /highlights/{highlightId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.userId == userId;
+        allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+        allow delete: if isExistingOwner(userId);
       }
     }
 
     /**
-     * @description Metadata for audio sermons and podcasts.
-     * @path /audio_files/{audioFileId}
-     * @allow (get) if authenticated.
-     * @deny (create) if not an admin.
-     * @principle Public consumption with authorized editorial control.
+     * @description Public prayer requests. Writable by authenticated users.
      */
+    match /community_prayers/{prayerId} {
+      allow read: if true; 
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn(); // Allow incrementing Amen count
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    match /reading_plans/{readingPlanId} {
+      allow get, list: if true;
+      allow create, update, delete: if isAdmin();
+
+      match /day_details/{dayNumber} {
+        allow get, list: if true;
+        allow create, update, delete: if isAdmin();
+      }
+    }
+
     match /audio_files/{audioFileId} {
-      allow get, list: if isSignedIn();
+      allow get, list: if true;
       allow create, update, delete: if isAdmin();
     }
 
-    /**
-     * @description Administrative role assignments.
-     * @path /roles_admin/{userId}
-     * @allow (get) for signed in users to check status.
-     * @deny (write) unless the requester is already an admin.
-     * @principle Bootstrap security for roles via DBAC.
-     */
     match /roles_admin/{userId} {
       allow get: if isSignedIn();
       allow list, create, update, delete: if isAdmin();
