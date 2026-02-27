@@ -1,212 +1,301 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   BookOpen, 
   ChevronRight, 
   User, 
-  Languages, 
   Loader2, 
   Bookmark, 
   FileText, 
-  Send, 
   Settings2, 
   Minus, 
   Plus, 
   Sparkles, 
   Volume2, 
-  Copy,
-  Check
+  ChevronDown,
+  Play,
+  Pause,
+  ArrowRight,
+  X,
+  Share2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFirebase } from '@/firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Slider } from '@/components/ui/slider';
-import { aiScriptureQuestion } from '@/ai/flows/ai-scripture-question';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { aiScriptureQuestion } from '@/ai/flows/ai-scripture-question';
 
-type Version = {
-  id: string;
-  name: string;
-  lang: string;
-};
+// 66 Books Mapping for Bolls.life
+const BIBLE_BOOKS = [
+  { id: 1, name: "Genesis", chapters: 50 }, { id: 2, name: "Exodus", chapters: 40 },
+  { id: 3, name: "Leviticus", chapters: 27 }, { id: 4, name: "Numbers", chapters: 36 },
+  { id: 5, name: "Deuteronomy", chapters: 34 }, { id: 6, name: "Joshua", chapters: 24 },
+  { id: 7, name: "Judges", chapters: 21 }, { id: 8, name: "Ruth", chapters: 4 },
+  { id: 9, name: "1 Samuel", chapters: 31 }, { id: 10, name: "2 Samuel", chapters: 24 },
+  { id: 11, name: "1 Kings", chapters: 22 }, { id: 12, name: "2 Kings", chapters: 25 },
+  { id: 13, name: "1 Chronicles", chapters: 29 }, { id: 14, name: "2 Chronicles", chapters: 36 },
+  { id: 15, name: "Ezra", chapters: 10 }, { id: 16, name: "Nehemiah", chapters: 13 },
+  { id: 17, name: "Esther", chapters: 10 }, { id: 18, name: "Job", chapters: 42 },
+  { id: 19, name: "Psalms", chapters: 150 }, { id: 20, name: "Proverbs", chapters: 31 },
+  { id: 21, name: "Ecclesiastes", chapters: 12 }, { id: 22, name: "Song of Solomon", chapters: 8 },
+  { id: 23, name: "Isaiah", chapters: 66 }, { id: 24, name: "Jeremiah", chapters: 52 },
+  { id: 25, name: "Lamentations", chapters: 5 }, { id: 26, name: "Ezekiel", chapters: 48 },
+  { id: 27, name: "Daniel", chapters: 12 }, { id: 28, name: "Hosea", chapters: 14 },
+  { id: 29, name: "Joel", chapters: 3 }, { id: 30, name: "Amos", chapters: 9 },
+  { id: 31, name: "Obadiah", chapters: 1 }, { id: 32, name: "Jonah", chapters: 4 },
+  { id: 33, name: "Micah", chapters: 7 }, { id: 34, name: "Nahum", chapters: 3 },
+  { id: 35, name: "Habakkuk", chapters: 3 }, { id: 36, name: "Zephaniah", chapters: 3 },
+  { id: 37, name: "Haggai", chapters: 2 }, { id: 38, name: "Zechariah", chapters: 14 },
+  { id: 39, name: "Malachi", chapters: 4 }, { id: 40, name: "Matthew", chapters: 28 },
+  { id: 41, name: "Mark", chapters: 16 }, { id: 42, name: "Luke", chapters: 24 },
+  { id: 43, name: "John", chapters: 21 }, { id: 44, name: "Acts", chapters: 28 },
+  { id: 45, name: "Romans", chapters: 16 }, { id: 46, name: "1 Corinthians", chapters: 16 },
+  { id: 47, name: "2 Corinthians", chapters: 13 }, { id: 48, name: "Galatians", chapters: 6 },
+  { id: 49, name: "Ephesians", chapters: 6 }, { id: 50, name: "Philippians", chapters: 4 },
+  { id: 51, name: "Colossians", chapters: 4 }, { id: 52, name: "1 Thessalonians", chapters: 5 },
+  { id: 53, name: "2 Thessalonians", chapters: 3 }, { id: 54, name: "1 Timothy", chapters: 6 },
+  { id: 55, name: "2 Timothy", chapters: 4 }, { id: 56, name: "Titus", chapters: 3 },
+  { id: 57, name: "Philemon", chapters: 1 }, { id: 58, name: "Hebrews", chapters: 13 },
+  { id: 59, name: "James", chapters: 5 }, { id: 60, name: "1 Peter", chapters: 5 },
+  { id: 61, name: "2 Peter", chapters: 3 }, { id: 62, name: "1 John", chapters: 5 },
+  { id: 63, name: "2 John", chapters: 1 }, { id: 64, name: "3 John", chapters: 1 },
+  { id: 65, name: "Jude", chapters: 1 }, { id: 66, name: "Revelation", chapters: 22 }
+];
 
-const BIBLE_VERSIONS: Version[] = [
+const BIBLE_VERSIONS = [
   { id: 'IRV_HIN', name: 'Hindi (IRV)', lang: 'hi-IN' },
   { id: 'KJV', name: 'English (KJV)', lang: 'en-US' },
-  { id: 'YLT', name: 'English (YLT)', lang: 'en-US' },
-  { id: 'BBE', name: 'English (BBE)', lang: 'en-US' },
   { id: 'IRV_MAR', name: 'Marathi (IRV)', lang: 'mr-IN' },
 ];
 
 export default function BibleReaderPage() {
   const { firestore, user } = useFirebase();
   const { toast } = useToast();
-  const [version, setVersion] = useState<string>('IRV_HIN');
+  
+  // Bible Engine State
+  const [state, setState] = useState({
+    translation: 'IRV_HIN',
+    bookId: 43, // Default: John
+    chapter: 1,
+    selectedVerse: null as any
+  });
+
+  const [verses, setVerses] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [view, setView] = useState<'index' | 'reader'>('index');
-  const [currentContent, setCurrentContent] = useState<any>(null);
-  const [selectedBook, setSelectedBook] = useState<any>(null);
   const [fontSize, setFontSize] = useState(18);
   const [showSettings, setShowSettings] = useState(false);
-  const [aiLoading, setAiLoading] = useState<string | null>(null);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  
+  // AI Insight State
+  const [aiLoading, setAiLoading] = useState(false);
   const [aiResponse, setAiResponse] = useState<string | null>(null);
 
-  // Load preferences
+  const currentBook = useMemo(() => BIBLE_BOOKS.find(b => b.id === state.bookId), [state.bookId]);
+
+  // Load Preferences
   useEffect(() => {
-    const savedLang = localStorage.getItem('bible_version') || 'IRV_HIN';
+    const savedVer = localStorage.getItem('bible_version') || 'IRV_HIN';
     const savedSize = localStorage.getItem('bible_font_size');
-    setVersion(savedLang);
+    const savedBook = localStorage.getItem('bible_book_id');
+    const savedChapter = localStorage.getItem('bible_chapter');
+
+    setState(prev => ({
+      ...prev,
+      translation: savedVer,
+      bookId: savedBook ? parseInt(savedBook) : prev.bookId,
+      chapter: savedChapter ? parseInt(savedChapter) : prev.chapter
+    }));
+
     if (savedSize) setFontSize(parseInt(savedSize));
   }, []);
 
-  const handleVersionChange = (newVer: string) => {
-    setVersion(newVer);
-    localStorage.setItem('bible_version', newVer);
-    if (selectedBook) fetchBibleContent(selectedBook.id, 1, newVer);
-  };
-
-  const handleFontSizeChange = (val: number) => {
-    setFontSize(val);
-    localStorage.setItem('bible_font_size', val.toString());
-  };
-
-  const fetchBibleContent = useCallback(async (bookId: number, chapter: number, verOverride?: string) => {
-    const targetVer = verOverride || version;
+  const fetchBibleContent = useCallback(async (bId: number, chap: number, trans: string) => {
     setLoading(true);
+    setVerses([]);
     try {
-      const res = await fetch(`https://bolls.life/get-text/${targetVer}/${bookId}/${chapter}/`);
-      const data = await res.json();
-      setCurrentContent(data);
-      setView('reader');
+      const url = `https://bolls.life/get-chapter/${trans}/${bId}/${chap}/`;
+      const response = await fetch(url);
+      const data = await response.json();
+      setVerses(data);
+      
+      // Persist navigation
+      localStorage.setItem('bible_book_id', bId.toString());
+      localStorage.setItem('bible_chapter', chap.toString());
+      localStorage.setItem('bible_version', trans);
     } catch (e) {
-      console.error(e);
-      toast({ title: "Error", description: "Vachan load karne mein dikkat hui.", variant: "destructive" });
+      toast({ title: "Connection Error", description: "Vachan load karne mein dikkat hui.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
-  }, [version, toast]);
+  }, [toast]);
 
-  const handleSpeak = (text: string, langCode: string) => {
+  useEffect(() => {
+    fetchBibleContent(state.bookId, state.chapter, state.translation);
+  }, [state.bookId, state.chapter, state.translation, fetchBibleContent]);
+
+  const handleSpeak = (text: string) => {
+    if (isAudioPlaying) {
+      window.speechSynthesis.cancel();
+      setIsAudioPlaying(false);
+      return;
+    }
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = langCode;
+    const lang = BIBLE_VERSIONS.find(v => v.id === state.translation)?.lang || 'en-US';
+    utterance.lang = lang;
+    utterance.onend = () => setIsAudioPlaying(false);
     window.speechSynthesis.speak(utterance);
-    toast({ title: "Audio Playing", description: "Vachan suniye..." });
+    setIsAudioPlaying(true);
   };
 
   const handleExplainAI = async (verse: any) => {
-    setAiLoading(verse.pk);
+    setAiLoading(true);
     setAiResponse(null);
     try {
-      const response = await aiScriptureQuestion({
-        passage: `${selectedBook?.name} ${verse.verse}`,
-        question: `Please explain this verse simply in ${version.includes('HIN') ? 'Hindi' : 'English'}: "${verse.text}"`
+      const res = await aiScriptureQuestion({
+        passage: `${currentBook?.name} ${state.chapter}:${verse.verse}`,
+        question: `Please explain this verse simply: "${verse.text}"`
       });
-      setAiResponse(response.answer);
+      setAiResponse(res.answer);
     } catch (e) {
-      toast({ title: "AI Error", description: "Gemini se connect nahi ho paya.", variant: "destructive" });
+      toast({ title: "AI Error", description: "Gemini connection failed." });
     } finally {
-      setAiLoading(null);
+      setAiLoading(false);
     }
   };
 
-  const handleBookmark = async (verse: any) => {
-    if (!user || !firestore) {
-      toast({ title: "Register required", description: "Kripya register karein bookmark save karne ke liye." });
+  const handleBookmark = async (v: any) => {
+    if (!user) {
+      toast({ title: "Sign In Required", description: "Please register to save bookmarks." });
       return;
     }
-    const bookmarkId = `${version}_${selectedBook?.id}_${verse.verse}`;
-    const ref = doc(firestore, 'users', user.uid, 'bookmarks', bookmarkId);
+    const bId = `${state.translation}_${state.bookId}_${state.chapter}_${v.verse}`;
+    const ref = doc(firestore, 'users', user.uid, 'bookmarks', bId);
     
     setDoc(ref, {
       userId: user.uid,
-      verseId: bookmarkId,
-      verseText: verse.text,
-      bookName: selectedBook?.name,
-      chapter: 1,
-      verseNumber: verse.verse,
-      translation: version,
+      verseId: bId,
+      verseText: v.text,
+      bookName: currentBook?.name,
+      chapter: state.chapter,
+      verseNumber: v.verse,
+      translation: state.translation,
       createdAt: serverTimestamp()
     }, { merge: true });
 
-    toast({ title: "Vachan Saved", description: "Aapke bookmarks mein joda gaya." });
+    toast({ title: "Verse Bookmarked", description: "Saved to your library." });
   };
 
-  const bollsBooks = [
-    { name: "Genesis", id: 1, short: "Ge", chapters: 50 },
-    { name: "Exodus", id: 2, short: "Ex", chapters: 40 },
-    { name: "Psalms", id: 19, short: "Ps", chapters: 150 },
-    { name: "Proverbs", id: 20, short: "Pr", chapters: 31 },
-    { name: "Matthew", id: 40, short: "Mt", chapters: 28 },
-    { name: "John", id: 43, short: "Jn", chapters: 21 },
-    { name: "Romans", id: 45, short: "Ro", chapters: 16 },
-    { name: "Revelation", id: 66, short: "Re", chapters: 22 },
-  ];
-
   return (
-    <div className="min-h-screen bg-[#09090b] text-zinc-100 pb-40">
+    <div className="min-h-screen bg-[#09090b] text-zinc-100 flex flex-col">
       {/* World Class Header */}
-      <header className="sticky top-0 z-50 bg-[#09090b]/90 backdrop-blur-xl border-b border-emerald-500/10">
+      <header className="sticky top-0 z-50 bg-[#09090b]/90 backdrop-blur-xl border-b border-white/5">
         <div className="flex items-center p-5 justify-between max-w-2xl mx-auto">
+          <Dialog>
+            <DialogTrigger asChild>
+              <button className="flex items-center gap-3 group">
+                <div className="bg-emerald-500/20 p-2.5 rounded-2xl border border-emerald-500/20 group-hover:bg-emerald-500/30 transition-all">
+                  <BookOpen className="w-6 h-6 text-emerald-500" />
+                </div>
+                <div className="text-left">
+                  <h2 className="text-xl font-serif font-bold italic text-white flex items-center gap-2">
+                    {currentBook?.name} {state.chapter} <ChevronDown className="w-4 h-4 text-emerald-500" />
+                  </h2>
+                  <p className="text-[9px] text-zinc-500 uppercase font-black tracking-[0.2em]">Bible Engine V2</p>
+                </div>
+              </button>
+            </DialogTrigger>
+            <DialogContent className="bg-[#09090b] border-zinc-800 rounded-[2.5rem] max-w-2xl w-[95%] p-0 overflow-hidden shadow-2xl">
+              <DialogHeader className="p-6 border-b border-white/5 bg-zinc-900/50">
+                <DialogTitle className="font-serif italic text-2xl text-emerald-500 flex items-center gap-3">
+                  <BookOpen className="w-6 h-6" /> Select Book & Chapter
+                </DialogTitle>
+              </DialogHeader>
+              <ScrollArea className="h-[60vh] p-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {BIBLE_BOOKS.map(book => (
+                    <div key={book.id} className="space-y-2">
+                      <button 
+                        onClick={() => setState(prev => ({ ...prev, bookId: book.id, chapter: 1 }))}
+                        className={cn(
+                          "w-full p-4 rounded-2xl border text-left transition-all",
+                          state.bookId === book.id ? "bg-emerald-500/10 border-emerald-500 text-emerald-500" : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-emerald-500/40"
+                        )}
+                      >
+                        <span className="text-xs font-bold font-serif">{book.name}</span>
+                      </button>
+                      {state.bookId === book.id && (
+                        <div className="grid grid-cols-4 gap-2 px-1">
+                          {Array.from({ length: Math.min(book.chapters, 12) }).map((_, i) => (
+                            <DialogClose key={i} asChild>
+                              <button 
+                                onClick={() => setState(prev => ({ ...prev, chapter: i + 1 }))}
+                                className={cn(
+                                  "size-8 rounded-lg flex items-center justify-center text-[10px] font-bold border transition-all",
+                                  state.chapter === i + 1 ? "bg-emerald-500 text-black border-emerald-500" : "bg-zinc-800 border-zinc-700 text-zinc-500"
+                                )}
+                              >
+                                {i + 1}
+                              </button>
+                            </DialogClose>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </DialogContent>
+          </Dialog>
+
           <div className="flex items-center gap-3">
-            <div className="bg-emerald-500/20 p-2.5 rounded-2xl border border-emerald-500/20">
-              <BookOpen className="w-6 h-6 text-emerald-500" />
-            </div>
-            <div>
-              <h2 className="text-xl font-serif font-bold tracking-tight italic text-white leading-none">Divine Reader</h2>
-              <p className="text-[9px] text-zinc-500 uppercase font-black tracking-[0.2em] mt-1.5">World Class Interface</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <button className="text-[10px] font-black uppercase tracking-widest text-emerald-500 px-4 py-2 border border-emerald-500/30 rounded-full hover:bg-emerald-500/5 transition-all">Register</button>
+            <button 
+              onClick={() => setShowSettings(!showSettings)}
+              className={cn("p-2.5 rounded-xl border transition-all", showSettings ? "bg-emerald-500/20 border-emerald-500 text-emerald-500" : "bg-zinc-900 border-zinc-800 text-zinc-400")}
+            >
+              <Settings2 className="w-5 h-5" />
+            </button>
             <div className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400">
               <User className="w-5 h-5" />
             </div>
           </div>
         </div>
 
-        {/* Dynamic Version Selector */}
+        {/* Dynamic Controls */}
         <div className="px-5 pb-5 max-w-2xl mx-auto flex items-center gap-3 overflow-x-auto no-scrollbar">
-          {BIBLE_VERSIONS.map((ver) => (
+          {BIBLE_VERSIONS.map(ver => (
             <button
               key={ver.id}
-              onClick={() => handleVersionChange(ver.id)}
+              onClick={() => setState(prev => ({ ...prev, translation: ver.id }))}
               className={cn(
                 "px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border",
-                version === ver.id 
+                state.translation === ver.id 
                   ? "bg-emerald-500 border-emerald-400 text-black shadow-lg shadow-emerald-500/20" 
-                  : "bg-zinc-900 border-zinc-800 text-zinc-500 hover:text-zinc-300"
+                  : "bg-zinc-900 border-zinc-800 text-zinc-500"
               )}
             >
               {ver.name}
             </button>
           ))}
-          {view === 'reader' && (
-            <button 
-              onClick={() => setShowSettings(!showSettings)}
-              className={cn("p-2.5 rounded-xl border shrink-0 transition-all ml-auto", showSettings ? "bg-emerald-500/20 border-emerald-500 text-emerald-500" : "bg-zinc-900/50 border-zinc-800 text-zinc-500")}
-            >
-              <Settings2 className="w-5 h-5" />
-            </button>
-          )}
         </div>
 
-        {/* Font Settings Overlay */}
-        {showSettings && view === 'reader' && (
+        {/* Font Settings */}
+        {showSettings && (
           <div className="px-5 pb-5 max-w-2xl mx-auto animate-in fade-in slide-in-from-top-2">
-            <div className="bg-zinc-900/90 border border-zinc-800 p-6 rounded-[2.5rem] space-y-4 shadow-2xl backdrop-blur-2xl">
+            <div className="bg-zinc-900/95 border border-zinc-800 p-6 rounded-[2.5rem] space-y-4 shadow-2xl backdrop-blur-2xl">
               <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-zinc-500">
-                <span>Text Size Control</span>
+                <span>Font Size Control</span>
                 <span className="text-emerald-500">{fontSize}px</span>
               </div>
               <div className="flex items-center gap-4">
                 <Minus className="w-4 h-4 text-zinc-600" />
-                <Slider value={[fontSize]} onValueChange={(val) => handleFontSizeChange(val[0])} min={14} max={36} step={1} className="flex-1" />
+                <Slider value={[fontSize]} onValueChange={(v) => { setFontSize(v[0]); localStorage.setItem('bible_font_size', v[0].toString()); }} min={14} max={36} step={1} className="flex-1" />
                 <Plus className="w-4 h-4 text-zinc-600" />
               </div>
             </div>
@@ -214,158 +303,121 @@ export default function BibleReaderPage() {
         )}
       </header>
 
-      <main className="max-w-2xl mx-auto px-5 pt-8">
-        {view === 'index' ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            {bollsBooks.map((book) => (
-              <div 
-                key={book.id} 
-                onClick={() => { setSelectedBook(book); fetchBibleContent(book.id, 1); }}
-                className="group bg-zinc-900 border border-zinc-800 p-8 rounded-[2.5rem] hover:border-emerald-500/40 cursor-pointer transition-all shadow-xl hover:shadow-emerald-500/5 active:scale-[0.98] overflow-hidden relative"
-              >
-                <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
-                  <BookOpen className="w-24 h-24 text-emerald-500" />
-                </div>
-                <div className="relative z-10">
-                  <div className="flex justify-between items-start mb-6">
-                    <div className="size-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 font-serif text-3xl font-bold border border-emerald-500/20 shadow-inner">{book.short}</div>
-                    <div className="size-10 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
-                      <ChevronRight className="w-5 h-5 text-emerald-500" />
-                    </div>
-                  </div>
-                  <h4 className="text-2xl font-bold text-white font-serif italic tracking-tight">{book.name}</h4>
-                  <p className="text-[10px] text-zinc-500 uppercase font-black tracking-[0.2em] mt-3">{book.chapters} Chapters Available</p>
-                </div>
-              </div>
-            ))}
+      {/* Main Reader Content */}
+      <main className="flex-1 max-w-2xl mx-auto px-6 pt-10 pb-48">
+        {loading ? (
+          <div className="flex flex-col items-center py-32 gap-6 opacity-40">
+            <Loader2 className="w-14 h-14 text-emerald-500 animate-spin" />
+            <p className="text-emerald-500 font-serif italic text-xl animate-pulse">Summoning Pavitra Vachan...</p>
           </div>
         ) : (
-          <div className="space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-700">
-            <button 
-              onClick={() => setView('index')} 
-              className="px-8 py-3 bg-zinc-900 border border-zinc-800 rounded-full text-emerald-500 text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-3 active:scale-95 transition-all shadow-xl"
-            >
-              <ChevronRight className="w-4 h-4 rotate-180" /> Change Book
-            </button>
-            
-            <div className="space-y-3">
-              <h1 className="text-5xl font-serif font-bold italic text-white tracking-tighter">{selectedBook?.name} <span className="text-emerald-500">Ch. 1</span></h1>
-              <div className="h-1.5 w-20 bg-emerald-500 rounded-full opacity-40"></div>
-            </div>
-            
-            {loading ? (
-              <div className="flex flex-col items-center py-32 gap-6 opacity-50">
-                <Loader2 className="w-14 h-14 text-emerald-500 animate-spin" />
-                <p className="text-zinc-500 font-serif italic text-xl animate-pulse">Summoning Scripture...</p>
-              </div>
-            ) : (
-              <div className="space-y-12">
-                {currentContent?.map((v: any) => (
-                  <div key={v.pk} className="group relative border-b border-white/5 pb-10 last:border-none">
-                    <p style={{ fontSize: `${fontSize}px` }} className="leading-[1.9] text-zinc-200 font-serif transition-all duration-300">
-                      <span className="text-emerald-500/40 font-black text-[0.6em] align-top mr-4">#{v.verse}</span>
-                      {v.text}
-                    </p>
+          <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            {verses.map(v => (
+              <div 
+                key={v.pk} 
+                onClick={() => setState(prev => ({ ...prev, selectedVerse: v }))}
+                className={cn(
+                  "group relative pb-8 border-b border-white/5 last:border-none transition-all duration-300",
+                  state.selectedVerse?.pk === v.pk && "bg-emerald-500/5 -mx-4 px-4 rounded-xl"
+                )}
+              >
+                <p style={{ fontSize: `${fontSize}px` }} className="leading-[1.9] text-zinc-200 font-serif">
+                  <span className="text-emerald-500/40 font-black text-[0.6em] align-top mr-4">#{v.verse}</span>
+                  {v.text}
+                </p>
+                
+                {/* Selection Toolbar (Inline) */}
+                {state.selectedVerse?.pk === v.pk && (
+                  <div className="flex items-center gap-2 mt-6 animate-in slide-in-from-top-2 duration-300">
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleBookmark(v); }}
+                      className="p-3.5 bg-zinc-900 border border-zinc-800 rounded-2xl hover:text-emerald-500 hover:border-emerald-500/40 transition-all shadow-xl"
+                    >
+                      <Bookmark className="w-4.5 h-4.5" />
+                    </button>
                     
-                    {/* Verse Toolbelt */}
-                    <div className="flex items-center gap-2 mt-6 opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 duration-500">
-                      <button 
-                        onClick={() => handleBookmark(v)} 
-                        title="Bookmark"
-                        className="p-3.5 bg-zinc-900 border border-zinc-800 rounded-2xl hover:text-emerald-500 hover:border-emerald-500/40 transition-all shadow-xl"
-                      >
-                        <Bookmark className="w-4.5 h-4.5" />
-                      </button>
-                      
-                      <button 
-                        onClick={() => handleSpeak(v.text, BIBLE_VERSIONS.find(b => b.id === version)?.lang || 'en-US')}
-                        title="Speak"
-                        className="p-3.5 bg-zinc-900 border border-zinc-800 rounded-2xl hover:text-emerald-500 hover:border-emerald-500/40 transition-all shadow-xl"
-                      >
-                        <Volume2 className="w-4.5 h-4.5" />
-                      </button>
-
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <button 
-                            onClick={() => handleExplainAI(v)}
-                            title="AI Insight"
-                            className="p-3.5 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-500 hover:bg-emerald-500/20 transition-all shadow-xl"
-                          >
-                            <Sparkles className="w-4.5 h-4.5" />
-                          </button>
-                        </DialogTrigger>
-                        <DialogContent className="bg-[#09090b] border-zinc-800 rounded-[2.5rem] max-w-md w-[92%] p-8 shadow-[0_0_50px_rgba(16,185,129,0.1)]">
-                          <DialogHeader>
-                            <DialogTitle className="font-serif italic text-2xl text-emerald-500 flex items-center gap-3">
-                              <Sparkles className="w-6 h-6" /> AI Scholar Insight
-                            </DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-6 mt-6">
-                            <div className="bg-zinc-900/50 p-5 rounded-2xl border border-white/5">
-                              <p className="text-xs text-zinc-500 font-black uppercase tracking-widest mb-3">Scripture Context</p>
-                              <p className="text-sm text-zinc-300 italic font-serif leading-relaxed">"{v.text}"</p>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleExplainAI(v); }}
+                          className="p-3.5 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-500 hover:bg-emerald-500/20 transition-all shadow-xl"
+                        >
+                          <Sparkles className="w-4.5 h-4.5" />
+                        </button>
+                      </DialogTrigger>
+                      <DialogContent className="bg-[#09090b] border-zinc-800 rounded-[2.5rem] p-8 max-w-md w-[92%]">
+                        <DialogHeader>
+                          <DialogTitle className="font-serif italic text-2xl text-emerald-500 flex items-center gap-3">
+                            <Sparkles className="w-6 h-6" /> AI Insight
+                          </DialogTitle>
+                        </DialogHeader>
+                        <ScrollArea className="max-h-[60vh] mt-6 text-zinc-200 leading-relaxed whitespace-pre-wrap">
+                          {aiLoading ? (
+                            <div className="flex flex-col items-center py-10 gap-4 opacity-40">
+                              <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+                              <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Consulting Wisdom...</p>
                             </div>
-                            
-                            <ScrollArea className="max-h-[300px] pr-4">
-                              {aiLoading === v.pk ? (
-                                <div className="flex flex-col items-center py-10 gap-4 opacity-40">
-                                  <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
-                                  <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Consulting Wisdom...</p>
-                                </div>
-                              ) : (
-                                <div className="text-zinc-200 text-[15px] leading-relaxed whitespace-pre-wrap font-sans">
-                                  {aiResponse || "No insight available."}
-                                </div>
-                              )}
-                            </ScrollArea>
-                            
-                            <Button 
-                              onClick={() => {
-                                navigator.clipboard.writeText(aiResponse || "");
-                                toast({ title: "Copied", description: "Insight copied to clipboard." });
-                              }}
-                              className="w-full bg-emerald-500 text-black font-black uppercase tracking-widest text-[11px] py-7 rounded-2xl shadow-xl shadow-emerald-500/20 active:scale-95 transition-all"
-                            >
-                              <Copy className="w-4 h-4 mr-3" /> Copy Wisdom
-                            </Button>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
+                          ) : aiResponse || "Insight available on click."}
+                        </ScrollArea>
+                      </DialogContent>
+                    </Dialog>
 
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <button 
-                            title="Add Note"
-                            className="p-3.5 bg-zinc-900 border border-zinc-800 rounded-2xl hover:text-emerald-500 hover:border-emerald-500/40 transition-all shadow-xl"
-                          >
-                            <FileText className="w-4.5 h-4.5" />
-                          </button>
-                        </DialogTrigger>
-                        <DialogContent className="bg-[#09090b] border-zinc-800 rounded-[2.5rem] p-8 max-w-md w-[92%]">
-                          <DialogHeader>
-                            <DialogTitle className="font-serif italic text-2xl text-emerald-500">Study Journal</DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-6 mt-6">
-                            <Textarea 
-                              placeholder="What is the Word speaking to you today?"
-                              className="bg-zinc-900 border-zinc-800 rounded-2xl min-h-[160px] focus:ring-emerald-500/20 text-sm p-5 leading-relaxed"
-                            />
-                            <Button className="w-full bg-emerald-500 text-black font-black uppercase tracking-widest text-[11px] py-7 rounded-2xl shadow-xl shadow-emerald-500/20 active:scale-95 transition-all">
-                              <Send className="w-4 h-4 mr-3" /> Save Reflection
-                            </Button>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                    </div>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleSpeak(v.text); }}
+                      className="p-3.5 bg-zinc-900 border border-zinc-800 rounded-2xl hover:text-emerald-500 hover:border-emerald-500/40 transition-all shadow-xl"
+                    >
+                      <Volume2 className="w-4.5 h-4.5" />
+                    </button>
+
+                    <button 
+                      onClick={(e) => { 
+                        e.stopPropagation(); 
+                        navigator.clipboard.writeText(v.text);
+                        toast({ title: "Copied!", description: "Verse text copied to clipboard." });
+                      }}
+                      className="p-3.5 bg-zinc-900 border border-zinc-800 rounded-2xl hover:text-emerald-500 hover:border-emerald-500/40 transition-all shadow-xl"
+                    >
+                      <Share2 className="w-4.5 h-4.5" />
+                    </button>
                   </div>
-                ))}
+                )}
               </div>
+            ))}
+
+            {/* Next Chapter Button */}
+            {currentBook && state.chapter < currentBook.chapters && (
+              <button 
+                onClick={() => setState(prev => ({ ...prev, chapter: prev.chapter + 1, selectedVerse: null }))}
+                className="w-full py-6 bg-zinc-900/50 border border-white/5 rounded-[2rem] flex items-center justify-center gap-4 text-emerald-500 hover:bg-emerald-500/10 transition-all group"
+              >
+                <span className="text-[10px] font-black uppercase tracking-[0.4em]">Next: Chapter {state.chapter + 1}</span>
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
+              </button>
             )}
           </div>
         )}
       </main>
+
+      {/* Fixed Audio Sync Panel (Footer) */}
+      <div className="fixed bottom-24 left-1/2 -translate-x-1/2 w-[90%] max-w-md z-50 animate-in slide-in-from-bottom-8 duration-700">
+        <div className="bg-[#121214]/90 backdrop-blur-2xl border border-white/10 p-4 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex items-center justify-between group">
+          <div className="flex items-center gap-4">
+            <div className="size-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 group-hover:bg-emerald-500/20 transition-all">
+              <Volume2 className="w-6 h-6 text-emerald-500" />
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-white">{currentBook?.name} {state.chapter}</h4>
+              <p className="text-[9px] text-zinc-500 uppercase font-black tracking-widest mt-1">Audio Bible Active</p>
+            </div>
+          </div>
+          <button 
+            onClick={() => handleSpeak(verses.map(v => v.text).join(' '))}
+            className="size-12 rounded-2xl bg-emerald-500 text-black flex items-center justify-center shadow-xl shadow-emerald-500/20 active:scale-90 transition-all"
+          >
+            {isAudioPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 fill-black" />}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
-
