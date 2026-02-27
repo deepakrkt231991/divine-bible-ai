@@ -2,14 +2,6 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    /**
-     * CORE PHILOSOPHY:
-     * This ruleset implements a strict User-Ownership model for personal data and a Database-Based Access Control (DBAC) 
-     * model for administrative content. 
-     */
-
-    // --- HELPER FUNCTIONS ---
-
     function isSignedIn() {
       return request.auth != null;
     }
@@ -18,83 +10,46 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    function isExistingOwner(userId) {
-      return isOwner(userId) && resource != null;
-    }
-
-    function isAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
-    }
-
-    // --- COLLECTION RULES ---
-
-    /**
-     * @description Rules for user profile documents.
-     */
+    // User Profile rules
     match /users/{userId} {
       allow get: if isOwner(userId);
-      allow list: if false;
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
 
       match /bookmarks/{bookmarkId} {
-        allow get, list: if isOwner(userId);
-        allow create: if isOwner(userId) && request.resource.data.userId == userId;
-        allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
-        allow delete: if isExistingOwner(userId);
+        allow read, write: if isOwner(userId);
       }
 
       match /notes/{noteId} {
-        allow get, list: if isOwner(userId);
-        allow create: if isOwner(userId) && request.resource.data.userId == userId;
-        allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
-        allow delete: if isExistingOwner(userId);
+        allow read, write: if isOwner(userId);
       }
 
-      match /reading_progress/{readingPlanId} {
-        allow get, list: if isOwner(userId);
-        allow create: if isOwner(userId) && request.resource.data.userId == userId;
-        allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
-        allow delete: if isExistingOwner(userId);
-      }
-      
-      match /highlights/{highlightId} {
-        allow get, list: if isOwner(userId);
-        allow create: if isOwner(userId) && request.resource.data.userId == userId;
-        allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
-        allow delete: if isExistingOwner(userId);
+      match /reading_progress/{planId} {
+        allow read, write: if isOwner(userId);
       }
     }
 
-    /**
-     * @description Public prayer requests. Writable by authenticated users.
-     */
+    // Community Prayers rules
     match /community_prayers/{prayerId} {
-      allow read: if true; 
+      // Allow everyone to read the feed
+      allow read: if true;
+      // Allow only signed-in users to create prayers
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow update: if isSignedIn(); // Allow incrementing Amen count
+      // Allow signed-in users to update (for Amen count)
+      allow update: if isSignedIn();
+      // Allow only the owner to delete their prayer
       allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
 
-    match /reading_plans/{readingPlanId} {
-      allow get, list: if true;
-      allow create, update, delete: if isAdmin();
-
-      match /day_details/{dayNumber} {
-        allow get, list: if true;
-        allow create, update, delete: if isAdmin();
-      }
+    // Reading Plans metadata
+    match /reading_plans/{planId} {
+      allow read: if true;
     }
 
-    match /audio_files/{audioFileId} {
-      allow get, list: if true;
-      allow create, update, delete: if isAdmin();
-    }
-
-    match /roles_admin/{userId} {
-      allow get: if isSignedIn();
-      allow list, create, update, delete: if isAdmin();
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
