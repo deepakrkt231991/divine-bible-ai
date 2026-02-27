@@ -6,23 +6,23 @@
   :root {
     --background: 240 10% 3.9%;
     --foreground: 0 0% 98%;
-    --card: 240 10% 6%;
+    --card: 240 10% 6.3%;
     --card-foreground: 0 0% 98%;
     --popover: 240 10% 3.9%;
     --popover-foreground: 0 0% 98%;
-    --primary: 161 77% 39%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 161 84% 39%;
+    --primary-foreground: 161 84% 10%;
     --secondary: 240 3.7% 15.9%;
     --secondary-foreground: 0 0% 98%;
     --muted: 240 3.7% 15.9%;
     --muted-foreground: 240 5% 64.9%;
-    --accent: 161 77% 39%;
+    --accent: 161 84% 39%;
     --accent-foreground: 0 0% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
     --border: 240 3.7% 15.9%;
     --input: 240 3.7% 15.9%;
-    --ring: 161 77% 39%;
+    --ring: 161 84% 39%;
     --radius: 1.5rem;
   }
 }
@@ -32,12 +32,15 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-background text-foreground antialiased selection:bg-primary/30;
   }
 }
 
-.glass {
-  @apply bg-zinc-900/60 backdrop-blur-xl border border-white/5;
+.glass-nav {
+  background: rgba(15, 15, 15, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .no-scrollbar::-webkit-scrollbar {

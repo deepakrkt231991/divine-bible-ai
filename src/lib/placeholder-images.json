@@ -1,3 +1,22 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "verse-bg",
+      "description": "Serene morning mountain landscape with soft sunlight",
+      "imageUrl": "https://images.unsplash.com/photo-1755150427184-5707e795f22e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxzZXJlbmUlMjBtb3VudGFpbnxlbnwwfHx8fDE3NzIyMTI2Mjh8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "serene mountain"
+    },
+    {
+      "id": "kids-ministry",
+      "description": "Group of diverse happy children laughing together",
+      "imageUrl": "https://images.unsplash.com/photo-1502086223501-7ea6ecd79368?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxoYXBweSUyMGNoaWxkcmVufGVufDB8fHx8MTc3MjIxMjYyN3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "happy children"
+    },
+    {
+      "id": "youth-ministry",
+      "description": "Teenagers chatting and hanging out in a modern setting",
+      "imageUrl": "https://images.unsplash.com/photo-1549057446-9f5c6ac91a04?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHx0ZWVuYWdlcnMlMjBoYW5naW5nfGVufDB8fHx8MTc3MjIxMjYyOHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "teenagers hanging"
+    }
+  ]
 }
