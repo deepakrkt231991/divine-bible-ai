@@ -15,11 +15,13 @@ import {
   RefreshCw,
   Plus,
   Minus,
-  Check
+  Check,
+  Trash2,
+  WifiOff
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, setDoc, serverTimestamp, collection, query, orderBy, limit, addDoc } from 'firebase/firestore';
+import { useFirebase, useMemoFirebase } from '@/firebase';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -28,7 +30,7 @@ import { Slider } from '@/components/ui/slider';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { smartBibleSearch } from '@/ai/flows/smart-bible-search';
 
-// 81-Book Index (Frontend Hardcoded for 0-second loading)
+// 81-Book Index
 const BIBLE_BOOKS = [
   { id: 1, name: "Genesis", hindi: "Utpatti", chapters: 50, canon: "standard", section: "Old Testament" },
   { id: 2, name: "Exodus", hindi: "Nirgaman", chapters: 40, canon: "standard", section: "Old Testament" },
@@ -52,8 +54,12 @@ const BIBLE_VERSIONS = [
   { id: 'IRV_MAR', name: 'Marathi (IRV)', lang: 'mr-IN' },
 ];
 
-// Global Memory Cache
-const BibleCache = new Map();
+// Memory Cache for 0-ms instant UI
+const BibleMemoryCache = new Map();
+
+// IndexedDB Configuration for Massive Offline Storage
+const DB_NAME = "DivineBibleOfflineDB";
+const STORE_NAME = "chapters";
 
 export default function BibleReaderPage() {
   const { firestore, user } = useFirebase();
@@ -76,12 +82,55 @@ export default function BibleReaderPage() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [aiSearchLoading, setAiSearchLoading] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
+  const [isOffline, setIsOffline] = useState(false);
 
   const currentBook = useMemo(() => BIBLE_BOOKS.find(b => b.id === state.bookId) || BIBLE_BOOKS[0], [state.bookId]);
 
   const filteredBooksByCanon = useMemo(() => {
     return state.canon === 'standard' ? BIBLE_BOOKS.filter(b => b.canon === 'standard') : BIBLE_BOOKS;
   }, [state.canon]);
+
+  // IndexedDB Helper
+  const openDB = useCallback(() => {
+    return new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open(DB_NAME, 1);
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          db.createObjectStore(STORE_NAME, { keyPath: "id" });
+        }
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }, []);
+
+  const getOfflineChapter = useCallback(async (id: string) => {
+    const db = await openDB();
+    return new Promise<any>((resolve) => {
+      const tx = db.transaction(STORE_NAME, "readonly");
+      const store = tx.objectStore(STORE_NAME);
+      const request = store.get(id);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => resolve(null);
+    });
+  }, [openDB]);
+
+  const saveOfflineChapter = useCallback(async (id: string, data: any) => {
+    const db = await openDB();
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
+    store.put({ id, data, timestamp: Date.now() });
+  }, [openDB]);
+
+  const clearOfflineCache = async () => {
+    const db = await openDB();
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
+    store.clear();
+    BibleMemoryCache.clear();
+    toast({ title: "Cache Cleared", description: "All offline chapters have been removed." });
+  };
 
   useEffect(() => {
     const savedVer = localStorage.getItem('bible_version') || 'IRV_HIN';
@@ -96,75 +145,76 @@ export default function BibleReaderPage() {
       chapter: savedChapter ? parseInt(savedChapter) : 1
     }));
     if (savedSize) setFontSize(parseInt(savedSize));
+
+    const handleStatus = () => setIsOffline(!navigator.onLine);
+    window.addEventListener('online', handleStatus);
+    window.addEventListener('offline', handleStatus);
+    return () => {
+      window.removeEventListener('online', handleStatus);
+      window.removeEventListener('offline', handleStatus);
+    };
   }, []);
 
-  // High-Performance Fetch Logic
+  // Optimized Fetch with Offline Fallback & Background Pre-fetching
   const fetchBibleContent = useCallback(async (bId: number, chap: number, trans: string) => {
     const cacheKey = `${trans}_${bId}_${chap}`;
     
-    // 1. Instant load from Memory Cache
-    if (BibleCache.has(cacheKey)) {
-      setVerses(BibleCache.get(cacheKey));
+    // 1. Instant Load from Memory (0ms)
+    if (BibleMemoryCache.has(cacheKey)) {
+      setVerses(BibleMemoryCache.get(cacheKey));
       return;
     }
 
-    // 2. Check LocalStorage for Offline/Fast load
-    const localSaved = localStorage.getItem(`cache_${cacheKey}`);
-    if (localSaved) {
-      const parsed = JSON.parse(localSaved);
-      BibleCache.set(cacheKey, parsed);
-      setVerses(parsed);
+    // 2. Check IndexedDB (5-10ms)
+    const offlineData = await getOfflineChapter(cacheKey);
+    if (offlineData) {
+      BibleMemoryCache.set(cacheKey, offlineData.data);
+      setVerses(offlineData.data);
       return;
     }
 
+    // 3. API Fetch
     setLoading(true);
     try {
-      const b = parseInt(bId.toString()) || 1;
-      const c = parseInt(chap.toString()) || 1;
-      const t = trans || 'IRV_HIN';
-
-      const url = `https://bolls.life/get-chapter/${t}/${b}/${c}/`;
+      const url = `https://bolls.life/get-chapter/${trans}/${bId}/${chap}/`;
       const response = await fetch(url);
-      
-      if (!response.ok) throw new Error("API Connection Error");
+      if (!response.ok) throw new Error("Offline or API Error");
       
       const data = await response.json();
       
-      if (!data || data.length === 0) {
-        toast({ title: "Content Unavailable", description: "Ye chapter abhi available nahi hai." });
-        setVerses([]);
-      } else {
-        // Save to Memory and LocalStorage Caches
-        BibleCache.set(cacheKey, data);
-        localStorage.setItem(`cache_${cacheKey}`, JSON.stringify(data));
+      if (data && data.length > 0) {
+        // Save to Memory & Offline Storage
+        BibleMemoryCache.set(cacheKey, data);
+        await saveOfflineChapter(cacheKey, data);
         
         setVerses(data);
-        localStorage.setItem('bible_book_id', b.toString());
-        localStorage.setItem('bible_chapter', c.toString());
-        localStorage.setItem('bible_version', t);
+        localStorage.setItem('bible_book_id', bId.toString());
+        localStorage.setItem('bible_chapter', chap.toString());
+        localStorage.setItem('bible_version', trans);
 
-        // Pre-fetch next chapter logic
-        if (c < currentBook.chapters) {
-          const nextKey = `${t}_${b}_${c + 1}`;
-          if (!BibleCache.has(nextKey)) {
-            fetch(`https://bolls.life/get-chapter/${t}/${b}/${c + 1}/`)
+        // 4. Background Pre-fetching Agla Chapter
+        if (chap < currentBook.chapters) {
+          const nextKey = `${trans}_${bId}_${chap + 1}`;
+          const alreadyCached = await getOfflineChapter(nextKey);
+          if (!alreadyCached) {
+            fetch(`https://bolls.life/get-chapter/${trans}/${bId}/${chap + 1}/`)
               .then(r => r.json())
-              .then(d => {
-                if (d && d.length > 0) {
-                  BibleCache.set(nextKey, d);
-                  localStorage.setItem(`cache_${nextKey}`, JSON.stringify(d));
-                }
-              }).catch(() => {});
+              .then(d => { if(d) saveOfflineChapter(nextKey, d); })
+              .catch(() => {});
           }
         }
       }
     } catch (e) {
       console.error("Fetch Error:", e);
-      toast({ title: "Error", description: "Vachan load nahi ho paye.", variant: "destructive" });
+      toast({ 
+        title: "Connection Lost", 
+        description: "Ye chapter offline available nahi hai. Internet check karein.", 
+        variant: "destructive" 
+      });
     } finally {
       setLoading(false);
     }
-  }, [toast, currentBook.chapters]);
+  }, [toast, currentBook.chapters, getOfflineChapter, saveOfflineChapter]);
 
   useEffect(() => {
     fetchBibleContent(state.bookId, state.chapter, state.translation);
@@ -227,7 +277,7 @@ export default function BibleReaderPage() {
   };
 
   return (
-    <div id="app-container">
+    <div id="app-container" className="bg-[#09090b]">
       {/* Top Header */}
       <header className="flex-none bg-[#09090b]/90 backdrop-blur-xl border-b border-white/5 px-4 py-3 z-40">
         <div className="max-w-2xl mx-auto space-y-3">
@@ -239,7 +289,7 @@ export default function BibleReaderPage() {
                 onChange={(e) => setState(prev => ({ ...prev, globalSearch: e.target.value }))}
                 onKeyDown={(e) => e.key === 'Enter' && handleGlobalSearch()}
                 onFocus={() => setState(prev => ({ ...prev, isSearchOpen: true }))}
-                placeholder="Dukh mein shanti, Love, or verse..."
+                placeholder="Search peace, hope, or verse..."
                 className="bg-zinc-950 border-zinc-800 rounded-2xl pl-12 h-12 text-sm focus-visible:ring-emerald-500/20"
               />
               {state.isSearchOpen && (
@@ -282,14 +332,21 @@ export default function BibleReaderPage() {
         </div>
       </header>
 
-      {/* Main Content Area (High Performance Scroll) */}
+      {/* Main Reading Area */}
       <main className="hide-scrollbar relative bg-[#09090b]">
+        {isOffline && (
+          <div className="bg-orange-500/10 border-b border-orange-500/20 py-2 flex items-center justify-center gap-2">
+            <WifiOff className="w-3 h-3 text-orange-500" />
+            <span className="text-[9px] font-black uppercase tracking-widest text-orange-500">Offline Mode: Cached chapters only</span>
+          </div>
+        )}
+
         {state.isSearchOpen && (
           <div className="absolute inset-0 bg-[#09090b] z-30 p-6 space-y-8 animate-in slide-in-from-top-4 overflow-y-auto pb-[150px]">
             {aiSearchLoading ? (
               <div className="flex flex-col items-center py-20 gap-4">
                 <Loader2 className="w-10 h-10 text-emerald-500 animate-spin" />
-                <p className="text-xs font-black uppercase tracking-widest text-emerald-500">Smart Search in progress...</p>
+                <p className="text-xs font-black uppercase tracking-widest text-emerald-500">AI Thinking...</p>
               </div>
             ) : (
               <div className="max-w-2xl mx-auto space-y-8">
@@ -322,7 +379,10 @@ export default function BibleReaderPage() {
           </div>
         ) : verses.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-32 text-center space-y-6">
-            <p className="text-zinc-500 italic font-serif text-lg">Vachan nahi mile. Check internet or version.</p>
+            <div className="size-20 rounded-full bg-zinc-900 flex items-center justify-center border border-zinc-800">
+              <WifiOff className="w-10 h-10 text-zinc-700" />
+            </div>
+            <p className="text-zinc-500 italic font-serif text-lg">No content found.</p>
             <Button variant="outline" onClick={() => fetchBibleContent(state.bookId, state.chapter, state.translation)} className="border-emerald-500/30 text-emerald-500">
               Try Again
             </Button>
@@ -334,13 +394,16 @@ export default function BibleReaderPage() {
               <p className="text-[10px] text-zinc-500 font-black uppercase tracking-widest">{currentBook.hindi} • {state.translation}</p>
             </div>
 
-            <div className="space-y-8">
+            <div className="space-y-10">
               {verses.map(v => (
                 <div 
                   key={v.pk} 
                   id={`v-${v.verse}`}
                   onClick={() => setState(prev => ({ ...prev, selectedVerse: v }))}
-                  className={cn("verse-row group relative animate-in fade-in slide-in-from-bottom-2 duration-500", state.selectedVerse?.pk === v.pk && "highlight-emerald")}
+                  className={cn(
+                    "verse-row group relative p-4 rounded-2xl transition-all duration-500",
+                    state.selectedVerse?.pk === v.pk ? "bg-emerald-500/10 border-l-4 border-emerald-500 shadow-xl" : "hover:bg-zinc-900/50"
+                  )}
                 >
                   <p style={{ fontSize: `${fontSize}px` }} className="leading-[1.9] text-zinc-200 font-serif">
                     <span className="text-emerald-500 font-bold mr-3">{v.verse}</span>
@@ -348,9 +411,9 @@ export default function BibleReaderPage() {
                   </p>
                   {state.selectedVerse?.pk === v.pk && (
                     <div className="flex items-center gap-2 mt-6 animate-in slide-in-from-top-2">
-                      <button onClick={() => handleBookmark(v)} className="p-3.5 bg-zinc-900 border border-zinc-800 rounded-2xl hover:text-emerald-500 transition-all shadow-xl"><Bookmark className="w-4 h-4" /></button>
-                      <button onClick={() => handleSpeak(v.text)} className="p-3.5 bg-zinc-900 border border-zinc-800 rounded-2xl hover:text-emerald-500 shadow-xl"><Volume2 className="w-4 h-4" /></button>
-                      <button className="p-3.5 bg-zinc-900 border border-zinc-800 rounded-2xl hover:text-emerald-500 shadow-xl"><Share2 className="w-4 h-4" /></button>
+                      <button onClick={() => handleBookmark(v)} className="size-12 bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center justify-center hover:text-emerald-500 transition-all shadow-xl"><Bookmark className="w-4 h-4" /></button>
+                      <button onClick={() => handleSpeak(v.text)} className="size-12 bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center justify-center hover:text-emerald-500 shadow-xl"><Volume2 className="w-4 h-4" /></button>
+                      <button className="size-12 bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center justify-center hover:text-emerald-500 shadow-xl"><Share2 className="w-4 h-4" /></button>
                     </div>
                   )}
                 </div>
@@ -361,33 +424,45 @@ export default function BibleReaderPage() {
               <button 
                 onClick={() => {
                   setState(prev => ({ ...prev, chapter: prev.chapter + 1, selectedVerse: null }));
-                  document.querySelector('main')?.scrollTo(0,0);
+                  document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
-                className="w-full py-8 bg-zinc-900/50 border border-white/5 rounded-[2.5rem] flex items-center justify-center gap-4 text-emerald-500 hover:bg-emerald-500/10 transition-all group"
+                className="w-full py-10 bg-zinc-900/50 border border-white/5 rounded-[2.5rem] flex flex-col items-center justify-center gap-4 text-emerald-500 hover:bg-emerald-500/10 transition-all group"
               >
                 <span className="text-[10px] font-black uppercase tracking-[0.4em]">Next: Chapter {state.chapter + 1}</span>
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
+                <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
               </button>
             )}
           </div>
         )}
       </main>
 
-      {/* Settings FAB */}
+      {/* Performance Settings FAB */}
       <div className="fixed bottom-24 right-6 z-50">
         <Dialog>
           <DialogTrigger asChild>
-            <button className="size-14 rounded-full bg-emerald-500 text-black shadow-2xl flex items-center justify-center active:scale-90 transition-all glow-primary">
+            <button className="size-14 rounded-full bg-emerald-500 text-black shadow-2xl flex items-center justify-center active:scale-90 transition-all glow-primary ring-4 ring-[#09090b]">
               <Settings2 className="w-6 h-6" />
             </button>
           </DialogTrigger>
           <DialogContent className="bg-zinc-900 border-zinc-800 rounded-[2.5rem] p-8">
-            <DialogHeader><DialogTitle className="font-serif italic text-emerald-500">Reading Settings</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle className="font-serif italic text-emerald-500">Reader Controls</DialogTitle></DialogHeader>
             <div className="space-y-8 pt-4">
               <div className="space-y-4">
                 <div className="flex justify-between items-center text-[10px] font-black text-zinc-500 uppercase"><span>Font Size</span><span>{fontSize}px</span></div>
                 <Slider value={[fontSize]} onValueChange={(val) => { setFontSize(val[0]); localStorage.setItem('bible_font_size', val[0].toString()); }} min={14} max={32} step={1} />
               </div>
+              
+              <div className="space-y-4">
+                <span className="text-[10px] font-black text-zinc-500 uppercase">Offline Storage</span>
+                <button 
+                  onClick={clearOfflineCache}
+                  className="w-full flex items-center justify-between p-4 bg-red-500/5 border border-red-500/20 rounded-2xl text-red-500 hover:bg-red-500/10 transition-all"
+                >
+                  <span className="text-xs font-bold">Clear Offline Cache</span>
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+
               <div className="space-y-4">
                 <span className="text-[10px] font-black text-zinc-500 uppercase">Translation</span>
                 <div className="grid grid-cols-1 gap-2">
