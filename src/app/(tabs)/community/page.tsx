@@ -1,22 +1,26 @@
+
 'use client';
 
 import React, { useState } from 'react';
-import { Heart, MessageCircle, Share2, MoreHorizontal, Image as ImageIcon, Smile, User, Send, Loader2, Search, Bell, Calendar as CalendarIcon } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MoreHorizontal, Image as ImageIcon, Smile, User, Send, Loader2, Calendar as CalendarIcon, Check } from 'lucide-react';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, addDoc, serverTimestamp, doc, updateDoc, increment, query, orderBy } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import Image from 'next/image';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
+import Link from 'next/link';
 
 export default function CommunityPage() {
   const { firestore, user } = useFirebase();
   const { toast } = useToast();
   const [newPrayer, setNewPrayer] = useState('');
+  const [isAnonymous, setIsAnonymous] = useState(false);
   const [isPosting, setIsPosting] = useState(false);
 
   const prayersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'community_prayers'), orderBy('createdAt', 'desc'));
+    return query(collection(firestore, 'prayer_requests'), orderBy('createdAt', 'desc'));
   }, [firestore]);
 
   const { data: prayers, isLoading } = useCollection(prayersQuery);
@@ -27,30 +31,52 @@ export default function CommunityPage() {
       return;
     }
     setIsPosting(true);
-    try {
-      await addDoc(collection(firestore, 'community_prayers'), {
-        userId: user.uid,
-        userName: user.displayName || 'Faithful Seeker',
-        content: newPrayer,
-        type: 'public',
-        amenCount: 0,
-        createdAt: serverTimestamp()
+    
+    const prayerData = {
+      userId: user.uid,
+      userName: isAnonymous ? 'Faithful Seeker' : (user.displayName || 'Faithful Seeker'),
+      content: newPrayer,
+      isAnonymous,
+      type: 'public',
+      amenCount: 0,
+      createdAt: serverTimestamp()
+    };
+
+    addDoc(collection(firestore, 'prayer_requests'), prayerData)
+      .then(() => {
+        setNewPrayer('');
+        setIsAnonymous(false);
+        toast({ title: "Prayer Shared", description: "Your request has been added to the community circle." });
+      })
+      .catch(async (e) => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: 'prayer_requests',
+          operation: 'create',
+          requestResourceData: prayerData
+        }));
+      })
+      .finally(() => {
+        setIsPosting(false);
       });
-      setNewPrayer('');
-      toast({ title: "Prayer Shared", description: "Your request has been added to the community circle." });
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsPosting(false);
-    }
   };
 
-  const handleAmen = async (prayerId: string) => {
-    if (!firestore) return;
-    const ref = doc(firestore, 'community_prayers', prayerId);
-    await updateDoc(ref, {
+  const handleAmen = async (prayerId: string, currentAmenCount: number) => {
+    if (!firestore || !user) {
+      toast({ title: "Sign In", description: "Please sign in to say Amen." });
+      return;
+    }
+    const ref = doc(firestore, 'prayer_requests', prayerId);
+    
+    updateDoc(ref, {
       amenCount: increment(1)
+    }).catch(async (e) => {
+      errorEmitter.emit('permission-error', new FirestorePermissionError({
+        path: ref.path,
+        operation: 'update',
+        requestResourceData: { amenCount: currentAmenCount + 1 }
+      }));
     });
+
     toast({ title: "Amen!", description: "You are praying for this request." });
   };
 
@@ -68,14 +94,14 @@ export default function CommunityPage() {
       {/* Top Header Panel */}
       <header className="sticky top-0 z-50 bg-[#09090b]/80 backdrop-blur-md border-b border-white/5 px-6 py-4">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <h1 className="font-serif text-2xl font-bold text-emerald-500 italic">Divine Compass</h1>
+          <Link href="/home" className="font-serif text-2xl font-bold text-emerald-500 italic">Divine Compass</Link>
           <div className="flex items-center gap-3">
             <button className="text-[10px] font-black uppercase tracking-widest text-emerald-500 px-4 py-2 border border-emerald-500/30 rounded-full">
               Register
             </button>
-            <div className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400">
+            <Link href="/profile" className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400">
               <User className="w-5 h-5" />
-            </div>
+            </Link>
           </div>
         </div>
       </header>
@@ -91,8 +117,8 @@ export default function CommunityPage() {
             {circles.map((circle, i) => (
               <div key={i} className="flex-shrink-0 flex flex-col items-center gap-2 w-20 group cursor-pointer">
                 <div className={cn(
-                  "size-16 rounded-full p-1 border-2 transition-all",
-                  i < 2 ? "border-emerald-500" : "border-white/10 group-hover:border-emerald-500/50"
+                  "size-16 rounded-full p-1 border-2 transition-all duration-500",
+                  i < 2 ? "border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)]" : "border-white/10 group-hover:border-emerald-500/50"
                 )}>
                   <div 
                     className="w-full h-full rounded-full bg-cover bg-center" 
@@ -106,9 +132,9 @@ export default function CommunityPage() {
         </section>
 
         {/* Create Post Area */}
-        <section className="bg-zinc-900/50 border border-white/5 rounded-2xl p-4 shadow-xl">
+        <section className="bg-zinc-900 border border-white/5 rounded-2xl p-4 shadow-xl">
           <div className="flex gap-4">
-            <div className="size-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+            <div className="size-10 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
               <User className="w-5 h-5 text-emerald-500" />
             </div>
             <div className="flex-1">
@@ -118,7 +144,19 @@ export default function CommunityPage() {
                 className="w-full bg-transparent border-none focus:ring-0 text-zinc-300 placeholder:text-zinc-600 resize-none h-14 pt-2 text-sm leading-relaxed" 
                 placeholder="Share a spiritual reflection..."
               ></textarea>
-              <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/5">
+              <div className="flex items-center gap-3 mb-3">
+                <button 
+                  onClick={() => setIsAnonymous(!isAnonymous)}
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-1 rounded-full border text-[9px] font-black uppercase tracking-widest transition-all",
+                    isAnonymous ? "bg-emerald-500/20 border-emerald-500 text-emerald-500" : "bg-zinc-800 border-zinc-700 text-zinc-500"
+                  )}
+                >
+                  {isAnonymous ? <Check className="w-3 h-3" /> : null}
+                  Anonymous
+                </button>
+              </div>
+              <div className="flex items-center justify-between pt-3 border-t border-white/5">
                 <div className="flex gap-1">
                   <button className="p-2 hover:bg-white/5 rounded-lg text-zinc-500 hover:text-emerald-500 transition-colors">
                     <ImageIcon className="w-5 h-5" />
@@ -158,8 +196,11 @@ export default function CommunityPage() {
               <div className="p-5">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="size-10 rounded-full bg-zinc-800 border border-white/5 flex items-center justify-center text-zinc-500">
-                      <User className="w-5 h-5" />
+                    <div className={cn(
+                      "size-10 rounded-full bg-zinc-800 border flex items-center justify-center text-zinc-500 transition-all duration-700",
+                      prayer.amenCount > 10 ? "border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)] scale-110" : "border-white/5"
+                    )}>
+                      {prayer.isAnonymous ? <span className="text-xl">?</span> : <User className="w-5 h-5" />}
                     </div>
                     <div>
                       <h4 className="text-sm font-bold text-zinc-100">{prayer.userName}</h4>
@@ -177,7 +218,7 @@ export default function CommunityPage() {
                 <div className="flex items-center justify-between pt-4 border-t border-white/5">
                   <div className="flex items-center gap-8">
                     <button 
-                      onClick={() => handleAmen(prayer.id)}
+                      onClick={() => handleAmen(prayer.id, prayer.amenCount || 0)}
                       className="flex items-center gap-2 text-zinc-400 hover:text-emerald-500 transition-all group"
                     >
                       <Heart className={cn("w-5 h-5 group-active:scale-150 transition-all duration-300", prayer.amenCount > 0 && "fill-emerald-500 text-emerald-500")} />

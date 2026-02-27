@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -24,27 +25,18 @@ service cloud.firestore {
       match /notes/{noteId} {
         allow read, write: if isOwner(userId);
       }
-
-      match /reading_progress/{planId} {
-        allow read, write: if isOwner(userId);
-      }
     }
 
-    // Community Prayers rules
-    match /community_prayers/{prayerId} {
-      // Allow everyone to read the feed
+    // Prayer Requests rules
+    match /prayer_requests/{requestId} {
+      // Sab dekh sakte hain (Public Read)
       allow read: if true;
-      // Allow only signed-in users to create prayers
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      // Allow signed-in users to update (for Amen count)
+      // Sirf logged-in users post kar sakte hain
+      allow create: if isSignedIn();
+      // Amen increment ke liye authenticated users update kar sakte hain
       allow update: if isSignedIn();
-      // Allow only the owner to delete their prayer
+      // Delete sirf owner kar sakta hai
       allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
-    }
-
-    // Reading Plans metadata
-    match /reading_plans/{planId} {
-      allow read: if true;
     }
 
     // Default deny

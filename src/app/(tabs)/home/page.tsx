@@ -1,14 +1,27 @@
+
 'use client';
 
 import React from 'react';
-import { Compass, Share2, Bookmark, BookOpen, Calendar, User, Sparkles, ArrowRight } from 'lucide-react';
+import { Compass, Share2, Bookmark, BookOpen, Calendar, User, Sparkles, ArrowRight, Heart } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, orderBy, limit } from 'firebase/firestore';
+import { cn } from '@/lib/utils';
 
 export default function BibleHomePage() {
+  const { firestore } = useFirebase();
   const verseText = "For I know the plans I have for you, declares the Lord, plans to prosper you and not to harm you, plans to give you hope and a future.";
   const verseRef = "Jeremiah 29:11";
   const aiImageUrl = `https://pollinations.ai/p/${encodeURIComponent("Biblical oil painting of Jeremiah 29:11 plans to prosper and hope, cinematic lighting, 4k, sacred art")}?width=1080&height=1920&model=flux`;
+
+  // Fetch Live Prayer Circle (Top 5 Recent)
+  const prayerCircleQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'prayer_requests'), orderBy('createdAt', 'desc'), limit(5));
+  }, [firestore]);
+
+  const { data: recentPrayers } = useCollection(prayerCircleQuery);
 
   return (
     <div className="min-h-screen bg-[#09090b] text-zinc-100 pb-32">
@@ -24,13 +37,43 @@ export default function BibleHomePage() {
           <button className="text-[10px] font-black uppercase tracking-widest text-emerald-500 px-4 py-2 border border-emerald-500/30 rounded-full">
             Register
           </button>
-          <button className="flex items-center justify-center size-10 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white transition-colors">
+          <Link href="/profile" className="flex items-center justify-center size-10 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white transition-colors">
             <User className="w-5 h-5" />
-          </button>
+          </Link>
         </div>
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-6 space-y-8">
+        {/* Live Prayer Circle Widget */}
+        <section>
+          <div className="flex items-center justify-between mb-4 px-1">
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Live Prayer Circle</h3>
+            <Link href="/community" className="text-[11px] text-emerald-500 font-bold uppercase tracking-widest hover:underline">Join All</Link>
+          </div>
+          <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
+            {recentPrayers?.map((prayer, i) => (
+              <div key={prayer.id} className="flex-shrink-0 flex flex-col items-center gap-2 w-20 group cursor-pointer">
+                <div className={cn(
+                  "size-16 rounded-full p-1 border-2 transition-all duration-500",
+                  prayer.amenCount > 10 ? "border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)] animate-pulse" : "border-white/10"
+                )}>
+                  <div className="w-full h-full rounded-full bg-zinc-800 flex items-center justify-center text-emerald-500 font-bold text-xl border border-white/5">
+                    {prayer.isAnonymous ? '?' : prayer.userName?.[0] || 'U'}
+                  </div>
+                </div>
+                <div className="flex flex-col items-center gap-1">
+                  <span className="text-[10px] text-zinc-400 font-black uppercase tracking-widest truncate w-full text-center">
+                    {prayer.isAnonymous ? 'Anonymous' : prayer.userName}
+                  </span>
+                  <div className="px-2 py-0.5 bg-white/5 rounded-full flex items-center gap-1">
+                    <span className="text-[9px] text-emerald-500">🙏 {prayer.amenCount || 0}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
         {/* Verse Card */}
         <section className="relative group">
           <div className="absolute -inset-1 bg-emerald-500/20 rounded-[2rem] blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
@@ -64,14 +107,14 @@ export default function BibleHomePage() {
               <BookOpen className="w-6 h-6 text-emerald-500" />
             </div>
             <h3 className="font-bold text-lg">Bible Reading</h3>
-            <p className="text-zinc-500 text-[10px] uppercase font-black tracking-widest">Psalm 23-25</p>
+            <p className="text-zinc-500 text-[10px] uppercase font-black tracking-widest">Explore Word</p>
           </Link>
           <Link href="/ai" className="bg-zinc-900/50 p-6 rounded-[1.5rem] border border-zinc-800 hover:border-emerald-500/40 transition-all group">
             <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center mb-4 group-hover:bg-emerald-500/20">
               <Sparkles className="w-6 h-6 text-emerald-500" />
             </div>
-            <h3 className="font-bold text-lg">AI Magic</h3>
-            <p className="text-zinc-500 text-[10px] uppercase font-black tracking-widest">Ask Chaplain</p>
+            <h3 className="font-bold text-lg">AI scholar</h3>
+            <p className="text-zinc-500 text-[10px] uppercase font-black tracking-widest">Ask Wise One</p>
           </Link>
         </section>
 

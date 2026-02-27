@@ -35,6 +35,7 @@
         "userId": { "type": "string" },
         "userName": { "type": "string" },
         "content": { "type": "string" },
+        "isAnonymous": { "type": "boolean" },
         "type": { "type": "string", "enum": ["public", "private"] },
         "amenCount": { "type": "number" },
         "createdAt": { "type": "string", "format": "date-time" }
@@ -60,6 +61,6 @@
     "/users/{userId}": { "schema": "UserProfile", "description": "User profile" },
     "/users/{userId}/bookmarks/{bookmarkId}": { "schema": "Bookmark", "description": "User bookmarks" },
     "/users/{userId}/notes/{noteId}": { "schema": "Note", "description": "Personal study notes" },
-    "/community_prayers/{prayerId}": { "schema": "PrayerRequest", "description": "Public prayer requests" }
+    "/prayer_requests/{requestId}": { "schema": "PrayerRequest", "description": "Public prayer requests" }
   }
 }
