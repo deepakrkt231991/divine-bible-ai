@@ -4,12 +4,18 @@
     "UserProfile": {
       "title": "UserProfile",
       "type": "object",
-      "description": "User profile information.",
+      "description": "User profile information including onboarding and engagement stats.",
       "properties": {
         "id": { "type": "string" },
         "name": { "type": "string" },
         "email": { "type": "string" },
-        "languagePreference": { "type": "string", "enum": ["KJV", "IRV_HIN"] },
+        "mobileNumber": { "type": "string" },
+        "location": { "type": "string" },
+        "profileImageUrl": { "type": "string" },
+        "verified": { "type": "boolean" },
+        "amenCount": { "type": "number", "default": 0 },
+        "readingStreak": { "type": "number", "default": 1 },
+        "languagePreference": { "type": "string", "enum": ["KJV", "IRV_HIN"], "default": "IRV_HIN" },
         "createdAt": { "type": "string", "format": "date-time" }
       }
     },
@@ -23,6 +29,9 @@
         "verseId": { "type": "string" },
         "verseText": { "type": "string" },
         "bookName": { "type": "string" },
+        "chapter": { "type": "number" },
+        "verseNumber": { "type": "number" },
+        "translation": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       }
     },
@@ -50,6 +59,8 @@
         "userId": { "type": "string" },
         "verseId": { "type": "string" },
         "content": { "type": "string" },
+        "bookName": { "type": "string" },
+        "verseText": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       }
     }

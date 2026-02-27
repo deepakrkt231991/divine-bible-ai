@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -8,6 +9,9 @@ import { cn } from '@/lib/utils';
 
 export default function BottomNav() {
   const pathname = usePathname();
+
+  // Hide nav on register/login pages
+  if (pathname === '/register' || pathname === '/login') return null;
 
   const navItems = [
     { name: 'Home', href: '/home', icon: Home },
