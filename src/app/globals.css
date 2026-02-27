@@ -35,7 +35,7 @@
     height: 100%;
     margin: 0;
     padding: 0;
-    overflow: hidden; /* Screen ko hilne se rokega */
+    overflow: hidden; 
     @apply bg-[#09090b] text-zinc-100 antialiased selection:bg-emerald-500/30 font-sans;
   }
 }
@@ -45,7 +45,7 @@
   flex-direction: column;
   height: 100vh;
   width: 100%;
-  max-width: 448px; /* Mobile width constraint */
+  max-width: 448px; 
   margin: 0 auto;
   position: relative;
   background: #09090b;
@@ -55,7 +55,7 @@
 main {
   flex: 1;
   overflow-y: auto;
-  padding-bottom: 150px; /* Space for Bottom Nav */
+  padding-bottom: 150px; 
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
 }
