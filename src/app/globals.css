@@ -43,10 +43,10 @@
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.no-scrollbar::-webkit-scrollbar {
+.hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
-.no-scrollbar {
+.hide-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }

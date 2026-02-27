@@ -1,42 +1,40 @@
 "use client";
 
-import { Home, BookOpen, MessageSquare, Heart, LayoutGrid, Plus } from "lucide-react";
+import { Home, BookOpen, Edit3, Church, Heart, Settings } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-
-const navItems = [
-  { name: "Home", href: "/home", icon: Home },
-  { name: "Bible", href: "/read", icon: BookOpen },
-  { name: "Journal", href: "/journal", icon: Plus, isCenter: true },
-  { name: "Community", href: "/community", icon: LayoutGrid },
-  { name: "More", href: "/profile", icon: Heart },
-];
 
 export default function BottomNav() {
   const pathname = usePathname();
 
+  const navItems = [
+    { name: "HOME", href: "/home", icon: Home },
+    { name: "BIBLE", href: "/read", icon: BookOpen },
+    { name: "JOURNAL", href: "/journal", icon: Edit3 },
+    { name: "PRAY", href: "/pray", icon: Heart },
+    { name: "SETTINGS", href: "/profile", icon: Settings },
+  ];
+
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 glass-nav px-6 pb-8 pt-3">
+    <nav className="fixed bottom-0 inset-x-0 glass-nav z-50 px-6 pb-8 pt-3">
       <div className="max-w-md mx-auto flex items-center justify-between relative">
-        {navItems.map((item) => {
-          const isActive = pathname.startsWith(item.href);
+        {navItems.map((item, index) => {
+          const isActive = pathname === item.href;
           
-          if (item.isCenter) {
+          if (index === 2) { // Middle "Add" style button
             return (
-              <Link 
-                key={item.name} 
-                href={item.href} 
-                className="relative -mt-12 flex flex-col items-center group"
-              >
-                <div className="bg-primary shadow-[0_8px_24px_rgba(16,183,127,0.4)] w-14 h-14 rounded-full flex items-center justify-center border-4 border-background transition-transform active:scale-90 group-hover:scale-105">
-                  <item.icon className="w-7 h-7 text-background font-bold" strokeWidth={3} />
-                </div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 pt-2">
+              <div key={item.name} className="relative -top-6">
+                <Link 
+                  href={item.href}
+                  className="size-14 bg-primary text-zinc-950 rounded-full shadow-lg shadow-primary/30 flex items-center justify-center hover:scale-105 transition-transform"
+                >
+                  <Church className="w-8 h-8 font-bold" />
+                </Link>
+                <span className="text-[10px] font-bold tracking-wide text-zinc-500 block text-center mt-1">
                   {item.name}
                 </span>
-              </Link>
+              </div>
             );
           }
 
@@ -45,20 +43,17 @@ export default function BottomNav() {
               key={item.name} 
               href={item.href} 
               className={cn(
-                "flex flex-col items-center gap-1.5 transition-colors duration-300",
+                "flex flex-col items-center gap-1 transition-colors duration-300",
                 isActive ? "text-primary" : "text-zinc-500 hover:text-zinc-300"
               )}
             >
-              <div className="relative p-1">
-                <item.icon className={cn("w-7 h-7", isActive && "fill-current")} />
+              <div className="relative">
                 {isActive && (
-                  <motion.div 
-                    layoutId="nav-indicator-glow"
-                    className="absolute -inset-2 bg-primary/20 blur-xl rounded-full -z-10"
-                  />
+                  <div className="absolute -inset-2 bg-primary/20 blur-md rounded-full -z-10" />
                 )}
+                <item.icon className={cn("w-7 h-7", isActive && "fill-current")} />
               </div>
-              <span className="text-[10px] font-black uppercase tracking-widest">
+              <span className="text-[10px] font-bold tracking-wide uppercase">
                 {item.name}
               </span>
             </Link>
