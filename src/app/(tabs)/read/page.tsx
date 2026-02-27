@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -25,7 +26,7 @@ import { Slider } from '@/components/ui/slider';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 // Database Config for Offline Support
-const DB_NAME = "DivineBibleDB_V5";
+const DB_NAME = "DivineBibleDB_V6";
 const STORE_NAME = "verses";
 const MemoryCache = new Map();
 
@@ -50,7 +51,7 @@ export default function BibleReaderPage() {
   
   const [state, setState] = useState({
     translation: 'IRV_HIN',
-    bookId: 43, // John
+    bookId: 1, // Default: Genesis
     chapter: 1,
     selectedVerse: null as any,
     bookList: [] as any[],
@@ -61,6 +62,7 @@ export default function BibleReaderPage() {
 
   const [verses, setVerses] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [fontSize, setFontSize] = useState(18);
   const [isOffline, setIsOffline] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -80,21 +82,11 @@ export default function BibleReaderPage() {
     });
   }, []);
 
-  // Fetch Full Book List with Robust Error Handling
+  // Fetch Full Book List
   const fetchBookList = useCallback(async () => {
     try {
       const res = await fetch(`https://bolls.life/get-books/${state.translation}/`);
-      if (!res.ok) {
-        console.warn(`Book list API failed with status: ${res.status}`);
-        return; 
-      }
-      
-      const contentType = res.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        console.warn("Book list API returned non-JSON response");
-        return;
-      }
-
+      if (!res.ok) throw new Error("API failure");
       const books = await res.json();
       setState(prev => ({ ...prev, bookList: Array.isArray(books) ? books : [] }));
     } catch (e) {
@@ -102,26 +94,30 @@ export default function BibleReaderPage() {
     }
   }, [state.translation]);
 
-  // High-Performance Chapter Loader with Robust Error Handling & Auto-Switch
+  // Load Chapter with Robust Error Handling
   const loadChapter = useCallback(async (bId: number, chap: number, trans: string) => {
-    // 1. Auto-Switch Translation for 81-book Canon
+    // Auto-Switch for Extra Books
     let targetTrans = trans;
-    if (bId > 66 && (trans === 'IRV_HIN' || trans === 'KJV')) {
-      targetTrans = 'NRSV'; // Switch to a version that supports extra books
+    if (bId > 66 && (trans === 'IRV_HIN' || trans === 'KJV' || trans === 'IRV_MAR')) {
+      targetTrans = 'NRSV';
       setState(prev => ({ ...prev, translation: 'NRSV' }));
-      toast({ title: "Version Switched", description: "This book is available in English (NRSV)." });
+      toast({ title: "Version Switched", description: "Vachan NRSV (81 books) mein available hai." });
     }
 
     const cacheKey = `${targetTrans}_${bId}_${chap}`;
     
-    // 2. Instant Load from Memory
+    // Check Memory Cache
     if (MemoryCache.has(cacheKey)) {
       setVerses(MemoryCache.get(cacheKey));
+      setError(null);
       return;
     }
 
-    // 3. Check Offline Storage (IndexedDB)
+    setLoading(true);
+    setError(null);
+
     try {
+      // 1. Check IndexedDB first
       const db = await openDB();
       const tx = db.transaction(STORE_NAME, "readonly");
       const store = tx.objectStore(STORE_NAME);
@@ -133,46 +129,36 @@ export default function BibleReaderPage() {
       if (offlineData) {
         MemoryCache.set(cacheKey, offlineData.data);
         setVerses(offlineData.data);
+        setLoading(false);
         return;
       }
-    } catch (e) { console.warn("Offline DB read error", e); }
 
-    // 4. Fetch from API with Robust JSON Validation
-    setLoading(true);
-    try {
+      // 2. Fetch from API
       const url = `https://bolls.life/get-chapter/${targetTrans}/${bId}/${chap}/`;
       const response = await fetch(url);
+      if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
       
       const text = await response.text();
-      // Ensure we have a valid JSON start
+      // Validate JSON
       if (!text.startsWith("{") && !text.startsWith("[")) {
-        throw new Error("Invalid API Response Format");
+        throw new Error("Invalid API Data (Not JSON)");
       }
 
       const data = JSON.parse(text);
-      
-      if (data && Array.isArray(data) && data.length > 0) {
-        MemoryCache.set(cacheKey, data);
+      if (Array.isArray(data) && data.length > 0) {
         setVerses(data);
+        MemoryCache.set(cacheKey, data);
         
-        // Save for Offline Access
-        try {
-          const db = await openDB();
-          const tx = db.transaction(STORE_NAME, "readwrite");
-          tx.objectStore(STORE_NAME).put({ id: cacheKey, data, timestamp: Date.now() });
-        } catch (dbErr) { console.warn("Offline DB write error", dbErr); }
+        // Save to IndexedDB
+        const saveTx = db.transaction(STORE_NAME, "readwrite");
+        saveTx.objectStore(STORE_NAME).put({ id: cacheKey, data, timestamp: Date.now() });
       } else {
         setVerses([]);
-        toast({ title: "Note", description: "Vachan is version mein available nahi hain." });
+        setError("Is chapter mein koi vachan nahi mila.");
       }
     } catch (e: any) {
-      console.error("Fetch Error:", e);
-      setVerses([]);
-      toast({ 
-        title: "Connection Issue", 
-        description: "Is chapter ka data load nahi ho paya. Please try again.", 
-        variant: "destructive" 
-      });
+      console.error("Bible Load Error:", e);
+      setError("Vachan load nahi ho paye. Kripaya internet check karein ya thodi der baad koshish karein.");
     } finally {
       setLoading(false);
     }
@@ -192,11 +178,7 @@ export default function BibleReaderPage() {
   }, [state.bookId, state.chapter, state.translation, fetchBookList, loadChapter]);
 
   const handleBookSelect = (book: any) => {
-    setState(prev => ({ 
-      ...prev, 
-      selectedBookForPicker: book, 
-      chapterPickerMode: true 
-    }));
+    setState(prev => ({ ...prev, selectedBookForPicker: book, chapterPickerMode: true }));
   };
 
   const handleChapterSelect = (chap: number) => {
@@ -208,9 +190,8 @@ export default function BibleReaderPage() {
       chapterPickerMode: false,
       selectedVerse: null
     }));
-    // Reset scroll of the main element
-    const mainEl = document.querySelector('main');
-    if (mainEl) mainEl.scrollTop = 0;
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleBookmark = async (v: any) => {
@@ -242,20 +223,20 @@ export default function BibleReaderPage() {
 
   return (
     <div className="relative flex h-screen w-full flex-col overflow-hidden bg-[#09090b]">
-      {/* Sticky Header */}
-      <header className="sticky top-0 z-[60] bg-[#09090b]/90 backdrop-blur-xl border-b border-white/5 px-6 py-5 shadow-2xl">
-        <div className="flex items-center justify-between">
+      {/* Fixed Header */}
+      <header className="sticky top-0 z-[60] bg-[#09090b]/90 backdrop-blur-xl border-b border-white/5 px-6 py-5">
+        <div className="flex items-center justify-between max-w-2xl mx-auto w-full">
           <Dialog open={state.isBookSelectorOpen} onOpenChange={(open) => setState(prev => ({ ...prev, isBookSelectorOpen: open, chapterPickerMode: false }))}>
             <DialogTrigger asChild>
-              <button className="flex items-center gap-3 group text-left">
+              <button className="flex items-center gap-3 group">
                 <div className="bg-emerald-500/10 p-2 rounded-xl border border-emerald-500/20 group-hover:bg-emerald-500/20 transition-all">
                   <BookOpen className="w-5 h-5 text-emerald-500" />
                 </div>
-                <div>
+                <div className="text-left">
                   <h2 className="text-lg font-bold font-serif italic text-white leading-none">
                     {state.bookList.find(b => b.bookid === state.bookId)?.name || "Loading..."} {state.chapter}
                   </h2>
-                  <span className="text-[10px] text-zinc-500 font-black uppercase tracking-widest mt-1">Tap to Change Book</span>
+                  <span className="text-[10px] text-zinc-500 font-black uppercase tracking-widest mt-1">Change Chapter</span>
                 </div>
               </button>
             </DialogTrigger>
@@ -269,7 +250,7 @@ export default function BibleReaderPage() {
                     <div className="relative flex-1 max-w-[200px]">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
                       <Input 
-                        placeholder="Search Book..." 
+                        placeholder="Search..." 
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="bg-zinc-950 border-zinc-800 rounded-xl h-9 pl-9 text-xs focus-visible:ring-emerald-500/20"
@@ -278,7 +259,7 @@ export default function BibleReaderPage() {
                   )}
                   {state.chapterPickerMode && (
                     <Button variant="ghost" size="sm" onClick={() => setState(prev => ({ ...prev, chapterPickerMode: false }))} className="text-emerald-500">
-                      Back to Books
+                      Back
                     </Button>
                   )}
                 </div>
@@ -340,7 +321,7 @@ export default function BibleReaderPage() {
               </button>
             </DialogTrigger>
             <DialogContent className="bg-zinc-900 border-zinc-800 rounded-[2.5rem] p-8 z-[100]">
-              <DialogHeader><DialogTitle className="font-serif italic text-emerald-500">Reader Settings</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle className="font-serif italic text-emerald-500">Settings</DialogTitle></DialogHeader>
               <div className="space-y-8 pt-4">
                 <div className="space-y-4">
                   <div className="flex justify-between items-center text-[10px] font-black text-zinc-500 uppercase"><span>Font Size</span><span>{fontSize}px</span></div>
@@ -367,7 +348,7 @@ export default function BibleReaderPage() {
                   }}
                   className="w-full p-4 bg-red-500/5 border border-red-500/20 rounded-2xl text-red-500 text-[10px] font-black uppercase tracking-widest flex items-center justify-between"
                 >
-                  <span>Clear Offline Cache</span>
+                  <span>Clear Storage</span>
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
@@ -376,12 +357,12 @@ export default function BibleReaderPage() {
         </div>
       </header>
 
-      {/* Main Reading Area */}
+      {/* Main Content Area */}
       <main className="flex-1 overflow-y-auto hide-scrollbar pb-40">
         {isOffline && (
           <div className="bg-orange-500/10 border-b border-orange-500/20 py-2 flex items-center justify-center gap-2">
             <WifiOff className="w-3 h-3 text-orange-500" />
-            <span className="text-[9px] font-black uppercase tracking-widest text-orange-500">Offline Mode: Using Device Cache</span>
+            <span className="text-[9px] font-black uppercase tracking-widest text-orange-500">Offline Mode</span>
           </div>
         )}
 
@@ -390,19 +371,23 @@ export default function BibleReaderPage() {
             <RefreshCw className="w-14 h-14 text-emerald-500 animate-spin" />
             <p className="text-emerald-500 font-serif italic text-xl animate-pulse">Vachan load ho rahe hain...</p>
           </div>
-        ) : verses.length === 0 ? (
+        ) : error ? (
           <div className="flex flex-col items-center justify-center py-40 text-center px-10 gap-6 opacity-50">
             <BookOpen className="w-16 h-16 text-zinc-700" />
             <div className="space-y-2">
-              <p className="text-xl font-serif italic">Is version mein ye chapter available nahi hai.</p>
-              <p className="text-xs text-zinc-500 uppercase font-black tracking-widest">Kripaya version badal kar koshish karein.</p>
+              <p className="text-xl font-serif italic">{error}</p>
             </div>
-            <Button variant="outline" onClick={() => loadChapter(state.bookId, state.chapter, state.translation)} className="rounded-full px-10">
+            <Button variant="outline" onClick={() => loadChapter(state.bookId, state.chapter, state.translation)} className="rounded-full px-10 border-emerald-500 text-emerald-500">
               Try Again
             </Button>
           </div>
+        ) : verses.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-40 text-center px-10 gap-6 opacity-50">
+            <BookOpen className="w-16 h-16 text-zinc-700" />
+            <p className="text-xl font-serif italic">Vachan is version mein available nahi hain.</p>
+          </div>
         ) : (
-          <div className="max-w-md mx-auto py-10 px-6 space-y-10">
+          <div className="max-w-2xl mx-auto py-10 px-6 space-y-10">
             {verses.map((v, i) => (
               <div 
                 key={i} 
@@ -433,12 +418,10 @@ export default function BibleReaderPage() {
             <button 
               onClick={() => {
                 setState(prev => ({ ...prev, chapter: prev.chapter + 1, selectedVerse: null }));
-                const mainEl = document.querySelector('main');
-                if (mainEl) mainEl.scrollTop = 0;
               }}
               className="w-full py-10 bg-zinc-900/50 border border-white/5 rounded-[2.5rem] flex flex-col items-center justify-center gap-4 text-emerald-500 hover:bg-emerald-500/10 transition-all group"
             >
-              <span className="text-[10px] font-black uppercase tracking-[0.4em]">Next: Chapter {state.chapter + 1}</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.4em]">Next Chapter {state.chapter + 1}</span>
               <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
             </button>
           </div>
@@ -447,3 +430,4 @@ export default function BibleReaderPage() {
     </div>
   );
 }
+
