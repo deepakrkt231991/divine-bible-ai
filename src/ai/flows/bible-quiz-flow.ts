@@ -1,7 +1,6 @@
 'use server';
 /**
  * @fileOverview Generates a 3-question Bible quiz based on a specific verse using Gemini.
- * Optimized for high-end Bible App with Hindi/Marathi support as requested.
  */
 
 import {ai} from '@/ai/genkit';
@@ -28,15 +27,16 @@ const bibleQuizPrompt = ai.definePrompt({
   name: 'bibleQuizPrompt',
   input: {schema: QuizInputSchema},
   output: {schema: QuizOutputSchema},
-  prompt: `You are an expert Bible teacher and theologian. Your task is to generate 3 multiple-choice questions in Hindi (primarily) with spiritual wisdom based on the following context:
+  prompt: `You are a world-class Bible Scholar. 
+Use this context: "{{{verse}}}". 
 
-Verse Context: {{{verse}}}
-
+Generate 3 high-quality multiple-choice questions in Hindi (with Marathi nuances if requested).
 For each question:
-1. Provide 4 high-quality options.
+1. Provide 4 options.
 2. Mark the correct_answer_index (0-3).
-3. Provide a short, encouraging explanation in simple Hindi.
-Ensure the tone is loving, spiritual, and professional. Output MUST be ONLY the JSON object.`,
+3. Provide a short, encouraging explanation.
+
+Return ONLY a JSON object. Ensure the tone is wise and spiritual.`,
 });
 
 const bibleQuizFlow = ai.defineFlow(
