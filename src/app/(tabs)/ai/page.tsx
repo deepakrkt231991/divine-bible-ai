@@ -19,9 +19,14 @@ export default function AiPage() {
             <span className="text-[10px] uppercase tracking-widest text-primary font-bold">Online</span>
           </div>
         </div>
-        <button className="flex items-center justify-center size-10 rounded-full hover:bg-zinc-800 transition-colors">
-          <Info className="text-slate-100 w-5 h-5" />
-        </button>
+        <div className="flex items-center gap-3">
+          <button className="text-[10px] font-black uppercase tracking-widest text-primary hover:text-emerald-400 transition-colors px-3 py-1.5 border border-primary/30 rounded-full">
+            Register
+          </button>
+          <button className="flex items-center justify-center size-10 rounded-full hover:bg-zinc-800 transition-colors text-slate-100">
+            <User className="w-5 h-5" />
+          </button>
+        </div>
       </header>
 
       {/* Chat Area */}

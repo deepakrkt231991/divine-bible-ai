@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Search, Bell, BookOpen, ChevronRight } from 'lucide-react';
+import { Search, Bell, BookOpen, ChevronRight, User } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
@@ -34,12 +34,12 @@ export default function BibleIndexPage() {
             <h2 className="text-xl font-serif font-bold tracking-tight">Divine Compass</h2>
           </div>
           <div className="flex items-center gap-3">
-            <button className="p-2 hover:bg-white/5 rounded-full transition-colors">
-              <Bell className="w-5 h-5 text-zinc-400" />
+            <button className="text-[10px] font-black uppercase tracking-widest text-primary hover:text-emerald-400 transition-colors px-3 py-1.5 border border-primary/30 rounded-full">
+              Register
             </button>
-            <div className="size-10 rounded-full border-2 border-primary/30 overflow-hidden bg-zinc-800 flex items-center justify-center">
-              <span className="text-primary font-bold text-xs">JD</span>
-            </div>
+            <button className="flex items-center justify-center size-10 rounded-full hover:bg-zinc-800 transition-colors text-slate-100">
+              <User className="w-5 h-5" />
+            </button>
           </div>
         </div>
 

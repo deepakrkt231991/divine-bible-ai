@@ -21,11 +21,11 @@ export default function CommunityPage() {
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <h1 className="font-serif text-2xl font-bold text-primary">Divine Compass</h1>
           <div className="flex items-center gap-3">
-            <button className="p-2 hover:bg-white/5 rounded-full transition-colors text-zinc-400">
-              <Search className="w-5 h-5" />
+            <button className="text-[10px] font-black uppercase tracking-widest text-primary hover:text-emerald-400 transition-colors px-3 py-1.5 border border-primary/30 rounded-full">
+              Register
             </button>
-            <button className="p-2 hover:bg-white/5 rounded-full transition-colors text-zinc-400">
-              <Bell className="w-5 h-5" />
+            <button className="flex items-center justify-center size-10 rounded-full hover:bg-zinc-800 transition-colors text-slate-100">
+              <User className="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -41,7 +41,7 @@ export default function CommunityPage() {
           <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
             {circles.map((circle, i) => (
               <div key={i} className="flex-shrink-0 flex flex-col items-center gap-2 w-20">
-                <div className={`size-16 rounded-full p-1 border-2 ${i < 2 ? 'border-primary' : 'border-primary/30'}`}>
+                <div className={`size-16 rounded-full p-1 border-2 ${i < 2 ? 'border-primary' : 'border-primary'}`}>
                   <div 
                     className="w-full h-full rounded-full bg-cover bg-center" 
                     style={{ backgroundImage: `url('${circle.image}')` }}

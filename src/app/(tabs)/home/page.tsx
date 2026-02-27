@@ -19,15 +19,15 @@ export default function BibleHomePage() {
           <div className="bg-primary/20 p-2 rounded-lg">
             <Compass className="w-6 h-6 text-primary" />
           </div>
-          <h1 className="text-xl font-bold tracking-tight">Divine Compass</h1>
+          <h1 className="text-xl font-bold tracking-tight font-serif">Divine Compass</h1>
         </div>
-        <div className="flex items-center gap-4">
-          <button className="p-2 rounded-full hover:bg-zinc-800 transition-colors">
-            <Bell className="w-5 h-5 text-zinc-400" />
+        <div className="flex items-center gap-3">
+          <button className="text-[10px] font-black uppercase tracking-widest text-primary hover:text-emerald-400 transition-colors px-3 py-1.5 border border-primary/30 rounded-full">
+            Register
           </button>
-          <div className="w-10 h-10 rounded-full bg-primary/30 border-2 border-primary/50 flex items-center justify-center overflow-hidden">
-            <User className="w-6 h-6 text-primary" />
-          </div>
+          <button className="flex items-center justify-center size-10 rounded-full hover:bg-zinc-800 transition-colors text-slate-100">
+            <User className="w-5 h-5" />
+          </button>
         </div>
       </header>
 
@@ -92,7 +92,7 @@ export default function BibleHomePage() {
         {/* Ministries */}
         <section className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold tracking-tight font-serif italic">Ministries</h2>
+            <h2 className="text-xl font-bold tracking-tight font-serif italic text-primary">Ministries</h2>
             <button className="text-primary text-xs font-bold uppercase tracking-widest hover:underline">View All</button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
