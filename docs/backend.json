@@ -1,597 +1,65 @@
+
 {
   "entities": {
     "UserProfile": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "UserProfile",
       "type": "object",
-      "description": "Represents a user's profile information within the application. Authentication details are handled externally by Firebase Auth.",
+      "description": "User profile information.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the UserProfile entity. This typically corresponds to the Firebase Authentication User ID (UID)."
-        },
-        "name": {
-          "type": "string",
-          "description": "The user's display name or full name."
-        },
-        "email": {
-          "type": "string",
-          "description": "The user's email address. Used for identification and administrative checks (e.g., isAdmin).",
-          "format": "email"
-        },
-        "photoUrl": {
-          "type": "string",
-          "description": "The URL to the user's profile picture or avatar.",
-          "format": "uri"
-        },
-        "isAdmin": {
-          "type": "boolean",
-          "description": "A flag indicating whether the user has administrative privileges within the application."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the user profile was first created.",
-          "format": "date-time"
-        },
-        "lastLoginAt": {
-          "type": "string",
-          "description": "Timestamp indicating the user's most recent login time.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "name",
-        "email",
-        "isAdmin",
-        "createdAt"
-      ]
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "languagePreference": { "type": "string", "enum": ["KJV", "IRV_HIN"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
     },
     "Bookmark": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Bookmark",
       "type": "object",
-      "description": "Stores a user's bookmarked Bible verse or passage for personal study and quick access.",
+      "description": "Saved Bible verses.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Bookmark entity."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to the UserProfile who created this bookmark. (Relationship: UserProfile 1:N Bookmark)"
-        },
-        "bibleId": {
-          "type": "string",
-          "description": "The identifier for the specific Bible version (e.g., from YouVersion API, like '3034' for KJV)."
-        },
-        "bookName": {
-          "type": "string",
-          "description": "The full name of the Bible book (e.g., 'John')."
-        },
-        "chapterNumber": {
-          "type": "number",
-          "description": "The chapter number of the book where the bookmark is located."
-        },
-        "verseStart": {
-          "type": "number",
-          "description": "The starting verse number of the bookmarked passage."
-        },
-        "verseEnd": {
-          "type": "number",
-          "description": "The ending verse number of the bookmarked passage. If a single verse, this will be the same as 'verseStart'."
-        },
-        "passageText": {
-          "type": "string",
-          "description": "The actual text content of the bookmarked verse(s)."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the bookmark was created.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "userId",
-        "bibleId",
-        "bookName",
-        "chapterNumber",
-        "verseStart",
-        "passageText",
-        "createdAt"
-      ]
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "verseId": { "type": "string" },
+        "verseText": { "type": "string" },
+        "bookName": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
     },
-    "Highlight": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Highlight",
+    "PrayerRequest": {
+      "title": "PrayerRequest",
       "type": "object",
-      "description": "Stores a user's highlighted Bible verse or passage along with the chosen highlight color.",
+      "description": "Community or private prayers.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Highlight entity."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to the UserProfile who created this highlight. (Relationship: UserProfile 1:N Highlight)"
-        },
-        "bibleId": {
-          "type": "string",
-          "description": "The identifier for the specific Bible version (e.g., from YouVersion API)."
-        },
-        "bookName": {
-          "type": "string",
-          "description": "The full name of the Bible book (e.g., 'Matthew')."
-        },
-        "chapterNumber": {
-          "type": "number",
-          "description": "The chapter number of the book where the highlight is located."
-        },
-        "verseStart": {
-          "type": "number",
-          "description": "The starting verse number of the highlighted passage."
-        },
-        "verseEnd": {
-          "type": "number",
-          "description": "The ending verse number of the highlighted passage. If a single verse, this will be the same as 'verseStart'."
-        },
-        "highlightColor": {
-          "type": "string",
-          "description": "The color code or name used for the highlight (e.g., 'yellow', '#FFFF00')."
-        },
-        "highlightedText": {
-          "type": "string",
-          "description": "The actual text content that was highlighted."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the highlight was created.",
-          "format": "date-time"
-        },
-        "lastUpdatedAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the highlight was last modified.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "userId",
-        "bibleId",
-        "bookName",
-        "chapterNumber",
-        "verseStart",
-        "highlightColor",
-        "highlightedText",
-        "createdAt"
-      ]
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "content": { "type": "string" },
+        "type": { "type": "string", "enum": ["public", "private"] },
+        "amenCount": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
     },
-    "Prayer": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Prayer",
+    "Note": {
+      "title": "Note",
       "type": "object",
-      "description": "Represents a user's personal prayer entry in their private journal.",
+      "description": "Personal study notes on verses.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Prayer entity."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to the UserProfile who created this prayer entry. (Relationship: UserProfile 1:N Prayer)"
-        },
-        "title": {
-          "type": "string",
-          "description": "A concise title or subject for the prayer entry."
-        },
-        "content": {
-          "type": "string",
-          "description": "The full text content of the prayer."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the prayer entry was created.",
-          "format": "date-time"
-        },
-        "lastUpdatedAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the prayer entry was last modified.",
-          "format": "date-time"
-        },
-        "isAnswered": {
-          "type": "boolean",
-          "description": "A flag indicating whether this prayer has been marked as answered."
-        }
-      },
-      "required": [
-        "id",
-        "userId",
-        "title",
-        "content",
-        "createdAt"
-      ]
-    },
-    "ReadingPlan": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "ReadingPlan",
-      "type": "object",
-      "description": "Defines a complete Bible reading plan, outlining its name, description, and duration.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the ReadingPlan entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "The title of the reading plan (e.g., 'New Testament in 260 Days')."
-        },
-        "description": {
-          "type": "string",
-          "description": "A detailed description of the reading plan, its goals, or focus."
-        },
-        "totalDays": {
-          "type": "number",
-          "description": "The total number of reading days included in this plan."
-        },
-        "planType": {
-          "type": "string",
-          "description": "Categorization of the plan (e.g., 'daily', 'thematic', 'book-by-book')."
-        },
-        "isActive": {
-          "type": "boolean",
-          "description": "A flag indicating whether this reading plan is currently available for users."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the reading plan definition was created.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "name",
-        "totalDays",
-        "planType",
-        "isActive",
-        "createdAt"
-      ]
-    },
-    "ReadingPlanDayDetail": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "ReadingPlanDayDetail",
-      "type": "object",
-      "description": "Specifies the Bible passage(s) designated for a particular day within a ReadingPlan.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the ReadingPlanDayDetail entity."
-        },
-        "readingPlanId": {
-          "type": "string",
-          "description": "Reference to the parent ReadingPlan this day detail belongs to. (Relationship: ReadingPlan 1:N ReadingPlanDayDetail)"
-        },
-        "dayNumber": {
-          "type": "number",
-          "description": "The sequential day number within the reading plan (e.g., 1, 2, 3...). Used to determine which day's reading it is."
-        },
-        "bookName": {
-          "type": "string",
-          "description": "The name of the Bible book(s) for this day's reading (e.g., 'Matthew', 'John')."
-        },
-        "bookId": {
-          "type": "number",
-          "description": "The numeric identifier for the Bible book, following the Bolls.life format (e.g., 40 for Matthew)."
-        },
-        "chapters": {
-          "type": "string",
-          "description": "The chapter or chapter range(s) to be read for this day (e.g., '1-2', '3-4', '5')."
-        },
-        "verseReference": {
-          "type": "string",
-          "description": "A human-readable formatted string representing the full Bible reference for this day's reading (e.g., 'Matthew 1-2')."
-        }
-      },
-      "required": [
-        "id",
-        "readingPlanId",
-        "dayNumber",
-        "bookName",
-        "bookId",
-        "chapters",
-        "verseReference"
-      ]
-    },
-    "UserReadingProgress": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "UserReadingProgress",
-      "type": "object",
-      "description": "Tracks an individual user's progress through a specific ReadingPlan.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the UserReadingProgress entity."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to the UserProfile whose progress is being tracked. (Relationship: UserProfile 1:N UserReadingProgress)"
-        },
-        "readingPlanId": {
-          "type": "string",
-          "description": "Reference to the ReadingPlan this progress is for. (Relationship: ReadingPlan 1:N UserReadingProgress)"
-        },
-        "currentDayNumber": {
-          "type": "number",
-          "description": "The highest day number that the user has marked as completed or is currently on in the plan."
-        },
-        "completedDays": {
-          "type": "array",
-          "description": "An array of day numbers that the user has explicitly marked as completed.",
-          "items": {
-            "type": "number"
-          }
-        },
-        "status": {
-          "type": "string",
-          "description": "The overall status of the user's progress for this plan ('notStarted', 'inProgress', 'completed', 'paused')."
-        },
-        "startDate": {
-          "type": "string",
-          "description": "Timestamp indicating when the user started this reading plan.",
-          "format": "date-time"
-        },
-        "lastProgressUpdateAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the user's progress was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "userId",
-        "readingPlanId",
-        "currentDayNumber",
-        "completedDays",
-        "status",
-        "startDate",
-        "lastProgressUpdateAt"
-      ]
-    },
-    "AudioFile": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "AudioFile",
-      "type": "object",
-      "description": "Stores metadata for audio resources like podcasts or sermons, managed via the admin panel.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the AudioFile entity."
-        },
-        "title": {
-          "type": "string",
-          "description": "The title of the audio content."
-        },
-        "description": {
-          "type": "string",
-          "description": "A detailed description or summary of the audio file's content."
-        },
-        "fileUrl": {
-          "type": "string",
-          "description": "The URL to the actual audio file stored in a cloud storage solution (e.g., Firebase Storage).",
-          "format": "uri"
-        },
-        "durationSeconds": {
-          "type": "number",
-          "description": "The length of the audio file in seconds."
-        },
-        "associatedBibleReference": {
-          "type": "string",
-          "description": "A human-readable Bible reference relevant to the audio content (e.g., 'John 3:16', 'Genesis 1-3')."
-        },
-        "uploadedByUserId": {
-          "type": "string",
-          "description": "Reference to the UserProfile (an admin) who uploaded this audio file. (Relationship: UserProfile 1:N AudioFile)"
-        },
-        "uploadDate": {
-          "type": "string",
-          "description": "Timestamp indicating when the audio file metadata was uploaded.",
-          "format": "date-time"
-        },
-        "tags": {
-          "type": "array",
-          "description": "A list of tags or keywords to categorize the audio content (e.g., 'sermon', 'podcast', 'prayer', 'encouragement').",
-          "items": {
-            "type": "string"
-          }
-        },
-        "seriesName": {
-          "type": "string",
-          "description": "The name of the series or collection this audio file belongs to, if applicable."
-        }
-      },
-      "required": [
-        "id",
-        "title",
-        "fileUrl",
-        "durationSeconds",
-        "uploadedByUserId",
-        "uploadDate"
-      ]
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "verseId": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
     }
   },
   "auth": {
-    "providers": [
-      "password",
-      "anonymous"
-    ]
+    "providers": ["password", "anonymous"]
   },
   "firestore": {
-    "structure": [
-      {
-        "path": "/users/{userId}",
-        "definition": {
-          "entityName": "UserProfile",
-          "schema": {
-            "$ref": "#/backend/entities/UserProfile"
-          },
-          "description": "Stores individual user profile information. Access is restricted to the owner (matching userId with request.auth.uid).",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user, corresponding to Firebase Authentication UID."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/bookmarks/{bookmarkId}",
-        "definition": {
-          "entityName": "Bookmark",
-          "schema": {
-            "$ref": "#/backend/entities/Bookmark"
-          },
-          "description": "Contains user-specific Bible verse bookmarks. Authorization is independent, relying on 'userId' in the path matching 'request.auth.uid'.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user who owns this bookmark."
-            },
-            {
-              "name": "bookmarkId",
-              "description": "The unique identifier for a specific bookmark."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/highlights/{highlightId}",
-        "definition": {
-          "entityName": "Highlight",
-          "schema": {
-            "$ref": "#/backend/entities/Highlight"
-          },
-          "description": "Stores user-specific Bible verse highlights. Authorization is independent, relying on 'userId' in the path matching 'request.auth.uid'.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user who owns this highlight."
-            },
-            {
-              "name": "highlightId",
-              "description": "The unique identifier for a specific highlight."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/prayers/{prayerId}",
-        "definition": {
-          "entityName": "Prayer",
-          "schema": {
-            "$ref": "#/backend/entities/Prayer"
-          },
-          "description": "Holds user's private prayer entries. Authorization is independent, relying on 'userId' in the path matching 'request.auth.uid'.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user who owns this prayer."
-            },
-            {
-              "name": "prayerId",
-              "description": "The unique identifier for a specific prayer entry."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/reading_progress/{readingPlanId}",
-        "definition": {
-          "entityName": "UserReadingProgress",
-          "schema": {
-            "$ref": "#/backend/entities/UserReadingProgress"
-          },
-          "description": "Tracks an individual user's progress for a specific reading plan. The 'readingPlanId' also serves as the document ID for efficient lookup. Authorization is independent, relying on 'userId' in the path matching 'request.auth.uid'.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user whose reading progress is being tracked."
-            },
-            {
-              "name": "readingPlanId",
-              "description": "The unique identifier of the reading plan this progress refers to, used as the document ID."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/reading_plans/{readingPlanId}",
-        "definition": {
-          "entityName": "ReadingPlan",
-          "schema": {
-            "$ref": "#/backend/entities/ReadingPlan"
-          },
-          "description": "Defines global Bible reading plans. Accessible (read) by all authenticated users, and writable only by administrators.",
-          "params": [
-            {
-              "name": "readingPlanId",
-              "description": "The unique identifier for a specific reading plan."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/reading_plans/{readingPlanId}/day_details/{dayNumber}",
-        "definition": {
-          "entityName": "ReadingPlanDayDetail",
-          "schema": {
-            "$ref": "#/backend/entities/ReadingPlanDayDetail"
-          },
-          "description": "Specifies the Bible passages for a particular day within a ReadingPlan. Globally readable for all authenticated users, inheriting access from the parent reading plan. 'dayNumber' is used as the document ID for direct access to daily content.",
-          "params": [
-            {
-              "name": "readingPlanId",
-              "description": "The unique identifier of the parent reading plan."
-            },
-            {
-              "name": "dayNumber",
-              "description": "The sequential day number within the reading plan, used as the document ID."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/audio_files/{audioFileId}",
-        "definition": {
-          "entityName": "AudioFile",
-          "schema": {
-            "$ref": "#/backend/entities/AudioFile"
-          },
-          "description": "Stores metadata for audio resources (e.g., sermons, podcasts). Globally readable by all authenticated users, writable only by administrators.",
-          "params": [
-            {
-              "name": "audioFileId",
-              "description": "The unique identifier for a specific audio file."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/roles_admin/{userId}",
-        "definition": {
-          "entityName": "AdminRole",
-          "schema": {
-            "$ref": "#/backend/entities/UserProfile"
-          },
-          "description": "Identifies users with administrative privileges. The existence of a document for a 'userId' in this collection indicates admin status, crucial for DBAC. Only administrators can create or delete documents here.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user who is an administrator."
-            }
-          ]
-        }
-      }
-    ],
-    "reasoning": "The recommended Firestore structure is designed to adhere strictly to the core design principles of Authorization Independence, Clarity of Intent, DBAC, QAPs, and Invariants. Each collection and subcollection path is meticulously chosen to simplify security rules and ensure scalability and debuggability.\n\n**Authorization Independence via Denormalization:**\n1.  **User-Owned Data (e.g., Bookmarks, Highlights, Prayers, UserReadingProgress):** All personal user data is organized under `/users/{userId}/<collectionName>/{docId}`. This structure is critical for authorization independence. The `userId` embedded directly in the path (`{userId}`) serves as the authorization context. Firebase Security Rules can directly compare `request.auth.uid` with this path segment (`userId`) without needing to perform any `get()` operations on parent documents. This allows for atomic writes (create, update, delete) within these subcollections, as no cross-document reads are required to validate permissions. For instance, a user can add a bookmark without the rule needing to 'get' their user profile to verify ownership; the path itself confirms it.\n2.  **Global Reading Plans and Day Details:** The main `reading_plans` collection and its `day_details` subcollection are designed for global read access. By default, any document in `/reading_plans/{readingPlanId}` or `/reading_plans/{readingPlanId}/day_details/{dayNumber}` is intended to be publicly readable by authenticated users. This means that rules for `day_details` do not need to `get()` the parent `reading_plan` document to check if it's 'public'; their public status is inherent to their structural placement. Administrative write access is granted through a separate global role.\n\n**QAPs (Queries as Authorization Policies):**\n1.  **Private User Data:** For collections like `/users/{userId}/bookmarks`, rules will ensure that `request.auth.uid == userId`. Any `list` query made by a user to their own bookmark subcollection will automatically be filtered by this rule, returning only their personal data. Queries will inherently respect the authorization policy, eliminating the need for client-side filtering or complex server-side logic.\n2.  **Public/Global Data:** Collections like `/reading_plans` and `/audio_files` are designated as globally readable for all authenticated users. Security rules will simply allow `read` access for `if request.auth != null`. This inherently makes them QAP-compliant, as any list query will retrieve data that is meant to be accessible by all authenticated users.\n\n**DBAC (Database-Based Access Control):**\nAdmin roles are managed explicitly through the `/roles_admin/{userId}` collection. The existence of a document at `/roles_admin/$(request.auth.uid)` directly grants administrative privileges within the rules, making roles clear, debuggable, and independent of custom claims or email comparisons within rules.\n\n**Structural Segregation:**\nData with different security postures is segregated into distinct collections. For example, user-specific data is always under `/users/{userId}`, while global content like `reading_plans` or `audio_files` is at the root level, ensuring homogeneous security requirements within each collection."
+    "/users/{userId}": { "schema": "UserProfile", "description": "User profile" },
+    "/users/{userId}/bookmarks/{bookmarkId}": { "schema": "Bookmark", "description": "User bookmarks" },
+    "/users/{userId}/notes/{noteId}": { "schema": "Note", "description": "Personal study notes" },
+    "/community_prayers/{prayerId}": { "schema": "PrayerRequest", "description": "Public prayer requests" }
   }
 }
