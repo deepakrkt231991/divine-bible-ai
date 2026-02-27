@@ -1,8 +1,7 @@
-
 'use client';
 
 import React, { useState } from 'react';
-import { Search, Bell, BookOpen, ChevronRight, User } from 'lucide-react';
+import { Search, BookOpen, ChevronRight, User } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
@@ -25,13 +24,13 @@ export default function BibleIndexPage() {
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 pb-32">
       {/* Header Section */}
-      <header className="sticky top-0 z-50 bg-zinc-950/80 backdrop-blur-md border-b border-primary/10">
+      <header className="sticky top-0 z-50 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-800/50">
         <div className="flex items-center p-4 justify-between max-w-2xl mx-auto">
           <div className="flex items-center gap-3">
             <div className="bg-primary/20 p-2 rounded-lg">
               <BookOpen className="w-6 h-6 text-primary" />
             </div>
-            <h2 className="text-xl font-serif font-bold tracking-tight">Divine Compass</h2>
+            <h2 className="text-xl font-serif font-bold tracking-tight italic">Divine Compass</h2>
           </div>
           <div className="flex items-center gap-3">
             <button className="text-[10px] font-black uppercase tracking-widest text-primary hover:text-emerald-400 transition-colors px-3 py-1.5 border border-primary/30 rounded-full">

@@ -1,8 +1,7 @@
-
 'use client';
 
 import React from 'react';
-import { Search, Bell, Heart, MessageCircle, Share2, MoreHorizontal, Image as ImageIcon, Smile, Calendar, User } from 'lucide-react';
+import { Search, Heart, MessageCircle, Share2, MoreHorizontal, Image as ImageIcon, Smile, Calendar, User, Bell } from 'lucide-react';
 
 export default function CommunityPage() {
   const circles = [
@@ -17,9 +16,9 @@ export default function CommunityPage() {
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 pb-32">
       {/* Top Bar */}
-      <header className="sticky top-0 z-40 bg-zinc-950/80 backdrop-blur-md border-b border-white/5 px-4 py-4">
+      <header className="sticky top-0 z-40 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-800/50 px-4 py-4">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <h1 className="font-serif text-2xl font-bold text-primary">Divine Compass</h1>
+          <h1 className="font-serif text-2xl font-bold text-primary italic">Divine Compass</h1>
           <div className="flex items-center gap-3">
             <button className="text-[10px] font-black uppercase tracking-widest text-primary hover:text-emerald-400 transition-colors px-3 py-1.5 border border-primary/30 rounded-full">
               Register
@@ -41,7 +40,7 @@ export default function CommunityPage() {
           <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
             {circles.map((circle, i) => (
               <div key={i} className="flex-shrink-0 flex flex-col items-center gap-2 w-20">
-                <div className={`size-16 rounded-full p-1 border-2 ${i < 2 ? 'border-primary' : 'border-primary'}`}>
+                <div className={`size-16 rounded-full p-1 border-2 border-primary`}>
                   <div 
                     className="w-full h-full rounded-full bg-cover bg-center" 
                     style={{ backgroundImage: `url('${circle.image}')` }}
@@ -118,48 +117,6 @@ export default function CommunityPage() {
                   <button className="flex items-center gap-2 text-zinc-400 hover:text-primary transition-colors">
                     <MessageCircle className="w-5 h-5" />
                     <span className="text-xs font-medium">32</span>
-                  </button>
-                </div>
-                <button className="flex items-center gap-2 text-zinc-400 hover:text-primary transition-colors">
-                  <Share2 className="w-5 h-5" />
-                  <span className="text-xs font-medium">Share</span>
-                </button>
-              </div>
-            </div>
-          </article>
-
-          <article className="bg-zinc-900 border border-white/5 rounded-2xl overflow-hidden shadow-sm">
-            <div className="p-5">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="size-10 rounded-full bg-cover bg-center" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&h=100')" }}></div>
-                  <div>
-                    <h4 className="text-sm font-bold text-zinc-100">Brother Eli</h4>
-                    <p className="text-xs text-zinc-500">5 hours ago • Daily Scripture</p>
-                  </div>
-                </div>
-                <button className="text-zinc-500 hover:text-white">
-                  <MoreHorizontal className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="bg-primary/5 border-l-4 border-primary p-4 mb-4 rounded-r-2xl">
-                <p className="text-zinc-100 italic font-serif text-xl leading-relaxed">
-                  "Thy word is a lamp unto my feet, and a light unto my path."
-                </p>
-                <p className="text-primary text-xs font-bold mt-2 uppercase tracking-widest">— Psalm 119:105</p>
-              </div>
-              <p className="text-zinc-300 leading-relaxed mb-4">
-                As we navigate the complexities of modern life, let us always return to the ancient wisdom that grounds us. This verse has been my anchor this week.
-              </p>
-              <div className="flex items-center justify-between pt-4 border-t border-white/5">
-                <div className="flex items-center gap-6">
-                  <button className="flex items-center gap-2 text-primary transition-colors">
-                    <Heart className="w-5 h-5 fill-current" />
-                    <span className="text-xs font-medium">89</span>
-                  </button>
-                  <button className="flex items-center gap-2 text-zinc-400 hover:text-primary transition-colors">
-                    <MessageCircle className="w-5 h-5" />
-                    <span className="text-xs font-medium">12</span>
                   </button>
                 </div>
                 <button className="flex items-center gap-2 text-zinc-400 hover:text-primary transition-colors">

@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -13,7 +12,7 @@ export default function AiPage() {
           <ArrowLeft className="text-slate-100 w-5 h-5" />
         </button>
         <div className="flex flex-col items-center">
-          <h2 className="text-slate-100 text-lg font-semibold tracking-tight font-serif">AI Chaplain</h2>
+          <h2 className="text-slate-100 text-lg font-semibold tracking-tight font-serif italic">AI Chaplain</h2>
           <div className="flex items-center gap-1.5">
             <span className="size-2 rounded-full bg-primary animate-pulse"></span>
             <span className="text-[10px] uppercase tracking-widest text-primary font-bold">Online</span>

@@ -1,8 +1,7 @@
-
 'use client';
 
 import React from 'react';
-import { Bell, Compass, Share2, Bookmark, BookOpen, HeartHandshake, ChevronRight, Calendar, User } from 'lucide-react';
+import { Compass, Share2, Bookmark, BookOpen, HeartHandshake, ChevronRight, Calendar, User } from 'lucide-react';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
@@ -19,7 +18,7 @@ export default function BibleHomePage() {
           <div className="bg-primary/20 p-2 rounded-lg">
             <Compass className="w-6 h-6 text-primary" />
           </div>
-          <h1 className="text-xl font-bold tracking-tight font-serif">Divine Compass</h1>
+          <h1 className="text-xl font-bold tracking-tight font-serif italic">Divine Compass</h1>
         </div>
         <div className="flex items-center gap-3">
           <button className="text-[10px] font-black uppercase tracking-widest text-primary hover:text-emerald-400 transition-colors px-3 py-1.5 border border-primary/30 rounded-full">
