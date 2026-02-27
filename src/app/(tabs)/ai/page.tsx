@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -9,7 +10,6 @@ type Message = {
   role: 'user' | 'assistant';
   content: string;
   time: string;
-  isBibleVerse?: boolean;
 };
 
 export default function AiPage() {
@@ -44,9 +44,7 @@ export default function AiPage() {
     setIsLoading(true);
 
     try {
-      // Using the integrated Genkit flow with "Wise Bible Scholar" logic
       const response = await aiScriptureQuestion({ 
-        passage: "General Scripture Context", 
         question: input 
       });
       
@@ -68,19 +66,24 @@ export default function AiPage() {
     <div className="relative flex h-screen w-full flex-col overflow-hidden bg-[#09090b]">
       {/* Top Bar Header */}
       <header className="flex items-center justify-between px-6 py-5 border-b border-zinc-800/50 bg-[#09090b]/80 backdrop-blur-xl sticky top-0 z-50">
-        <button className="flex items-center justify-center size-10 rounded-full hover:bg-zinc-800 transition-colors">
-          <ArrowLeft className="text-zinc-400 w-5 h-5" />
-        </button>
-        <div className="flex flex-col items-center">
-          <h2 className="text-zinc-100 text-lg font-bold tracking-tight font-serif italic">AI Magic</h2>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="size-2 rounded-full bg-emerald-500 animate-pulse glow-primary"></span>
-            <span className="text-[10px] uppercase tracking-widest text-emerald-500 font-black">AI Chaplain Online</span>
+        <div className="flex items-center gap-3">
+          <button className="flex items-center justify-center size-10 rounded-full hover:bg-zinc-800 transition-colors">
+            <ArrowLeft className="text-zinc-400 w-5 h-5" />
+          </button>
+          <div className="flex flex-col">
+            <h2 className="text-zinc-100 text-lg font-bold tracking-tight font-serif italic">AI Scholar</h2>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="size-2 rounded-full bg-emerald-500 animate-pulse glow-primary"></span>
+              <span className="text-[10px] uppercase tracking-widest text-emerald-500 font-black">Online</span>
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button className="flex items-center justify-center size-10 rounded-full hover:bg-zinc-800 transition-colors text-zinc-400">
-            <Info className="w-5 h-5" />
+          <button className="text-[10px] font-black uppercase tracking-widest text-emerald-500 px-4 py-2 border border-emerald-500/30 rounded-full">
+            Register
+          </button>
+          <button className="flex items-center justify-center size-10 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400">
+            <User className="w-5 h-5" />
           </button>
         </div>
       </header>
@@ -96,7 +99,7 @@ export default function AiPage() {
             )}
             <div className={cn("flex flex-col gap-2 max-w-[82%]", msg.role === 'user' ? "items-end" : "")}>
               <p className="text-zinc-600 text-[10px] font-black uppercase tracking-[0.2em] px-1">
-                {msg.role === 'assistant' ? 'Divine Compass AI' : 'You'}
+                {msg.role === 'assistant' ? 'Wise Bible Scholar' : 'You'}
               </p>
               <div className={cn(
                 "rounded-[1.5rem] px-5 py-4 shadow-2xl border leading-relaxed",
@@ -138,7 +141,9 @@ export default function AiPage() {
           {['✨ Daily prayer', '📖 Explain John 3:16', '🕊️ I\'m feeling anxious', '🙏 Morning devotion'].map((suggestion) => (
             <button 
               key={suggestion}
-              onClick={() => setInput(suggestion.replace(/[^\w\s]/gi, '').trim())}
+              onClick={() => {
+                setInput(suggestion.replace(/[^\w\s]/gi, '').trim());
+              }}
               className="whitespace-nowrap rounded-full bg-zinc-900/90 border border-zinc-800 px-5 py-2.5 text-[11px] font-black uppercase tracking-widest text-zinc-400 hover:text-emerald-500 hover:border-emerald-500/50 transition-all backdrop-blur-md shadow-2xl"
             >
               {suggestion}
@@ -153,7 +158,7 @@ export default function AiPage() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
               className="flex-1 bg-transparent border-none focus:ring-0 text-[15px] text-zinc-100 placeholder-zinc-600 py-3" 
-              placeholder="Message your chaplain..." 
+              placeholder="Message your scholar..." 
               type="text"
             />
             <div className="flex items-center gap-2">
