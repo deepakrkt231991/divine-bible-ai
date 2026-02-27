@@ -96,7 +96,6 @@ export default function BibleHomePage() {
             <button className="text-primary text-xs font-bold uppercase tracking-widest hover:underline">View All</button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Kids Ministry */}
             <div className="relative group h-48 rounded-2xl overflow-hidden cursor-pointer border border-zinc-800">
               {kidsImg && (
                 <Image 
@@ -117,7 +116,6 @@ export default function BibleHomePage() {
                 </div>
               </div>
             </div>
-            {/* Youth Ministry */}
             <div className="relative group h-48 rounded-2xl overflow-hidden cursor-pointer border border-zinc-800">
               {youthImg && (
                 <Image 

@@ -3,7 +3,6 @@
 
 import React from 'react';
 import { ArrowLeft, Info, Sparkles, User, Mic, Send } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 export default function AiPage() {
   return (
@@ -86,7 +85,6 @@ export default function AiPage() {
 
       {/* Bottom Controls Area */}
       <div className="fixed bottom-24 left-0 w-full z-40">
-        {/* Suggested Questions */}
         <div className="flex gap-2 overflow-x-auto px-4 pb-4 no-scrollbar">
           <button className="whitespace-nowrap rounded-full bg-zinc-900/80 border border-zinc-800 px-4 py-2 text-xs font-medium text-slate-300 hover:border-primary/50 transition-colors backdrop-blur-sm">
             ✨ Daily prayer
@@ -102,7 +100,6 @@ export default function AiPage() {
           </button>
         </div>
 
-        {/* Input Bar */}
         <div className="bg-zinc-950/80 backdrop-blur-xl p-4 border-t border-zinc-800/50">
           <div className="flex items-center gap-3 bg-zinc-900/50 rounded-xl border border-zinc-800/50 p-1.5 pl-4 group focus-within:border-primary/50 transition-all duration-300">
             <input 

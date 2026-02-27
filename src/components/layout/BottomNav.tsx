@@ -13,13 +13,13 @@ export default function BottomNav() {
   const navItems = [
     { name: 'Home', href: '/home', icon: Home },
     { name: 'Bible', href: '/read', icon: BookOpen },
-    { name: 'AI', href: '/ai', icon: Sparkles, center: true },
+    { name: 'AI Magic', href: '/ai', icon: Sparkles, center: true },
     { name: 'Community', href: '/community', icon: Users },
     { name: 'More', href: '/more', icon: MoreHorizontal },
   ];
 
   return (
-    <nav className="fixed bottom-0 inset-x-0 glass-nav z-50 px-6 pb-6 pt-3 bg-zinc-950/80 backdrop-blur-xl border-t border-white/10">
+    <nav className="fixed bottom-0 inset-x-0 z-50 px-6 pb-6 pt-3 bg-zinc-950/80 backdrop-blur-xl border-t border-white/10">
       <div className="max-w-md mx-auto flex items-center justify-between relative">
         {navItems.map((item) => {
           const isActive = pathname === item.href;

@@ -37,9 +37,9 @@ export default function BibleIndexPage() {
             <button className="p-2 hover:bg-white/5 rounded-full transition-colors">
               <Bell className="w-5 h-5 text-zinc-400" />
             </button>
-            <button className="size-10 rounded-full border-2 border-primary/30 overflow-hidden bg-zinc-800 flex items-center justify-center">
+            <div className="size-10 rounded-full border-2 border-primary/30 overflow-hidden bg-zinc-800 flex items-center justify-center">
               <span className="text-primary font-bold text-xs">JD</span>
-            </button>
+            </div>
           </div>
         </div>
 
@@ -83,13 +83,11 @@ export default function BibleIndexPage() {
 
       {/* Main Content */}
       <main className="max-w-2xl mx-auto px-4 pt-6">
-        {/* Section Header */}
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-2xl font-serif font-bold text-zinc-100 italic">The Pentateuch</h3>
           <span className="text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full uppercase tracking-widest border border-primary/20">5 Books</span>
         </div>
 
-        {/* Books Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
           {books.map((book) => (
             <div key={book.name} className="group relative bg-zinc-900/40 border border-zinc-800 p-5 rounded-2xl hover:border-primary/40 hover:bg-zinc-900/60 transition-all cursor-pointer shadow-xl">
@@ -119,7 +117,6 @@ export default function BibleIndexPage() {
           ))}
         </div>
 
-        {/* History Section */}
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-2xl font-serif font-bold text-zinc-100 italic">Historical Books</h3>
           <span className="text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full uppercase tracking-widest border border-primary/20">12 Books</span>
