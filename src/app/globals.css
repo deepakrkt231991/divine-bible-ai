@@ -85,7 +85,7 @@ main {
   bottom: 0;
   width: 100%;
   max-width: 448px;
-  z-index: 100;
+  z-index: 100; /* Ensured top visibility */
   background: rgba(9, 9, 11, 0.85);
   backdrop-filter: blur(20px);
   border-top: 1px solid rgba(255, 255, 255, 0.05);
