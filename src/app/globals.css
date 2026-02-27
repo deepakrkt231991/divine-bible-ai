@@ -35,7 +35,7 @@
     height: 100%;
     margin: 0;
     padding: 0;
-    overflow: hidden; 
+    overflow: hidden; /* Prevents whole page from scrolling/bouncing */
     @apply bg-[#09090b] text-zinc-100 antialiased selection:bg-emerald-500/30 font-sans;
   }
 }
@@ -55,7 +55,7 @@
 main {
   flex: 1;
   overflow-y: auto;
-  padding-bottom: 150px; 
+  padding-bottom: 160px; /* Space for fixed bottom navigation */
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
 }
