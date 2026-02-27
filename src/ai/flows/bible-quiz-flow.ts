@@ -1,14 +1,14 @@
 
 'use server';
 /**
- * @fileOverview Generates a 5-question Bible quiz based on a specific verse.
+ * @fileOverview Generates a 3-question Bible quiz based on a specific verse using Gemini.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const QuizInputSchema = z.object({
-  verse: z.string().describe('The verse to base the quiz on.')
+  verse: z.string().describe('The verse text or reference to base the quiz on.')
 });
 
 const QuizOutputSchema = z.object({
@@ -28,10 +28,14 @@ const bibleQuizPrompt = ai.definePrompt({
   name: 'bibleQuizPrompt',
   input: {schema: QuizInputSchema},
   output: {schema: QuizOutputSchema},
-  prompt: `You are an expert Bible teacher. Generate 5 challenging but fair multiple-choice questions based on the following verse:
-Verse: {{{verse}}}
+  prompt: `You are an expert Bible teacher. Generate 3 multiple-choice questions in Hindi based on the following verse context:
+Verse Context: {{{verse}}}
 
-Provide 4 options for each question and clearly mark the correct answer index (0-3). Include a short explanation for why the answer is correct.`,
+For each question:
+1. Provide 4 options.
+2. Mark the correct_answer_index (0-3).
+3. Provide a short explanation in Hindi.
+Ensure the tone is spiritual and encouraging.`,
 });
 
 const bibleQuizFlow = ai.defineFlow(

@@ -30,15 +30,15 @@ export default function BottomNav() {
                 <Link
                   href={item.href}
                   className={cn(
-                    "size-14 bg-primary text-zinc-950 rounded-full shadow-lg shadow-primary/40 flex items-center justify-center hover:scale-105 transition-transform border-4 border-zinc-950",
-                    isActive && "ring-2 ring-primary ring-offset-2 ring-offset-zinc-950"
+                    "size-14 bg-emerald-500 text-zinc-950 rounded-full shadow-lg shadow-emerald-500/40 flex items-center justify-center hover:scale-105 transition-transform border-4 border-zinc-950",
+                    isActive && "ring-2 ring-emerald-500 ring-offset-2 ring-offset-zinc-950"
                   )}
                 >
                   <item.icon className="w-7 h-7 font-bold" />
                 </Link>
                 <span className={cn(
                   "text-[10px] font-black tracking-widest text-center block mt-2 uppercase",
-                  isActive ? "text-primary" : "text-zinc-500"
+                  isActive ? "text-emerald-500" : "text-zinc-500"
                 )}>
                   AI
                 </span>
@@ -52,12 +52,12 @@ export default function BottomNav() {
               href={item.href}
               className={cn(
                 "flex flex-col items-center gap-1 transition-all duration-300",
-                isActive ? "text-primary" : "text-zinc-500 hover:text-zinc-300"
+                isActive ? "text-emerald-500" : "text-zinc-500 hover:text-zinc-300"
               )}
             >
               <div className="relative">
                 {isActive && (
-                  <div className="absolute -inset-2 bg-primary/20 blur-md rounded-full -z-10" />
+                  <div className="absolute -inset-2 bg-emerald-500/20 blur-md rounded-full -z-10" />
                 )}
                 <item.icon className={cn("w-6 h-6", isActive && "fill-current")} />
               </div>

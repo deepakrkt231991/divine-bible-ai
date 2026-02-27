@@ -28,9 +28,10 @@ export default function BibleIndexPage() {
 
   // Browser-based TTS (Marathi/Hindi Support)
   const playVerse = (text: string) => {
+    if (!window.speechSynthesis) return;
     const utterance = new SpeechSynthesisUtterance(text);
-    // Find Hindi or Marathi voice if available
     const voices = window.speechSynthesis.getVoices();
+    // Try to find a Hindi or Marathi voice
     const voice = voices.find(v => v.lang === 'hi-IN' || v.lang === 'mr-IN') || voices[0];
     if (voice) utterance.voice = voice;
     window.speechSynthesis.speak(utterance);
@@ -38,23 +39,23 @@ export default function BibleIndexPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 pb-32 selection:bg-emerald-500/30">
-      {/* Header Section */}
+      {/* Top Header Panel */}
       <header className="sticky top-0 z-50 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-800/50">
         <div className="flex items-center p-4 justify-between max-w-2xl mx-auto">
           <div className="flex items-center gap-3">
-            <div className="bg-primary/20 p-2 rounded-lg">
-              <BookOpen className="w-6 h-6 text-primary" />
+            <div className="bg-emerald-500/20 p-2 rounded-lg">
+              <BookOpen className="w-6 h-6 text-emerald-500" />
             </div>
             <h2 className="text-xl font-serif font-bold tracking-tight italic">Divine Compass</h2>
           </div>
           <div className="flex items-center gap-3">
             <button 
               onClick={() => setShowSettings(!showSettings)}
-              className={cn("p-2 rounded-full transition-colors", showSettings && "bg-primary/10 text-primary")}
+              className={cn("p-2 rounded-full transition-colors", showSettings && "bg-emerald-500/10 text-emerald-500")}
             >
               <Settings2 className="w-5 h-5" />
             </button>
-            <button className="text-[10px] font-black uppercase tracking-widest text-primary hover:text-emerald-400 transition-colors px-3 py-1.5 border border-primary/30 rounded-full">
+            <button className="text-[10px] font-black uppercase tracking-widest text-emerald-500 hover:text-emerald-400 transition-colors px-3 py-1.5 border border-emerald-500/30 rounded-full">
               Register
             </button>
             <button className="flex items-center justify-center size-10 rounded-full hover:bg-zinc-800 transition-colors text-slate-100">
@@ -67,10 +68,10 @@ export default function BibleIndexPage() {
         <div className="px-4 pb-4 max-w-2xl mx-auto">
           <div className="relative group">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="w-5 h-5 text-zinc-500 group-focus-within:text-primary transition-colors" />
+              <Search className="w-5 h-5 text-zinc-500 group-focus-within:text-emerald-500 transition-colors" />
             </div>
             <Input 
-              className="block w-full pl-10 pr-4 py-6 bg-zinc-900/50 border-zinc-800 rounded-xl focus:ring-1 focus:ring-primary focus:border-primary placeholder-zinc-500 text-sm transition-all" 
+              className="block w-full pl-10 pr-4 py-6 bg-zinc-900/50 border-zinc-800 rounded-xl focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 placeholder-zinc-500 text-sm transition-all" 
               placeholder="Search books, verses, or keywords..." 
             />
           </div>
@@ -79,11 +80,11 @@ export default function BibleIndexPage() {
         {/* Font Settings Overlay */}
         {showSettings && (
           <div className="px-4 pb-4 max-w-2xl mx-auto animate-in fade-in slide-in-from-top-2">
-            <Card className="bg-zinc-900 p-6 rounded-2xl border border-primary/20 shadow-2xl">
+            <Card className="bg-zinc-900 p-6 rounded-2xl border border-emerald-500/20 shadow-2xl">
               <div className="space-y-4">
                 <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-zinc-500">
                   <span>Font Size</span>
-                  <span className="text-primary">{fontSize}px</span>
+                  <span className="text-emerald-500">{fontSize}px</span>
                 </div>
                 <div className="flex items-center gap-4">
                   <Minus className="w-4 h-4 text-zinc-500" />
@@ -107,7 +108,7 @@ export default function BibleIndexPage() {
               onClick={() => setTestament('old')}
               className={cn(
                 "flex-1 py-2 text-xs font-black uppercase tracking-widest rounded-md transition-all",
-                testament === 'old' ? "bg-primary text-zinc-950" : "text-zinc-500 hover:text-zinc-100"
+                testament === 'old' ? "bg-emerald-500 text-zinc-950" : "text-zinc-500 hover:text-zinc-100"
               )}
             >
               Old Testament
@@ -116,7 +117,7 @@ export default function BibleIndexPage() {
               onClick={() => setTestament('new')}
               className={cn(
                 "flex-1 py-2 text-xs font-black uppercase tracking-widest rounded-md transition-all",
-                testament === 'new' ? "bg-primary text-zinc-950" : "text-zinc-500 hover:text-zinc-100"
+                testament === 'new' ? "bg-emerald-500 text-zinc-950" : "text-zinc-500 hover:text-zinc-100"
               )}
             >
               New Testament
@@ -129,22 +130,22 @@ export default function BibleIndexPage() {
       <main className="max-w-2xl mx-auto px-4 pt-6">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-2xl font-serif font-bold text-zinc-100 italic">The Pentateuch</h3>
-          <span className="text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full uppercase tracking-widest border border-primary/20">5 Books</span>
+          <span className="text-xs font-bold text-emerald-500 bg-emerald-500/10 px-3 py-1 rounded-full uppercase tracking-widest border border-emerald-500/20">5 Books</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
           {books.map((book) => (
-            <div key={book.name} className="group relative bg-zinc-900/40 border border-zinc-800 p-5 rounded-2xl hover:border-primary/40 hover:bg-zinc-900/60 transition-all cursor-pointer shadow-xl">
+            <div key={book.name} className="group relative bg-zinc-900/40 border border-zinc-800 p-5 rounded-2xl hover:border-emerald-500/40 hover:bg-zinc-900/60 transition-all cursor-pointer shadow-xl">
               <div className="flex justify-between items-start mb-4">
-                <div className="size-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-serif text-xl font-bold group-hover:scale-110 transition-transform">
+                <div className="size-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 font-serif text-xl font-bold group-hover:scale-110 transition-transform">
                   {book.short}
                 </div>
                 <div className="flex gap-1">
                   <button 
                     onClick={(e) => { e.stopPropagation(); playVerse(book.snippet); }}
-                    className="size-8 rounded-full bg-zinc-800 flex items-center justify-center hover:bg-primary/20 transition-colors"
+                    className="size-8 rounded-full bg-zinc-800 flex items-center justify-center hover:bg-emerald-500/20 transition-colors"
                   >
-                    <PlayCircle className="w-4 h-4 text-zinc-400 group-hover:text-primary" />
+                    <PlayCircle className="w-4 h-4 text-zinc-400 group-hover:text-emerald-500" />
                   </button>
                   <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest bg-zinc-800/50 px-2 py-1 rounded border border-white/5">
                     {book.chapters} Chapters
@@ -156,11 +157,11 @@ export default function BibleIndexPage() {
               
               <div className="mt-5 flex items-center gap-3">
                 <div className="h-1.5 flex-1 bg-zinc-800 rounded-full overflow-hidden">
-                  <div className="h-full bg-primary" style={{ width: `${book.progress}%` }}></div>
+                  <div className="h-full bg-emerald-500" style={{ width: `${book.progress}%` }}></div>
                 </div>
                 <span className={cn(
                   "text-[10px] font-bold uppercase tracking-widest",
-                  book.progress > 0 ? "text-primary" : "text-zinc-600"
+                  book.progress > 0 ? "text-emerald-500" : "text-zinc-600"
                 )}>
                   {book.progress > 0 ? `${book.progress}% Read` : "Start"}
                 </span>
@@ -171,13 +172,13 @@ export default function BibleIndexPage() {
 
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-2xl font-serif font-bold text-zinc-100 italic">Historical Books</h3>
-          <span className="text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full uppercase tracking-widest border border-primary/20">12 Books</span>
+          <span className="text-xs font-bold text-emerald-500 bg-emerald-500/10 px-3 py-1 rounded-full uppercase tracking-widest border border-emerald-500/20">12 Books</span>
         </div>
 
         <div className="space-y-3 mb-12">
           {historicalBooks.map((book) => (
-            <div key={book.name} className="flex items-center gap-4 p-5 bg-zinc-900/40 border border-zinc-800 rounded-xl hover:border-primary/40 transition-all cursor-pointer group shadow-lg">
-              <div className="size-12 shrink-0 rounded-lg bg-zinc-800 flex items-center justify-center font-serif font-bold text-zinc-400 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+            <div key={book.name} className="flex items-center gap-4 p-5 bg-zinc-900/40 border border-zinc-800 rounded-xl hover:border-emerald-500/40 transition-all cursor-pointer group shadow-lg">
+              <div className="size-12 shrink-0 rounded-lg bg-zinc-800 flex items-center justify-center font-serif font-bold text-zinc-400 group-hover:bg-emerald-500/10 group-hover:text-emerald-500 transition-colors">
                 {book.short}
               </div>
               <div className="flex-1">
@@ -186,7 +187,7 @@ export default function BibleIndexPage() {
                   {book.chapters} Chapters • {book.type}
                 </p>
               </div>
-              <ChevronRight className="w-5 h-5 text-zinc-600 group-hover:text-primary transition-colors" />
+              <ChevronRight className="w-5 h-5 text-zinc-600 group-hover:text-emerald-500 transition-colors" />
             </div>
           ))}
         </div>

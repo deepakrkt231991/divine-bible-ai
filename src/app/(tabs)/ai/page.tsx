@@ -65,7 +65,7 @@ export default function AiPage() {
 
   return (
     <div className="relative flex h-screen w-full flex-col overflow-hidden bg-zinc-950">
-      {/* Top Bar */}
+      {/* Top Bar Header */}
       <header className="flex items-center justify-between px-4 py-4 border-b border-zinc-800/50 bg-zinc-950/50 backdrop-blur-md sticky top-0 z-50">
         <button className="flex items-center justify-center size-10 rounded-full hover:bg-zinc-800 transition-colors">
           <ArrowLeft className="text-slate-100 w-5 h-5" />
@@ -73,12 +73,12 @@ export default function AiPage() {
         <div className="flex flex-col items-center">
           <h2 className="text-slate-100 text-lg font-semibold tracking-tight font-serif italic">AI Chaplain</h2>
           <div className="flex items-center gap-1.5">
-            <span className="size-2 rounded-full bg-primary animate-pulse"></span>
-            <span className="text-[10px] uppercase tracking-widest text-primary font-bold">Online</span>
+            <span className="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span className="text-[10px] uppercase tracking-widest text-emerald-500 font-bold">Online</span>
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button className="text-[10px] font-black uppercase tracking-widest text-primary hover:text-emerald-400 transition-colors px-3 py-1.5 border border-primary/30 rounded-full">
+          <button className="text-[10px] font-black uppercase tracking-widest text-emerald-500 hover:text-emerald-400 transition-colors px-3 py-1.5 border border-emerald-500/30 rounded-full">
             Register
           </button>
           <button className="flex items-center justify-center size-10 rounded-full hover:bg-zinc-800 transition-colors text-slate-100">
@@ -92,8 +92,8 @@ export default function AiPage() {
         {messages.map((msg, idx) => (
           <div key={idx} className={cn("flex items-start gap-3", msg.role === 'user' ? "justify-end" : "")}>
             {msg.role === 'assistant' && (
-              <div className="size-8 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center shrink-0">
-                <Sparkles className="text-primary w-4 h-4" />
+              <div className="size-8 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0">
+                <Sparkles className="text-emerald-500 w-4 h-4" />
               </div>
             )}
             <div className={cn("flex flex-col gap-1.5 max-w-[85%]", msg.role === 'user' ? "items-end" : "")}>
@@ -119,11 +119,11 @@ export default function AiPage() {
         ))}
         {isLoading && (
           <div className="flex items-start gap-3">
-            <div className="size-8 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center shrink-0">
-              <Loader2 className="text-primary w-4 h-4 animate-spin" />
+            <div className="size-8 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0">
+              <Loader2 className="text-emerald-500 w-4 h-4 animate-spin" />
             </div>
             <div className="bg-zinc-900/50 rounded-2xl rounded-tl-none px-4 py-3 border border-zinc-800/50">
-              <p className="text-xs font-black uppercase tracking-widest text-primary animate-pulse">Searching scriptures...</p>
+              <p className="text-xs font-black uppercase tracking-widest text-emerald-500 animate-pulse">Searching scriptures...</p>
             </div>
           </div>
         )}
@@ -136,7 +136,7 @@ export default function AiPage() {
             <button 
               key={suggestion}
               onClick={() => setInput(suggestion.replace(/[^\w\s]/gi, '').trim())}
-              className="whitespace-nowrap rounded-full bg-zinc-900/80 border border-zinc-800 px-4 py-2 text-xs font-medium text-slate-300 hover:border-primary/50 transition-colors backdrop-blur-sm shadow-xl"
+              className="whitespace-nowrap rounded-full bg-zinc-900/80 border border-zinc-800 px-4 py-2 text-xs font-medium text-slate-300 hover:border-emerald-500/50 transition-colors backdrop-blur-sm shadow-xl"
             >
               {suggestion}
             </button>
@@ -144,7 +144,7 @@ export default function AiPage() {
         </div>
 
         <div className="bg-zinc-950/80 backdrop-blur-xl p-4 border-t border-zinc-800/50">
-          <div className="flex items-center gap-3 bg-zinc-900/50 rounded-xl border border-zinc-800/50 p-1.5 pl-4 group focus-within:border-primary/50 transition-all duration-300">
+          <div className="flex items-center gap-3 bg-zinc-900/50 rounded-xl border border-zinc-800/50 p-1.5 pl-4 group focus-within:border-emerald-500/50 transition-all duration-300">
             <input 
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -154,13 +154,13 @@ export default function AiPage() {
               type="text"
             />
             <div className="flex items-center gap-1">
-              <button className="flex items-center justify-center size-10 rounded-lg text-zinc-400 hover:text-primary transition-colors">
+              <button className="flex items-center justify-center size-10 rounded-lg text-zinc-400 hover:text-emerald-500 transition-colors">
                 <Mic className="w-5 h-5" />
               </button>
               <button 
                 onClick={handleSend}
                 disabled={isLoading || !input.trim()}
-                className="flex items-center justify-center size-10 rounded-lg bg-primary text-zinc-950 shadow-lg shadow-primary/40 transition-transform active:scale-95 disabled:opacity-50"
+                className="flex items-center justify-center size-10 rounded-lg bg-emerald-500 text-zinc-950 shadow-lg shadow-emerald-500/40 transition-transform active:scale-95 disabled:opacity-50"
               >
                 <Send className="w-5 h-5 font-bold" />
               </button>
