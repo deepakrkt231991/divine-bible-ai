@@ -109,20 +109,26 @@ export default function MorePage() {
               </div>
               <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-emerald-500 transition-colors" />
             </Link>
-            {[
-              { icon: Calendar, title: 'Bible Reading Plans' },
-              { icon: Bookmark, title: 'Saved Bookmarks & Verses' }
-            ].map((item, i) => (
-              <div key={i} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex items-center justify-between hover:bg-zinc-900/50 transition-colors cursor-pointer group">
-                <div className="flex items-center gap-4">
-                  <div className="size-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                    <item.icon className="w-5 h-5 text-emerald-500" />
-                  </div>
-                  <span className="font-medium text-sm">{item.title}</span>
+
+            <Link href="/plans" className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex items-center justify-between hover:bg-zinc-900/50 transition-colors cursor-pointer group block">
+              <div className="flex items-center gap-4">
+                <div className="size-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                  <Calendar className="w-5 h-5 text-emerald-500" />
                 </div>
-                <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-emerald-500 transition-colors" />
+                <span className="font-medium text-sm">Bible Reading Plans</span>
               </div>
-            ))}
+              <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-emerald-500 transition-colors" />
+            </Link>
+
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex items-center justify-between hover:bg-zinc-900/50 transition-colors cursor-pointer group">
+              <div className="flex items-center gap-4">
+                <div className="size-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                  <Bookmark className="w-5 h-5 text-emerald-500" />
+                </div>
+                <span className="font-medium text-sm">Saved Bookmarks & Verses</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-emerald-500 transition-colors" />
+            </div>
           </div>
         </section>
 

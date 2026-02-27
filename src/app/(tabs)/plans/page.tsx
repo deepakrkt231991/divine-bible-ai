@@ -1,13 +1,12 @@
 
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { ClipboardList, User, CheckCircle2, PlayCircle, ChevronRight, Loader2, Sparkles, BookOpen } from 'lucide-react';
+import React, { useState } from 'react';
+import { ClipboardList, User, CheckCircle2, PlayCircle, Loader2, Sparkles, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFirebase, useMemoFirebase, useDoc } from '@/firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
 // 260-Day Plan Logic (5 days/week)
 const PLANS_CONFIG = [
@@ -29,18 +28,19 @@ const PLANS_CONFIG = [
   }
 ];
 
-// Sample reading data for Day 1-3 as per your logic
+// Sample reading data based on Bolls.life IDs
 const READING_DATA: Record<number, { book: string, id: number, chapters: string }> = {
   1: { book: "Matthew", id: 40, chapters: "1-2" },
   2: { book: "Matthew", id: 40, chapters: "3-4" },
   3: { book: "Matthew", id: 40, chapters: "5-7" },
+  4: { book: "Matthew", id: 40, chapters: "8-9" },
+  5: { book: "Matthew", id: 40, chapters: "10-12" },
   100: { book: "John", id: 43, chapters: "3-4" }
 };
 
 export default function PlansPage() {
   const { firestore, user } = useFirebase();
-  const router = useRouter();
-  const [selectedTab, setSelectedTab] = useState<'active' | 'discover'>('active');
+  const [selectedTab, setSelectedTab] = useState<'active' | 'discover'>('discover');
 
   // Fetch user progress for the 260-day plan
   const progressRef = useMemoFirebase(() => {
@@ -53,7 +53,7 @@ export default function PlansPage() {
   const handleStartPlan = async (planId: string) => {
     if (!firestore || !user) return;
     const ref = doc(firestore, 'users', user.uid, 'reading_progress', planId);
-    await setDoc(ref, {
+    setDoc(ref, {
       userId: user.uid,
       readingPlanId: planId,
       currentDayNumber: 1,
@@ -62,6 +62,7 @@ export default function PlansPage() {
       startDate: serverTimestamp(),
       lastProgressUpdateAt: serverTimestamp()
     }, { merge: true });
+    setSelectedTab('active');
   };
 
   const handleMarkComplete = async (day: number) => {
@@ -69,7 +70,7 @@ export default function PlansPage() {
     const ref = doc(firestore, 'users', user.uid, 'reading_progress', progress.id);
     const completedDays = progress.completedDays || [];
     if (!completedDays.includes(day)) {
-      await setDoc(ref, {
+      setDoc(ref, {
         completedDays: [...completedDays, day],
         currentDayNumber: Math.max(progress.currentDayNumber, day + 1),
         lastProgressUpdateAt: serverTimestamp()
@@ -175,7 +176,7 @@ export default function PlansPage() {
                       {!progress && (
                         <button 
                           onClick={() => handleStartPlan(plan.id)}
-                          className="text-[10px] font-black text-emerald-500 hover:underline uppercase tracking-widest"
+                          className="bg-emerald-500 text-black px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg"
                         >
                           Join Plan
                         </button>
