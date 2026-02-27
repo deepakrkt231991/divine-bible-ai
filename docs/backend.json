@@ -35,6 +35,18 @@
         "createdAt": { "type": "string", "format": "date-time" }
       }
     },
+    "SearchHistory": {
+      "title": "SearchHistory",
+      "type": "object",
+      "description": "User's previous search queries.",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "query": { "type": "string" },
+        "type": { "type": "string", "enum": ["keyword", "contextual"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
     "PrayerRequest": {
       "title": "PrayerRequest",
       "type": "object",
@@ -72,6 +84,7 @@
     "/users/{userId}": { "schema": "UserProfile", "description": "User profile" },
     "/users/{userId}/bookmarks/{bookmarkId}": { "schema": "Bookmark", "description": "User bookmarks" },
     "/users/{userId}/notes/{noteId}": { "schema": "Note", "description": "Personal study notes" },
+    "/users/{userId}/search_history/{searchId}": { "schema": "SearchHistory", "description": "User search history" },
     "/prayer_requests/{requestId}": { "schema": "PrayerRequest", "description": "Public prayer requests" }
   }
 }

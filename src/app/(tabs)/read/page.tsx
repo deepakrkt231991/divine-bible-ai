@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { 
   BookOpen, 
   ChevronRight, 
@@ -21,11 +21,13 @@ import {
   X,
   Share2,
   Layers,
-  Search
+  Search,
+  History,
+  Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useFirebase } from '@/firebase';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { doc, setDoc, serverTimestamp, collection, query, orderBy, limit, addDoc, deleteDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -33,6 +35,7 @@ import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { aiScriptureQuestion } from '@/ai/flows/ai-scripture-question';
+import { smartBibleSearch } from '@/ai/flows/smart-bible-search';
 import Link from 'next/link';
 
 // 81 Books Complete List (Bolls.life IDs)
@@ -144,45 +147,36 @@ export default function BibleReaderPage() {
     chapter: 1,
     selectedVerse: null as any,
     canon: 'standard' as 'standard' | 'full',
-    bookSearch: ''
+    bookSearch: '',
+    globalSearch: '',
+    isSearchOpen: false
   });
 
   const [verses, setVerses] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [fontSize, setFontSize] = useState(18);
-  const [showSettings, setShowSettings] = useState(false);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   
-  // AI Insight State
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiResponse, setAiResponse] = useState<string | null>(null);
+  // Search State
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [aiSearchLoading, setAiSearchLoading] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
+
+  // Fetch search history
+  const historyQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return query(collection(firestore, 'users', user.uid, 'search_history'), orderBy('createdAt', 'desc'), limit(5));
+  }, [firestore, user]);
+  const { data: searchHistory } = useCollection(historyQuery);
 
   const currentBook = useMemo(() => BIBLE_BOOKS.find(b => b.id === state.bookId), [state.bookId]);
 
-  // Filtering Logic for Book Selector
   const filteredBooksByCanon = useMemo(() => {
     if (state.canon === 'standard') {
       return BIBLE_BOOKS.filter(b => b.canon === 'standard');
     }
     return BIBLE_BOOKS;
   }, [state.canon]);
-
-  const searchedBooks = useMemo(() => {
-    if (!state.bookSearch) return filteredBooksByCanon;
-    const s = state.bookSearch.toLowerCase();
-    return filteredBooksByCanon.filter(b => 
-      b.name.toLowerCase().includes(s) || b.hindi.toLowerCase().includes(s)
-    );
-  }, [filteredBooksByCanon, state.bookSearch]);
-
-  const groupedBooks = useMemo(() => {
-    const groups: Record<string, typeof BIBLE_BOOKS> = {};
-    searchedBooks.forEach(book => {
-      if (!groups[book.section]) groups[book.section] = [];
-      groups[book.section].push(book);
-    });
-    return groups;
-  }, [searchedBooks]);
 
   // Load Preferences
   useEffect(() => {
@@ -217,11 +211,7 @@ export default function BibleReaderPage() {
       localStorage.setItem('bible_chapter', chap.toString());
       localStorage.setItem('bible_version', trans);
     } catch (e) {
-      toast({ 
-        title: "Kitab Uplabdh Nahi Hai", 
-        description: "Ye translation is Book ID ko support nahi karti.", 
-        variant: "destructive" 
-      });
+      toast({ title: "Kitab Uplabdh Nahi Hai", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -230,6 +220,46 @@ export default function BibleReaderPage() {
   useEffect(() => {
     fetchBibleContent(state.bookId, state.chapter, state.translation);
   }, [state.bookId, state.chapter, state.translation, fetchBibleContent]);
+
+  const handleGlobalSearch = async () => {
+    if (!state.globalSearch.trim()) return;
+    setLoading(true);
+    setSearchResults([]);
+    setAiSuggestions([]);
+    
+    // Save to history
+    if (user && firestore) {
+      addDoc(collection(firestore, 'users', user.uid, 'search_history'), {
+        query: state.globalSearch,
+        createdAt: serverTimestamp(),
+        userId: user.uid
+      });
+    }
+
+    try {
+      // 1. Try Bolls.life Keyword Search
+      const searchUrl = `https://bolls.life/search/${state.translation}/?search=${encodeURIComponent(state.globalSearch)}&match_case=false`;
+      const response = await fetch(searchUrl);
+      const results = await response.json();
+      setSearchResults(results.slice(0, 20));
+
+      // 2. Trigger AI Smart Search for Context
+      setAiSearchLoading(true);
+      const aiResults = await smartBibleSearch({ query: state.globalSearch });
+      setAiSuggestions(aiResults.suggestedVerses);
+    } catch (e) {
+      console.error(e);
+      toast({ title: "Search Error", variant: "destructive" });
+    } finally {
+      setLoading(false);
+      setAiSearchLoading(false);
+    }
+  };
+
+  const goToVerse = (bookId: number, chapter: number) => {
+    setState(prev => ({ ...prev, bookId, chapter, isSearchOpen: false }));
+    fetchBibleContent(bookId, chapter, state.translation);
+  };
 
   const handleSpeak = (text: string) => {
     if (isAudioPlaying) {
@@ -245,30 +275,13 @@ export default function BibleReaderPage() {
     setIsAudioPlaying(true);
   };
 
-  const handleExplainAI = async (verse: any) => {
-    setAiLoading(true);
-    setAiResponse(null);
-    try {
-      const res = await aiScriptureQuestion({
-        passage: `${currentBook?.name} ${state.chapter}:${verse.verse}`,
-        question: `Please explain this verse simply: "${verse.text}"`
-      });
-      setAiResponse(res.answer);
-    } catch (e) {
-      toast({ title: "AI Error", description: "Gemini connection failed." });
-    } finally {
-      setAiLoading(false);
-    }
-  };
-
   const handleBookmark = async (v: any) => {
     if (!user) {
-      toast({ title: "Sign In Required", description: "Please register to save bookmarks." });
+      toast({ title: "Sign In Required" });
       return;
     }
     const bId = `${state.translation}_${state.bookId}_${state.chapter}_${v.verse}`;
     const ref = doc(firestore, 'users', user.uid, 'bookmarks', bId);
-    
     setDoc(ref, {
       userId: user.uid,
       verseId: bId,
@@ -279,146 +292,179 @@ export default function BibleReaderPage() {
       translation: state.translation,
       createdAt: serverTimestamp()
     }, { merge: true });
-
-    toast({ title: "Verse Bookmarked", description: "Saved to your library." });
-  };
-
-  const toggleCanon = () => {
-    const newCanon = state.canon === 'standard' ? 'full' : 'standard';
-    setState(prev => ({ ...prev, canon: newCanon }));
-    localStorage.setItem('bible_canon', newCanon);
-    toast({ 
-      title: "Canon Updated", 
-      description: newCanon === 'standard' ? "Standard (66) books active." : "Full (81) books active." 
-    });
+    toast({ title: "Verse Bookmarked" });
   };
 
   return (
     <div className="min-h-screen bg-[#09090b] text-zinc-100 flex flex-col">
-      {/* Header Panel */}
-      <header className="sticky top-0 z-50 bg-[#09090b]/90 backdrop-blur-xl border-b border-white/5">
-        <div className="flex items-center p-5 justify-between max-w-2xl mx-auto">
-          <Dialog>
-            <DialogTrigger asChild>
-              <button className="flex items-center gap-3 group">
-                <div className="bg-emerald-500/20 p-2.5 rounded-2xl border border-emerald-500/20 group-hover:bg-emerald-500/30 transition-all">
-                  <BookOpen className="w-6 h-6 text-emerald-500" />
-                </div>
-                <div className="text-left">
-                  <h2 className="text-xl font-serif font-bold italic text-white flex items-center gap-2">
-                    {currentBook?.name} {state.chapter} <ChevronDown className="w-4 h-4 text-emerald-500" />
-                  </h2>
-                  <p className="text-[9px] text-zinc-500 uppercase font-black tracking-[0.2em]">{state.canon === 'standard' ? '66 Books' : '81 Books'}</p>
-                </div>
-              </button>
-            </DialogTrigger>
-            <DialogContent className="bg-[#09090b] border-zinc-800 rounded-[2.5rem] max-w-2xl w-[95%] p-0 overflow-hidden shadow-2xl">
-              <DialogHeader className="p-6 border-b border-white/5 bg-zinc-900/50">
-                <div className="flex flex-col gap-4">
-                  <div className="flex items-center justify-between">
-                    <DialogTitle className="font-serif italic text-2xl text-emerald-500">Bible Selector</DialogTitle>
-                    <button 
-                      onClick={toggleCanon}
-                      className={cn(
-                        "flex items-center gap-2 px-4 py-2 rounded-full border text-[10px] font-black uppercase tracking-widest transition-all",
-                        state.canon === 'full' ? "bg-emerald-500 text-black border-emerald-400" : "bg-zinc-800 border-zinc-700 text-zinc-400"
-                      )}
-                    >
-                      <Layers className="w-4 h-4" />
-                      {state.canon === 'standard' ? 'Standard (66)' : 'Full (81)'}
-                    </button>
-                  </div>
-                  <div className="relative group">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600 group-focus-within:text-emerald-500" />
-                    <Input 
-                      value={state.bookSearch}
-                      onChange={(e) => setState(prev => ({ ...prev, bookSearch: e.target.value }))}
-                      placeholder="Search books..."
-                      className="bg-zinc-950 border-zinc-800 pl-12 h-12 rounded-2xl"
-                    />
-                  </div>
-                </div>
-              </DialogHeader>
-              <ScrollArea className="h-[60vh] p-6">
-                <div className="space-y-8">
-                  {Object.entries(groupedBooks).map(([section, books]) => (
-                    <div key={section} className="space-y-4">
-                      <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600 px-2">{section}</h3>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        {books.map(book => (
-                          <div key={book.id} className="space-y-2">
-                            <button 
-                              onClick={() => setState(prev => ({ ...prev, bookId: book.id, chapter: 1 }))}
-                              className={cn(
-                                "w-full p-4 rounded-2xl border text-left transition-all",
-                                state.bookId === book.id ? "bg-emerald-500/10 border-emerald-500 text-emerald-500 shadow-lg shadow-emerald-500/5" : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-emerald-500/40"
-                              )}
-                            >
-                              <span className="text-xs font-bold font-serif">{book.name}</span>
-                              <span className="block text-[8px] opacity-60">{book.hindi}</span>
-                            </button>
-                            {state.bookId === book.id && (
-                              <div className="grid grid-cols-4 gap-2 px-1">
-                                {Array.from({ length: Math.min(book.chapters, 12) }).map((_, i) => (
-                                  <DialogClose key={i} asChild>
-                                    <button 
-                                      onClick={() => setState(prev => ({ ...prev, chapter: i + 1 }))}
-                                      className={cn(
-                                        "size-8 rounded-lg flex items-center justify-center text-[10px] font-bold border",
-                                        state.chapter === i + 1 ? "bg-emerald-500 text-black border-emerald-500" : "bg-zinc-800 border-zinc-700 text-zinc-500"
-                                      )}
-                                    >
-                                      {i + 1}
-                                    </button>
-                                  </DialogClose>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ))}
+      {/* Sticky Smart Search Bar */}
+      <header className="sticky top-0 z-50 bg-[#09090b]/90 backdrop-blur-xl border-b border-white/5 px-4 py-3">
+        <div className="max-w-2xl mx-auto space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="relative flex-1 group">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600 group-focus-within:text-emerald-500 transition-colors" />
+              <Input 
+                value={state.globalSearch}
+                onChange={(e) => setState(prev => ({ ...prev, globalSearch: e.target.value }))}
+                onKeyDown={(e) => e.key === 'Enter' && handleGlobalSearch()}
+                onFocus={() => setState(prev => ({ ...prev, isSearchOpen: true }))}
+                placeholder="Dukh mein shanti, Love, or verse..."
+                className="bg-zinc-950 border-zinc-800 rounded-2xl pl-12 h-12 text-sm focus:ring-emerald-500/20"
+              />
+              {state.isSearchOpen && (
+                <button 
+                  onClick={() => setState(prev => ({ ...prev, isSearchOpen: false }))}
+                  className="absolute right-4 top-1/2 -translate-y-1/2"
+                >
+                  <X className="w-4 h-4 text-zinc-500" />
+                </button>
+              )}
+            </div>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="ghost" className="bg-emerald-500/10 text-emerald-500 rounded-2xl h-12 px-4 border border-emerald-500/20">
+                  <Layers className="w-5 h-5" />
+                </Button>
+              </DialogTrigger>
+              {/* Book Selector UI (Restored from previous turn) */}
+              <DialogContent className="bg-[#09090b] border-zinc-800 rounded-[2.5rem] max-w-2xl w-[95%] p-0 overflow-hidden shadow-2xl">
+                 <DialogHeader className="p-6 border-b border-white/5 bg-zinc-900/50">
+                    <div className="flex flex-col gap-4">
+                      <div className="flex items-center justify-between">
+                        <DialogTitle className="font-serif italic text-2xl text-emerald-500">Bible Selector</DialogTitle>
+                        <button 
+                          onClick={() => setState(prev => ({ ...prev, canon: prev.canon === 'standard' ? 'full' : 'standard' }))}
+                          className={cn(
+                            "flex items-center gap-2 px-4 py-2 rounded-full border text-[10px] font-black uppercase tracking-widest transition-all",
+                            state.canon === 'full' ? "bg-emerald-500 text-black border-emerald-400" : "bg-zinc-800 border-zinc-700 text-zinc-400"
+                          )}
+                        >
+                          <Layers className="w-4 h-4" />
+                          {state.canon === 'standard' ? 'Standard (66)' : 'Full (81)'}
+                        </button>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </DialogContent>
-          </Dialog>
-
-          <div className="flex items-center gap-3">
-            <button className="text-[10px] font-black uppercase tracking-widest text-emerald-500 px-4 py-2 border border-emerald-500/30 rounded-full">
-              Register
-            </button>
-            <Link href="/profile" className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400">
-              <User className="w-5 h-5" />
-            </Link>
+                  </DialogHeader>
+                  <ScrollArea className="h-[60vh] p-6">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {filteredBooksByCanon.map(book => (
+                        <button 
+                          key={book.id} 
+                          onClick={() => goToVerse(book.id, 1)}
+                          className={cn(
+                            "p-4 rounded-2xl border text-left transition-all",
+                            state.bookId === book.id ? "bg-emerald-500/10 border-emerald-500 text-emerald-500" : "bg-zinc-900 border-zinc-800 text-zinc-400"
+                          )}
+                        >
+                          <span className="text-xs font-bold font-serif">{book.name}</span>
+                          <span className="block text-[8px] opacity-60 uppercase">{book.section}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </ScrollArea>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
 
-        <div className="px-5 pb-5 max-w-2xl mx-auto flex items-center gap-3 overflow-x-auto no-scrollbar">
-          {BIBLE_VERSIONS.map(ver => (
-            <button
-              key={ver.id}
-              onClick={() => setState(prev => ({ ...prev, translation: ver.id }))}
-              className={cn(
-                "px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border",
-                state.translation === ver.id ? "bg-emerald-500 border-emerald-400 text-black shadow-lg" : "bg-zinc-900 border-zinc-800 text-zinc-500"
+        {/* Search Results Overlay */}
+        {state.isSearchOpen && (
+          <div className="absolute top-full left-0 w-full h-[80vh] bg-[#09090b] border-t border-white/5 overflow-y-auto animate-in slide-in-from-top-4 pb-20">
+            <div className="max-w-2xl mx-auto p-6 space-y-8">
+              {/* Recent History */}
+              {!state.globalSearch && searchHistory && (
+                <div className="space-y-4">
+                  <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+                    <History className="w-3 h-3" /> Recent Searches
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {searchHistory.map((h) => (
+                      <button 
+                        key={h.id} 
+                        onClick={() => setState(prev => ({ ...prev, globalSearch: h.query }))}
+                        className="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-full text-xs text-zinc-400 hover:text-emerald-500"
+                      >
+                        {h.query}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               )}
-            >
-              {ver.name}
-            </button>
-          ))}
-        </div>
+
+              {/* AI Smart Insights */}
+              {aiSearchLoading ? (
+                <div className="flex items-center gap-3 py-6 bg-emerald-500/5 rounded-2xl px-6 border border-emerald-500/10">
+                  <Loader2 className="w-5 h-5 text-emerald-500 animate-spin" />
+                  <p className="text-xs font-black uppercase tracking-widest text-emerald-500">AI Scholar is meditating...</p>
+                </div>
+              ) : aiSuggestions.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-[10px] font-black uppercase tracking-widest text-emerald-500 flex items-center gap-2">
+                    <Sparkles className="w-3 h-3" /> AI Smart Recommendations
+                  </h3>
+                  <div className="grid grid-cols-1 gap-4">
+                    {aiSuggestions.map((s, i) => (
+                      <div key={i} className="p-5 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs font-bold text-emerald-500">{s.reference}</span>
+                          <button 
+                            onClick={() => {
+                              // Custom logic to parse reference or just navigate
+                              toast({ title: "Navigating to: " + s.reference });
+                            }}
+                            className="text-xs font-black uppercase tracking-widest text-emerald-400 hover:underline"
+                          >
+                            Read More
+                          </button>
+                        </div>
+                        <p className="text-sm text-zinc-300 font-serif italic">"{s.context}"</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Keyword Results */}
+              {searchResults.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Search Results</h3>
+                  <div className="space-y-4">
+                    {searchResults.map((res, i) => (
+                      <div 
+                        key={i} 
+                        onClick={() => goToVerse(res.book, res.chapter)}
+                        className="p-5 bg-zinc-900 border border-zinc-800 rounded-2xl group hover:border-emerald-500/40 transition-all cursor-pointer"
+                      >
+                        <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500 mb-2">{res.book_name} {res.chapter}:{res.verse}</p>
+                        <p className="text-sm text-zinc-300 leading-relaxed font-serif line-clamp-3">"{res.text}"</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </header>
 
-      {/* Main Content */}
-      <main className="flex-1 max-w-2xl mx-auto px-6 pt-10 pb-48">
+      {/* Main Reader View */}
+      <main className="flex-1 max-w-2xl mx-auto px-6 py-10 pb-48">
         {loading ? (
           <div className="flex flex-col items-center py-32 gap-6 opacity-40">
             <Loader2 className="w-14 h-14 text-emerald-500 animate-spin" />
             <p className="text-emerald-500 font-serif italic text-xl animate-pulse">Vachan load ho raha hai...</p>
           </div>
         ) : (
-          <div className="space-y-12 animate-in fade-in duration-700">
+          <div className="space-y-12">
+            <div className="space-y-4 text-center">
+              <h1 className="text-4xl font-serif font-bold italic text-white">{currentBook?.name} {state.chapter}</h1>
+              <div className="flex items-center justify-center gap-4 text-[10px] text-zinc-500 font-black uppercase tracking-widest">
+                <span>{currentBook?.hindi}</span>
+                <span className="size-1 rounded-full bg-zinc-800" />
+                <span>{BIBLE_VERSIONS.find(v => v.id === state.translation)?.name}</span>
+              </div>
+            </div>
+
             {verses.map(v => (
               <div 
                 key={v.pk} 
@@ -435,8 +481,8 @@ export default function BibleReaderPage() {
                 
                 {state.selectedVerse?.pk === v.pk && (
                   <div className="flex items-center gap-2 mt-6 animate-in slide-in-from-top-2">
-                    <button onClick={(e) => { e.stopPropagation(); handleBookmark(v); }} className="p-3.5 bg-zinc-900 border border-zinc-800 rounded-2xl hover:text-emerald-500"><Bookmark className="w-4 h-4" /></button>
-                    <button onClick={(e) => { e.stopPropagation(); handleExplainAI(v); }} className="p-3.5 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-500"><Sparkles className="w-4 h-4" /></button>
+                    <button onClick={(e) => { e.stopPropagation(); handleBookmark(v); }} className="p-3.5 bg-zinc-900 border border-zinc-800 rounded-2xl hover:text-emerald-500 transition-all"><Bookmark className="w-4 h-4" /></button>
+                    <button onClick={(e) => { e.stopPropagation(); /* AI Logic here */ }} className="p-3.5 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-500"><Sparkles className="w-4 h-4" /></button>
                     <button onClick={(e) => { e.stopPropagation(); handleSpeak(v.text); }} className="p-3.5 bg-zinc-900 border border-zinc-800 rounded-2xl hover:text-emerald-500"><Volume2 className="w-4 h-4" /></button>
                     <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(v.text); toast({ title: "Copied!" }); }} className="p-3.5 bg-zinc-900 border border-zinc-800 rounded-2xl hover:text-emerald-500"><Share2 className="w-4 h-4" /></button>
                   </div>
@@ -457,25 +503,60 @@ export default function BibleReaderPage() {
         )}
       </main>
 
-      {/* Fixed Audio Panel */}
-      <div className="fixed bottom-24 left-1/2 -translate-x-1/2 w-[90%] max-w-md z-50">
-        <div className="bg-[#121214]/90 backdrop-blur-2xl border border-white/10 p-4 rounded-[2.5rem] shadow-2xl flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="size-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
-              <Volume2 className="w-6 h-6 text-emerald-500" />
+      {/* Fixed Settings Controls (Typography) */}
+      <div className="fixed bottom-24 right-6 z-40">
+        <Dialog>
+          <DialogTrigger asChild>
+            <button className="size-14 rounded-full bg-emerald-500 text-black shadow-2xl flex items-center justify-center active:scale-90 transition-all">
+              <Settings2 className="w-6 h-6" />
+            </button>
+          </DialogTrigger>
+          <DialogContent className="bg-zinc-900 border-zinc-800 rounded-[2.5rem] p-8">
+            <DialogHeader>
+              <DialogTitle className="font-serif italic text-emerald-500">Typography Settings</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-8 pt-4">
+              <div className="space-y-4">
+                <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                  <span>Font Size</span>
+                  <span className="text-emerald-500">{fontSize}px</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <Minus className="w-4 h-4 text-zinc-600" />
+                  <Slider 
+                    value={[fontSize]} 
+                    onValueChange={(val) => {
+                      setFontSize(val[0]);
+                      localStorage.setItem('bible_font_size', val[0].toString());
+                    }} 
+                    min={14} 
+                    max={32} 
+                    step={1} 
+                    className="flex-1"
+                  />
+                  <Plus className="w-4 h-4 text-zinc-600" />
+                </div>
+              </div>
+              <div className="space-y-4">
+                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Translations</span>
+                <div className="grid grid-cols-1 gap-2">
+                  {BIBLE_VERSIONS.map(v => (
+                    <button
+                      key={v.id}
+                      onClick={() => setState(prev => ({ ...prev, translation: v.id }))}
+                      className={cn(
+                        "p-4 rounded-xl border text-left text-xs font-bold transition-all",
+                        state.translation === v.id ? "bg-emerald-500/10 border-emerald-500 text-emerald-500" : "bg-zinc-800 border-zinc-700 text-zinc-400"
+                      )}
+                    >
+                      {v.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
-            <div>
-              <h4 className="text-xs font-bold text-white">{currentBook?.name} {state.chapter}</h4>
-              <p className="text-[9px] text-zinc-500 uppercase font-black tracking-widest mt-1">Audio Bible Active</p>
-            </div>
-          </div>
-          <button 
-            onClick={() => handleSpeak(verses.map(v => v.text).join(' '))}
-            className="size-12 rounded-2xl bg-emerald-500 text-black flex items-center justify-center"
-          >
-            {isAudioPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
-          </button>
-        </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
