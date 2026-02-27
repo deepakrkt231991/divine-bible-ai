@@ -16,20 +16,22 @@ export default function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-zinc-900/80 backdrop-blur-lg border-t border-zinc-800 px-2">
-      <div className="max-w-md mx-auto flex justify-between items-center h-16">
+    <nav className="fixed bottom-6 left-6 right-6 z-50 h-18 bg-zinc-900/80 backdrop-blur-2xl border border-white/5 rounded-[2.5rem] shadow-2xl px-6">
+      <div className="max-w-md mx-auto flex justify-between items-center h-full">
         {navItems.map((item) => {
           const isActive = pathname.startsWith(item.href);
           return (
-            <Link key={item.name} href={item.href} className="relative flex flex-col items-center justify-center w-full h-full gap-1">
-              <item.icon className={`w-6 h-6 transition-colors ${isActive ? "text-emerald-500" : "text-zinc-500"}`} />
-              <span className={`text-[10px] font-medium ${isActive ? "text-emerald-500" : "text-zinc-500"}`}>
-                {item.name}
-              </span>
+            <Link key={item.name} href={item.href} className="relative flex flex-col items-center justify-center w-full h-full gap-1 group">
+              <div className={cn(
+                "p-2 rounded-2xl transition-all duration-300",
+                isActive ? "bg-primary text-black" : "text-zinc-500 hover:text-primary hover:bg-primary/10"
+              )}>
+                <item.icon className="w-6 h-6" />
+              </div>
               {isActive && (
                 <motion.div 
                   layoutId="nav-indicator"
-                  className="absolute -top-[1px] w-8 h-[2px] bg-emerald-500 rounded-full"
+                  className="absolute -bottom-1 w-1 h-1 bg-primary rounded-full"
                 />
               )}
             </Link>
@@ -39,3 +41,5 @@ export default function BottomNav() {
     </nav>
   );
 }
+
+import { cn } from "@/lib/utils";

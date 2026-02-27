@@ -1,26 +1,25 @@
 "use client";
+
 import React, { useState, useEffect } from 'react';
 import { Card } from "@/components/ui/card";
-import { Sparkles, Baby, Book, MessageCircle, Share2 } from "lucide-react";
-import { Skeleton } from '@/components/ui/skeleton';
-import { getSingleVerse } from '@/lib/youversion';
+import { Sparkles, BookOpen, MessageCircle, Share2, Play, Bookmark, Clock } from "lucide-react";
+import { getSingleVerse } from "@/lib/youversion";
+import { Skeleton } from "@/components/ui/skeleton";
+import Link from 'next/link';
 
 export default function BibleHomePage() {
-  const [activeTab, setActiveTab] = useState('youth');
   const [dailyVerse, setDailyVerse] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchVOTD = async () => {
       try {
-        // Fetching John 3:16 as the representative Verse of the Day
         const data = await getSingleVerse("3034", "JHN.3.16");
         setDailyVerse(data);
       } catch (error) {
-        console.error("VOTD Error:", error);
         setDailyVerse({
-          reference: "John 3:16",
-          content: "Kyunki Parmeshwar ne jagat se aisa prem kiya ki usne apna eklowta Putra de diya...",
+          reference: "Psalm 23:1",
+          content: "The Lord is my shepherd; I shall not want.",
         });
       } finally {
         setLoading(false);
@@ -30,98 +29,105 @@ export default function BibleHomePage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white p-4 pb-24 container mx-auto">
+    <div className="min-h-screen bg-background text-white p-6 pb-24 max-w-2xl mx-auto space-y-8">
       {/* Header */}
-      <header className="flex justify-between items-center py-6">
+      <header className="flex justify-between items-center pt-4">
         <div>
-          <h1 className="text-2xl font-bold font-serif text-emerald-500">Divine Bible AI</h1>
-          <p className="text-zinc-400 text-sm">Deepak, aapka aaj ka safar...</p>
+          <h1 className="text-3xl font-bold font-serif text-primary tracking-tight">Divine Compass</h1>
+          <p className="text-zinc-500 text-sm mt-1">Peace be with you, Deepak</p>
         </div>
-        <div className="bg-zinc-900 px-3 py-1 rounded-full border border-zinc-800 text-xs text-emerald-400">
-          🔥 5 Day Streak
+        <div className="bg-primary/10 px-4 py-2 rounded-full border border-primary/20 text-xs font-bold text-primary flex items-center gap-2">
+          <Sparkles className="w-3 h-3" /> 5 Day Streak
         </div>
       </header>
 
-      {/* Verse of the Day - Premium Card */}
-      <Card className="bg-gradient-to-br from-emerald-900/40 to-zinc-900 border-emerald-500/30 p-6 mb-8 relative overflow-hidden group shadow-2xl">
-        <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:opacity-100 transition-opacity">
-          <Share2 className="w-5 h-5 cursor-pointer" />
+      {/* Daily Verse Card */}
+      <Card className="glass relative overflow-hidden p-8 rounded-[2rem] border-primary/20 shadow-2xl group">
+        <div className="absolute top-0 right-0 p-6 opacity-40 group-hover:opacity-100 transition-opacity">
+          <Share2 className="w-5 h-5 cursor-pointer text-primary" />
         </div>
-        <p className="text-emerald-400 text-xs font-medium mb-2 uppercase tracking-tighter">Vachan of the Day</p>
-        
-        {loading ? (
-          <div className="space-y-3">
-            <Skeleton className="h-8 w-full bg-zinc-800" />
-            <Skeleton className="h-4 w-1/3 bg-zinc-800" />
-          </div>
-        ) : (
-          <>
-            <p className="text-xl font-serif leading-relaxed mb-4">
-              "{dailyVerse?.content?.replace(/<[^>]*>?/gm, '') || dailyVerse?.content}"
-            </p>
-            <p className="text-sm text-zinc-500 italic">- {dailyVerse?.reference}</p>
-          </>
-        )}
+        <div className="space-y-6">
+          <span className="text-primary text-xs font-bold uppercase tracking-[0.2em]">Verse of the Day</span>
+          
+          {loading ? (
+            <div className="space-y-3">
+              <Skeleton className="h-8 w-full bg-zinc-800/50" />
+              <Skeleton className="h-8 w-2/3 bg-zinc-800/50" />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-2xl font-serif leading-relaxed italic text-zinc-100">
+                "{dailyVerse?.content?.replace(/<[^>]*>?/gm, '') || dailyVerse?.content}"
+              </p>
+              <div className="flex items-center gap-3">
+                <div className="h-px w-8 bg-primary/30" />
+                <p className="text-sm font-medium text-primary uppercase tracking-widest">{dailyVerse?.reference}</p>
+              </div>
+            </div>
+          )}
+        </div>
       </Card>
 
-      {/* Age Group Selector */}
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {['Kids', 'Youth', 'Scholars'].map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab.toLowerCase())}
-            className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
-              activeTab === tab.toLowerCase() 
-              ? 'bg-emerald-500 text-black' 
-              : 'bg-zinc-900 text-zinc-400 border border-zinc-800'
-            }`}
-          >
-            {tab === 'Kids' && <Baby className="inline w-3 h-3 mr-1" />}
-            {tab === 'Youth' && <Sparkles className="inline w-3 h-3 mr-1" />}
-            {tab === 'Scholars' && <Book className="inline w-3 h-3 mr-1" />}
-            {tab}
-          </button>
-        ))}
-      </div>
-
-      {/* Dynamic Content Based on Age */}
-      <div className="space-y-4">
-        {activeTab === 'kids' && (
-          <div className="bg-blue-600/10 border border-blue-500/20 p-4 rounded-2xl animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <h3 className="font-bold text-blue-400 mb-2 text-lg">Daily Audio Drama 🎭</h3>
-            <p className="text-sm text-zinc-400 mb-4">David aur Goliath ki kahani sound effects ke saath suniye!</p>
-            <button className="w-full bg-blue-500 py-3 rounded-xl font-bold flex items-center justify-center gap-2 text-sm shadow-lg shadow-blue-500/20">
-              ▶ Listen Now
-            </button>
-          </div>
-        )}
-
-        {activeTab === 'youth' && (
-          <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-2xl animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <h3 className="font-bold text-emerald-400 mb-2 text-lg">AI Spiritual Guide 🤖</h3>
-            <p className="text-sm text-zinc-400 mb-4">Aapke career ya relationships se jude sawal Bible se poochein.</p>
-            <div className="flex gap-2">
-              <input 
-                placeholder="Talk to AI..." 
-                className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm w-full outline-none focus:border-emerald-500 transition-all"
-              />
-              <button className="bg-emerald-500 p-2 rounded-lg text-black hover:scale-110 transition-transform">
-                <MessageCircle className="w-5 h-5" />
-              </button>
+      {/* Quick Actions */}
+      <div className="grid grid-cols-2 gap-4">
+        <Link href="/read" className="block">
+          <Card className="glass hover:bg-primary/10 transition-all p-6 rounded-3xl border-none flex flex-col items-center gap-3 group">
+            <div className="p-4 bg-primary/20 rounded-2xl group-hover:scale-110 transition-transform">
+              <BookOpen className="w-6 h-6 text-primary" />
             </div>
-          </div>
-        )}
-
-        {activeTab === 'scholars' && (
-          <div className="bg-purple-600/10 border border-purple-500/20 p-4 rounded-2xl animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <h3 className="font-bold text-purple-400 mb-2 text-lg">Deep Study Tool 📖</h3>
-            <p className="text-sm text-zinc-400 mb-4">Greek aur Hebrew meanings ke saath verses ko gehraayi se samjhein.</p>
-            <button className="w-full bg-purple-500 py-3 rounded-xl font-bold text-sm shadow-lg shadow-purple-500/20">
-              Open Dictionary
-            </button>
-          </div>
-        )}
+            <span className="font-bold text-sm">Bible Reading</span>
+          </Card>
+        </Link>
+        <Link href="/ai" className="block">
+          <Card className="glass hover:bg-primary/10 transition-all p-6 rounded-3xl border-none flex flex-col items-center gap-3 group">
+            <div className="p-4 bg-primary/20 rounded-2xl group-hover:scale-110 transition-transform">
+              <MessageCircle className="w-6 h-6 text-primary" />
+            </div>
+            <span className="font-bold text-sm">AI Chat Guide</span>
+          </Card>
+        </Link>
       </div>
+
+      {/* Continue Reading */}
+      <section className="space-y-4">
+        <div className="flex justify-between items-end">
+          <h2 className="text-xl font-bold font-serif flex items-center gap-2">
+            <Clock className="w-5 h-5 text-primary" /> Continue Reading
+          </h2>
+          <span className="text-xs text-primary font-bold">View History</span>
+        </div>
+        
+        <Card className="glass p-5 rounded-3xl border-none flex items-center gap-4 hover:bg-zinc-900/40 transition-colors">
+          <div className="h-14 w-14 bg-zinc-800 rounded-2xl flex items-center justify-center font-bold text-primary">
+            JHN
+          </div>
+          <div className="flex-1">
+            <h3 className="font-bold text-sm">John 4:14</h3>
+            <p className="text-xs text-zinc-500">Living Water - Chapter 4</p>
+          </div>
+          <div className="p-3 bg-primary rounded-full">
+            <Play className="w-4 h-4 text-black fill-black" />
+          </div>
+        </Card>
+      </section>
+
+      {/* Bookmarks Quick Link */}
+      <section className="space-y-4">
+        <h2 className="text-xl font-bold font-serif flex items-center gap-2">
+          <Bookmark className="w-5 h-5 text-primary" /> Your Bookmarks
+        </h2>
+        <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="glass min-w-[140px] p-4 rounded-3xl border-none space-y-2">
+              <div className="h-8 w-8 bg-primary/10 rounded-lg flex items-center justify-center">
+                <Bookmark className="w-4 h-4 text-primary" />
+              </div>
+              <p className="text-xs font-bold">Psalm 23:4</p>
+              <p className="text-[10px] text-zinc-500 line-clamp-1">Even though I walk...</p>
+            </Card>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
