@@ -19,7 +19,8 @@ import {
   Pause,
   ArrowRight,
   X,
-  Share2
+  Share2,
+  Layers
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFirebase } from '@/firebase';
@@ -32,41 +33,59 @@ import { Slider } from '@/components/ui/slider';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { aiScriptureQuestion } from '@/ai/flows/ai-scripture-question';
 
-// 66 Books Mapping for Bolls.life
+// 81 Books Mapping for Bolls.life (Standard 66 + 15+ Apocrypha)
 const BIBLE_BOOKS = [
-  { id: 1, name: "Genesis", chapters: 50 }, { id: 2, name: "Exodus", chapters: 40 },
-  { id: 3, name: "Leviticus", chapters: 27 }, { id: 4, name: "Numbers", chapters: 36 },
-  { id: 5, name: "Deuteronomy", chapters: 34 }, { id: 6, name: "Joshua", chapters: 24 },
-  { id: 7, name: "Judges", chapters: 21 }, { id: 8, name: "Ruth", chapters: 4 },
-  { id: 9, name: "1 Samuel", chapters: 31 }, { id: 10, name: "2 Samuel", chapters: 24 },
-  { id: 11, name: "1 Kings", chapters: 22 }, { id: 12, name: "2 Kings", chapters: 25 },
-  { id: 13, name: "1 Chronicles", chapters: 29 }, { id: 14, name: "2 Chronicles", chapters: 36 },
-  { id: 15, name: "Ezra", chapters: 10 }, { id: 16, name: "Nehemiah", chapters: 13 },
-  { id: 17, name: "Esther", chapters: 10 }, { id: 18, name: "Job", chapters: 42 },
-  { id: 19, name: "Psalms", chapters: 150 }, { id: 20, name: "Proverbs", chapters: 31 },
-  { id: 21, name: "Ecclesiastes", chapters: 12 }, { id: 22, name: "Song of Solomon", chapters: 8 },
-  { id: 23, name: "Isaiah", chapters: 66 }, { id: 24, name: "Jeremiah", chapters: 52 },
-  { id: 25, name: "Lamentations", chapters: 5 }, { id: 26, name: "Ezekiel", chapters: 48 },
-  { id: 27, name: "Daniel", chapters: 12 }, { id: 28, name: "Hosea", chapters: 14 },
-  { id: 29, name: "Joel", chapters: 3 }, { id: 30, name: "Amos", chapters: 9 },
-  { id: 31, name: "Obadiah", chapters: 1 }, { id: 32, name: "Jonah", chapters: 4 },
-  { id: 33, name: "Micah", chapters: 7 }, { id: 34, name: "Nahum", chapters: 3 },
-  { id: 35, name: "Habakkuk", chapters: 3 }, { id: 36, name: "Zephaniah", chapters: 3 },
-  { id: 37, name: "Haggai", chapters: 2 }, { id: 38, name: "Zechariah", chapters: 14 },
-  { id: 39, name: "Malachi", chapters: 4 }, { id: 40, name: "Matthew", chapters: 28 },
-  { id: 41, name: "Mark", chapters: 16 }, { id: 42, name: "Luke", chapters: 24 },
-  { id: 43, name: "John", chapters: 21 }, { id: 44, name: "Acts", chapters: 28 },
-  { id: 45, name: "Romans", chapters: 16 }, { id: 46, name: "1 Corinthians", chapters: 16 },
-  { id: 47, name: "2 Corinthians", chapters: 13 }, { id: 48, name: "Galatians", chapters: 6 },
-  { id: 49, name: "Ephesians", chapters: 6 }, { id: 50, name: "Philippians", chapters: 4 },
-  { id: 51, name: "Colossians", chapters: 4 }, { id: 52, name: "1 Thessalonians", chapters: 5 },
-  { id: 53, name: "2 Thessalonians", chapters: 3 }, { id: 54, name: "1 Timothy", chapters: 6 },
-  { id: 55, name: "2 Timothy", chapters: 4 }, { id: 56, name: "Titus", chapters: 3 },
-  { id: 57, name: "Philemon", chapters: 1 }, { id: 58, name: "Hebrews", chapters: 13 },
-  { id: 59, name: "James", chapters: 5 }, { id: 60, name: "1 Peter", chapters: 5 },
-  { id: 61, name: "2 Peter", chapters: 3 }, { id: 62, name: "1 John", chapters: 5 },
-  { id: 63, name: "2 John", chapters: 1 }, { id: 64, name: "3 John", chapters: 1 },
-  { id: 65, name: "Jude", chapters: 1 }, { id: 66, name: "Revelation", chapters: 22 }
+  // Standard 66
+  { id: 1, name: "Genesis", chapters: 50, canon: "standard" }, { id: 2, name: "Exodus", chapters: 40, canon: "standard" },
+  { id: 3, name: "Leviticus", chapters: 27, canon: "standard" }, { id: 4, name: "Numbers", chapters: 36, canon: "standard" },
+  { id: 5, name: "Deuteronomy", chapters: 34, canon: "standard" }, { id: 6, name: "Joshua", chapters: 24, canon: "standard" },
+  { id: 7, name: "Judges", chapters: 21, canon: "standard" }, { id: 8, name: "Ruth", chapters: 4, canon: "standard" },
+  { id: 9, name: "1 Samuel", chapters: 31, canon: "standard" }, { id: 10, name: "2 Samuel", chapters: 24, canon: "standard" },
+  { id: 11, name: "1 Kings", chapters: 22, canon: "standard" }, { id: 12, name: "2 Kings", chapters: 25, canon: "standard" },
+  { id: 13, name: "1 Chronicles", chapters: 29, canon: "standard" }, { id: 14, name: "2 Chronicles", chapters: 36, canon: "standard" },
+  { id: 15, name: "Ezra", chapters: 10, canon: "standard" }, { id: 16, name: "Nehemiah", chapters: 13, canon: "standard" },
+  { id: 17, name: "Esther", chapters: 10, canon: "standard" }, { id: 18, name: "Job", chapters: 42, canon: "standard" },
+  { id: 19, name: "Psalms", chapters: 150, canon: "standard" }, { id: 20, name: "Proverbs", chapters: 31, canon: "standard" },
+  { id: 21, name: "Ecclesiastes", chapters: 12, canon: "standard" }, { id: 22, name: "Song of Solomon", chapters: 8, canon: "standard" },
+  { id: 23, name: "Isaiah", chapters: 66, canon: "standard" }, { id: 24, name: "Jeremiah", chapters: 52, canon: "standard" },
+  { id: 25, name: "Lamentations", chapters: 5, canon: "standard" }, { id: 26, name: "Ezekiel", chapters: 48, canon: "standard" },
+  { id: 27, name: "Daniel", chapters: 12, canon: "standard" }, { id: 28, name: "Hosea", chapters: 14, canon: "standard" },
+  { id: 29, name: "Joel", chapters: 3, canon: "standard" }, { id: 30, name: "Amos", chapters: 9, canon: "standard" },
+  { id: 31, name: "Obadiah", chapters: 1, canon: "standard" }, { id: 32, name: "Jonah", chapters: 4, canon: "standard" },
+  { id: 33, name: "Micah", chapters: 7, canon: "standard" }, { id: 34, name: "Nahum", chapters: 3, canon: "standard" },
+  { id: 35, name: "Habakkuk", chapters: 3, canon: "standard" }, { id: 36, name: "Zephaniah", chapters: 3, canon: "standard" },
+  { id: 37, name: "Haggai", chapters: 2, canon: "standard" }, { id: 38, name: "Zechariah", chapters: 14, canon: "standard" },
+  { id: 39, name: "Malachi", chapters: 4, canon: "standard" }, { id: 40, name: "Matthew", chapters: 28, canon: "standard" },
+  { id: 41, name: "Mark", chapters: 16, canon: "standard" }, { id: 42, name: "Luke", chapters: 24, canon: "standard" },
+  { id: 43, name: "John", chapters: 21, canon: "standard" }, { id: 44, name: "Acts", chapters: 28, canon: "standard" },
+  { id: 45, name: "Romans", chapters: 16, canon: "standard" }, { id: 46, name: "1 Corinthians", chapters: 16, canon: "standard" },
+  { id: 47, name: "2 Corinthians", chapters: 13, canon: "standard" }, { id: 48, name: "Galatians", chapters: 6, canon: "standard" },
+  { id: 49, name: "Ephesians", chapters: 6, canon: "standard" }, { id: 50, name: "Philippians", chapters: 4, canon: "standard" },
+  { id: 51, name: "Colossians", chapters: 4, canon: "standard" }, { id: 52, name: "1 Thessalonians", chapters: 5, canon: "standard" },
+  { id: 53, name: "2 Thessalonians", chapters: 3, canon: "standard" }, { id: 54, name: "1 Timothy", chapters: 6, canon: "standard" },
+  { id: 55, name: "2 Timothy", chapters: 4, canon: "standard" }, { id: 56, name: "Titus", chapters: 3, canon: "standard" },
+  { id: 57, name: "Philemon", chapters: 1, canon: "standard" }, { id: 58, name: "Hebrews", chapters: 13, canon: "standard" },
+  { id: 59, name: "James", chapters: 5, canon: "standard" }, { id: 60, name: "1 Peter", chapters: 5, canon: "standard" },
+  { id: 61, name: "2 Peter", chapters: 3, canon: "standard" }, { id: 62, name: "1 John", chapters: 5, canon: "standard" },
+  { id: 63, name: "2 John", chapters: 1, canon: "standard" }, { id: 64, name: "3 John", chapters: 1, canon: "standard" },
+  { id: 65, name: "Jude", chapters: 1, canon: "standard" }, { id: 66, name: "Revelation", chapters: 22, canon: "standard" },
+  
+  // Extended Canon (Apocrypha / Deuterocanonical)
+  { id: 67, name: "Tobit", chapters: 14, canon: "extended" },
+  { id: 68, name: "Judith", chapters: 16, canon: "extended" },
+  { id: 69, name: "Wisdom of Solomon", chapters: 19, canon: "extended" },
+  { id: 70, name: "Sirach", chapters: 51, canon: "extended" },
+  { id: 71, name: "Baruch", chapters: 6, canon: "extended" },
+  { id: 72, name: "1 Maccabees", chapters: 16, canon: "extended" },
+  { id: 73, name: "2 Maccabees", chapters: 15, canon: "extended" },
+  { id: 74, name: "3 Maccabees", chapters: 7, canon: "extended" },
+  { id: 75, name: "4 Maccabees", chapters: 18, canon: "extended" },
+  { id: 76, name: "1 Esdras", chapters: 9, canon: "extended" },
+  { id: 77, name: "Prayer of Manasseh", chapters: 1, canon: "extended" },
+  { id: 78, name: "Psalm 151", chapters: 1, canon: "extended" },
+  { id: 79, name: "Enoch", chapters: 108, canon: "extended" },
+  { id: 80, name: "Jubilees", chapters: 50, canon: "extended" },
+  { id: 81, name: "Letter of Jeremiah", chapters: 1, canon: "extended" }
 ];
 
 const BIBLE_VERSIONS = [
@@ -84,7 +103,8 @@ export default function BibleReaderPage() {
     translation: 'IRV_HIN',
     bookId: 43, // Default: John
     chapter: 1,
-    selectedVerse: null as any
+    selectedVerse: null as any,
+    canon: 'standard' as 'standard' | 'extended'
   });
 
   const [verses, setVerses] = useState<any[]>([]);
@@ -99,18 +119,28 @@ export default function BibleReaderPage() {
 
   const currentBook = useMemo(() => BIBLE_BOOKS.find(b => b.id === state.bookId), [state.bookId]);
 
+  // Filtered Books based on Canon selection
+  const filteredBooks = useMemo(() => {
+    if (state.canon === 'standard') {
+      return BIBLE_BOOKS.filter(b => b.canon === 'standard');
+    }
+    return BIBLE_BOOKS;
+  }, [state.canon]);
+
   // Load Preferences
   useEffect(() => {
     const savedVer = localStorage.getItem('bible_version') || 'IRV_HIN';
     const savedSize = localStorage.getItem('bible_font_size');
     const savedBook = localStorage.getItem('bible_book_id');
     const savedChapter = localStorage.getItem('bible_chapter');
+    const savedCanon = localStorage.getItem('bible_canon') as 'standard' | 'extended';
 
     setState(prev => ({
       ...prev,
       translation: savedVer,
       bookId: savedBook ? parseInt(savedBook) : prev.bookId,
-      chapter: savedChapter ? parseInt(savedChapter) : prev.chapter
+      chapter: savedChapter ? parseInt(savedChapter) : prev.chapter,
+      canon: savedCanon || 'standard'
     }));
 
     if (savedSize) setFontSize(parseInt(savedSize));
@@ -122,6 +152,7 @@ export default function BibleReaderPage() {
     try {
       const url = `https://bolls.life/get-chapter/${trans}/${bId}/${chap}/`;
       const response = await fetch(url);
+      if (!response.ok) throw new Error("Translation does not support this book.");
       const data = await response.json();
       setVerses(data);
       
@@ -130,7 +161,11 @@ export default function BibleReaderPage() {
       localStorage.setItem('bible_chapter', chap.toString());
       localStorage.setItem('bible_version', trans);
     } catch (e) {
-      toast({ title: "Connection Error", description: "Vachan load karne mein dikkat hui.", variant: "destructive" });
+      toast({ 
+        title: "Kitab Uplabdh Nahi Hai", 
+        description: "Ye version shayad is kitab ko support nahi karta.", 
+        variant: "destructive" 
+      });
     } finally {
       setLoading(false);
     }
@@ -192,6 +227,16 @@ export default function BibleReaderPage() {
     toast({ title: "Verse Bookmarked", description: "Saved to your library." });
   };
 
+  const toggleCanon = () => {
+    const newCanon = state.canon === 'standard' ? 'extended' : 'standard';
+    setState(prev => ({ ...prev, canon: newCanon }));
+    localStorage.setItem('bible_canon', newCanon);
+    toast({ 
+      title: "Canon Updated", 
+      description: newCanon === 'standard' ? "Standard (66) books active." : "Extended (81) books active." 
+    });
+  };
+
   return (
     <div className="min-h-screen bg-[#09090b] text-zinc-100 flex flex-col">
       {/* World Class Header */}
@@ -207,19 +252,31 @@ export default function BibleReaderPage() {
                   <h2 className="text-xl font-serif font-bold italic text-white flex items-center gap-2">
                     {currentBook?.name} {state.chapter} <ChevronDown className="w-4 h-4 text-emerald-500" />
                   </h2>
-                  <p className="text-[9px] text-zinc-500 uppercase font-black tracking-[0.2em]">Bible Engine V2</p>
+                  <p className="text-[9px] text-zinc-500 uppercase font-black tracking-[0.2em]">Bible Engine V2 • {state.canon === 'standard' ? '66 Books' : '81 Books'}</p>
                 </div>
               </button>
             </DialogTrigger>
             <DialogContent className="bg-[#09090b] border-zinc-800 rounded-[2.5rem] max-w-2xl w-[95%] p-0 overflow-hidden shadow-2xl">
               <DialogHeader className="p-6 border-b border-white/5 bg-zinc-900/50">
-                <DialogTitle className="font-serif italic text-2xl text-emerald-500 flex items-center gap-3">
-                  <BookOpen className="w-6 h-6" /> Select Book & Chapter
-                </DialogTitle>
+                <div className="flex items-center justify-between">
+                  <DialogTitle className="font-serif italic text-2xl text-emerald-500 flex items-center gap-3">
+                    <BookOpen className="w-6 h-6" /> Select Book
+                  </DialogTitle>
+                  <button 
+                    onClick={toggleCanon}
+                    className={cn(
+                      "flex items-center gap-2 px-4 py-2 rounded-full border text-[10px] font-black uppercase tracking-widest transition-all",
+                      state.canon === 'extended' ? "bg-emerald-500 text-black border-emerald-400" : "bg-zinc-800 border-zinc-700 text-zinc-400"
+                    )}
+                  >
+                    <Layers className="w-4 h-4" />
+                    {state.canon === 'standard' ? 'Standard (66)' : 'Extended (81)'}
+                  </button>
+                </div>
               </DialogHeader>
               <ScrollArea className="h-[60vh] p-6">
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {BIBLE_BOOKS.map(book => (
+                  {filteredBooks.map(book => (
                     <div key={book.id} className="space-y-2">
                       <button 
                         onClick={() => setState(prev => ({ ...prev, bookId: book.id, chapter: 1 }))}
@@ -229,6 +286,9 @@ export default function BibleReaderPage() {
                         )}
                       >
                         <span className="text-xs font-bold font-serif">{book.name}</span>
+                        {book.canon === 'extended' && (
+                          <span className="block text-[8px] text-emerald-500/50 uppercase font-black tracking-widest mt-1">Apocrypha</span>
+                        )}
                       </button>
                       {state.bookId === book.id && (
                         <div className="grid grid-cols-4 gap-2 px-1">
