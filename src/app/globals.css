@@ -40,7 +40,7 @@
   }
 }
 
-.main-container {
+#app-container {
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -49,6 +49,15 @@
   margin: 0 auto;
   position: relative;
   background: #09090b;
+  overflow: hidden;
+}
+
+main {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 150px; /* Space for Bottom Nav */
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
 }
 
 .hide-scrollbar::-webkit-scrollbar {
@@ -75,6 +84,7 @@
   position: fixed;
   bottom: 0;
   width: 100%;
+  max-width: 448px;
   z-index: 100;
   background: rgba(9, 9, 11, 0.85);
   backdrop-filter: blur(20px);

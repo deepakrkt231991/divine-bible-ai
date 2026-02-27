@@ -28,9 +28,7 @@ import { Slider } from '@/components/ui/slider';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { smartBibleSearch } from '@/ai/flows/smart-bible-search';
 
-// Global Cache for Instant Loading
-const BibleCache: Record<string, any[]> = {};
-
+// 81-Book Index (Frontend Hardcoded for 0-second loading)
 const BIBLE_BOOKS = [
   { id: 1, name: "Genesis", hindi: "Utpatti", chapters: 50, canon: "standard", section: "Old Testament" },
   { id: 2, name: "Exodus", hindi: "Nirgaman", chapters: 40, canon: "standard", section: "Old Testament" },
@@ -43,6 +41,7 @@ const BIBLE_BOOKS = [
   { id: 66, name: "Revelation", hindi: "Prakashitvakya", chapters: 22, canon: "standard", section: "New Testament" },
   { id: 67, name: "Tobit", hindi: "Tobit", chapters: 14, canon: "full", section: "Deuterocanonical" },
   { id: 68, name: "Judith", hindi: "Judith", chapters: 16, canon: "full", section: "Deuterocanonical" },
+  { id: 70, name: "Wisdom", hindi: "Wisdom", chapters: 19, canon: "full", section: "Deuterocanonical" },
   { id: 71, name: "Sirach", hindi: "Sirach", chapters: 51, canon: "full", section: "Deuterocanonical" },
   { id: 81, name: "Psalm 151", hindi: "Bhajan 151", chapters: 1, canon: "full", section: "Orthodox Extra" }
 ];
@@ -52,6 +51,9 @@ const BIBLE_VERSIONS = [
   { id: 'KJV', name: 'English (KJV)', lang: 'en-US' },
   { id: 'IRV_MAR', name: 'Marathi (IRV)', lang: 'mr-IN' },
 ];
+
+// Global Memory Cache
+const BibleCache = new Map();
 
 export default function BibleReaderPage() {
   const { firestore, user } = useFirebase();
@@ -96,20 +98,21 @@ export default function BibleReaderPage() {
     if (savedSize) setFontSize(parseInt(savedSize));
   }, []);
 
+  // High-Performance Fetch Logic
   const fetchBibleContent = useCallback(async (bId: number, chap: number, trans: string) => {
     const cacheKey = `${trans}_${bId}_${chap}`;
     
-    // 1. Check Memory Cache first (Instant)
-    if (BibleCache[cacheKey]) {
-      setVerses(BibleCache[cacheKey]);
+    // 1. Instant load from Memory Cache
+    if (BibleCache.has(cacheKey)) {
+      setVerses(BibleCache.get(cacheKey));
       return;
     }
 
-    // 2. Check LocalStorage
+    // 2. Check LocalStorage for Offline/Fast load
     const localSaved = localStorage.getItem(`cache_${cacheKey}`);
     if (localSaved) {
       const parsed = JSON.parse(localSaved);
-      BibleCache[cacheKey] = parsed;
+      BibleCache.set(cacheKey, parsed);
       setVerses(parsed);
       return;
     }
@@ -131,14 +134,29 @@ export default function BibleReaderPage() {
         toast({ title: "Content Unavailable", description: "Ye chapter abhi available nahi hai." });
         setVerses([]);
       } else {
-        // Save to Caches
-        BibleCache[cacheKey] = data;
+        // Save to Memory and LocalStorage Caches
+        BibleCache.set(cacheKey, data);
         localStorage.setItem(`cache_${cacheKey}`, JSON.stringify(data));
         
         setVerses(data);
         localStorage.setItem('bible_book_id', b.toString());
         localStorage.setItem('bible_chapter', c.toString());
         localStorage.setItem('bible_version', t);
+
+        // Pre-fetch next chapter logic
+        if (c < currentBook.chapters) {
+          const nextKey = `${t}_${b}_${c + 1}`;
+          if (!BibleCache.has(nextKey)) {
+            fetch(`https://bolls.life/get-chapter/${t}/${b}/${c + 1}/`)
+              .then(r => r.json())
+              .then(d => {
+                if (d && d.length > 0) {
+                  BibleCache.set(nextKey, d);
+                  localStorage.setItem(`cache_${nextKey}`, JSON.stringify(d));
+                }
+              }).catch(() => {});
+          }
+        }
       }
     } catch (e) {
       console.error("Fetch Error:", e);
@@ -146,7 +164,7 @@ export default function BibleReaderPage() {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, currentBook.chapters]);
 
   useEffect(() => {
     fetchBibleContent(state.bookId, state.chapter, state.translation);
@@ -209,7 +227,7 @@ export default function BibleReaderPage() {
   };
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-[#09090b]">
+    <div id="app-container">
       {/* Top Header */}
       <header className="flex-none bg-[#09090b]/90 backdrop-blur-xl border-b border-white/5 px-4 py-3 z-40">
         <div className="max-w-2xl mx-auto space-y-3">
@@ -265,9 +283,9 @@ export default function BibleReaderPage() {
       </header>
 
       {/* Main Content Area (High Performance Scroll) */}
-      <main className="flex-1 overflow-y-auto px-6 py-10 pb-[120px] scroll-smooth hide-scrollbar relative bg-[#09090b]">
+      <main className="hide-scrollbar relative bg-[#09090b]">
         {state.isSearchOpen && (
-          <div className="absolute inset-0 bg-[#09090b] z-30 p-6 space-y-8 animate-in slide-in-from-top-4 overflow-y-auto">
+          <div className="absolute inset-0 bg-[#09090b] z-30 p-6 space-y-8 animate-in slide-in-from-top-4 overflow-y-auto pb-[150px]">
             {aiSearchLoading ? (
               <div className="flex flex-col items-center py-20 gap-4">
                 <Loader2 className="w-10 h-10 text-emerald-500 animate-spin" />
@@ -310,7 +328,7 @@ export default function BibleReaderPage() {
             </Button>
           </div>
         ) : (
-          <div className="max-w-2xl mx-auto space-y-12">
+          <div className="max-w-2xl mx-auto space-y-12 py-10 px-6">
             <div className="text-center space-y-4">
               <h1 className="text-4xl font-serif font-bold italic text-white">{currentBook.name} {state.chapter}</h1>
               <p className="text-[10px] text-zinc-500 font-black uppercase tracking-widest">{currentBook.hindi} • {state.translation}</p>
@@ -320,6 +338,7 @@ export default function BibleReaderPage() {
               {verses.map(v => (
                 <div 
                   key={v.pk} 
+                  id={`v-${v.verse}`}
                   onClick={() => setState(prev => ({ ...prev, selectedVerse: v }))}
                   className={cn("verse-row group relative animate-in fade-in slide-in-from-bottom-2 duration-500", state.selectedVerse?.pk === v.pk && "highlight-emerald")}
                 >
@@ -342,7 +361,7 @@ export default function BibleReaderPage() {
               <button 
                 onClick={() => {
                   setState(prev => ({ ...prev, chapter: prev.chapter + 1, selectedVerse: null }));
-                  window.scrollTo(0,0);
+                  document.querySelector('main')?.scrollTo(0,0);
                 }}
                 className="w-full py-8 bg-zinc-900/50 border border-white/5 rounded-[2.5rem] flex items-center justify-center gap-4 text-emerald-500 hover:bg-emerald-500/10 transition-all group"
               >
