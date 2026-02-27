@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -9,7 +10,7 @@ import {
   HelpCircle, 
   Calendar, 
   Bookmark, 
-  Users, 
+  HeartHandshake, 
   FileText, 
   Settings, 
   ChevronRight, 
@@ -17,21 +18,21 @@ import {
   User,
   LayoutGrid
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 export default function MorePage() {
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col pb-32">
-      {/* Top Bar */}
+      {/* Top Bar - Consistent Header */}
       <header className="sticky top-0 z-50 flex items-center justify-between px-6 py-4 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-800/50">
         <div className="flex items-center gap-3">
-          <div className="bg-primary/20 p-2 rounded-lg">
-            <LayoutGrid className="w-6 h-6 text-primary" />
+          <div className="bg-emerald-500/20 p-2 rounded-lg">
+            <LayoutGrid className="w-6 h-6 text-emerald-500" />
           </div>
           <h1 className="text-xl font-bold tracking-tight font-serif italic">More Resources</h1>
         </div>
         <div className="flex items-center gap-3">
-          <button className="text-[10px] font-black uppercase tracking-widest text-primary hover:text-emerald-400 transition-colors px-3 py-1.5 border border-primary/30 rounded-full">
+          <button className="text-[10px] font-black uppercase tracking-widest text-emerald-500 hover:text-emerald-400 transition-colors px-3 py-1.5 border border-emerald-500/30 rounded-full">
             Register
           </button>
           <button className="flex items-center justify-center size-10 rounded-full hover:bg-zinc-800 transition-colors text-slate-100">
@@ -44,8 +45,8 @@ export default function MorePage() {
         {/* AI Creation Tools Section */}
         <section>
           <div className="flex items-center gap-2 mb-4 px-2">
-            <Sparkles className="w-5 h-5 text-primary" />
-            <h2 className="font-serif text-lg font-semibold italic text-primary">AI Creation Tools</h2>
+            <Sparkles className="w-5 h-5 text-emerald-500" />
+            <h2 className="font-serif text-lg font-semibold italic text-emerald-500">AI Creation Tools</h2>
           </div>
           
           <div className="grid grid-cols-1 gap-4">
@@ -62,26 +63,26 @@ export default function MorePage() {
                     <h3 className="text-white font-bold text-lg">AI Image Generator</h3>
                     <p className="text-zinc-300 text-xs">Create sacred visual meditations</p>
                   </div>
-                  <div className="bg-primary/20 p-2 rounded-full backdrop-blur-sm group-hover:bg-primary transition-colors">
-                    <ArrowRight className="w-5 h-5 text-primary group-hover:text-zinc-950" />
+                  <div className="bg-emerald-500/20 p-2 rounded-full backdrop-blur-sm group-hover:bg-emerald-500 transition-colors">
+                    <ArrowRight className="w-5 h-5 text-emerald-500 group-hover:text-zinc-950" />
                   </div>
                 </div>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 flex flex-col gap-3 hover:border-primary/40 transition-all cursor-pointer group">
-                <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20">
-                  <Mic className="w-6 h-6 text-primary" />
+              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 flex flex-col gap-3 hover:border-emerald-500/40 transition-all cursor-pointer group">
+                <div className="size-10 rounded-xl bg-emerald-500/10 flex items-center justify-center group-hover:bg-emerald-500/20">
+                  <Mic className="w-6 h-6 text-emerald-500" />
                 </div>
                 <div>
                   <h3 className="font-bold text-sm">AI Voice</h3>
                   <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-black">Sermon & Scripture</p>
                 </div>
               </div>
-              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 flex flex-col gap-3 hover:border-primary/40 transition-all cursor-pointer group">
-                <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20">
-                  <Video className="w-6 h-6 text-primary" />
+              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 flex flex-col gap-3 hover:border-emerald-500/40 transition-all cursor-pointer group">
+                <div className="size-10 rounded-xl bg-emerald-500/10 flex items-center justify-center group-hover:bg-emerald-500/20">
+                  <Video className="w-6 h-6 text-emerald-500" />
                 </div>
                 <div>
                   <h3 className="font-bold text-sm">AI Video</h3>
@@ -95,23 +96,31 @@ export default function MorePage() {
         {/* Bible Study & Engagement */}
         <section>
           <div className="flex items-center gap-2 mb-4 px-2">
-            <BookOpen className="w-5 h-5 text-primary" />
-            <h2 className="font-serif text-lg font-semibold italic text-primary">Bible Study</h2>
+            <BookOpen className="w-5 h-5 text-emerald-500" />
+            <h2 className="font-serif text-lg font-semibold italic text-emerald-500">Bible Study</h2>
           </div>
           <div className="space-y-3">
+            <Link href="/quiz" className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex items-center justify-between hover:bg-zinc-900/50 transition-colors cursor-pointer group block">
+              <div className="flex items-center gap-4">
+                <div className="size-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                  <HelpCircle className="w-5 h-5 text-emerald-500" />
+                </div>
+                <span className="font-medium text-sm">Bible Quiz</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-emerald-500 transition-colors" />
+            </Link>
             {[
-              { icon: HelpCircle, title: 'Bible Quiz' },
               { icon: Calendar, title: 'Bible Reading Plans' },
               { icon: Bookmark, title: 'Saved Bookmarks & Verses' }
             ].map((item, i) => (
               <div key={i} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex items-center justify-between hover:bg-zinc-900/50 transition-colors cursor-pointer group">
                 <div className="flex items-center gap-4">
-                  <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <item.icon className="w-5 h-5 text-primary" />
+                  <div className="size-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                    <item.icon className="w-5 h-5 text-emerald-500" />
                   </div>
                   <span className="font-medium text-sm">{item.title}</span>
                 </div>
-                <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-primary transition-colors" />
+                <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-emerald-500 transition-colors" />
               </div>
             ))}
           </div>
@@ -120,18 +129,18 @@ export default function MorePage() {
         {/* Community & Personal */}
         <section>
           <div className="flex items-center gap-2 mb-4 px-2">
-            <Users className="w-5 h-5 text-primary" />
-            <h2 className="font-serif text-lg font-semibold italic text-primary">Community & Personal</h2>
+            <HeartHandshake className="w-5 h-5 text-emerald-500" />
+            <h2 className="font-serif text-lg font-semibold italic text-emerald-500">Community & Personal</h2>
           </div>
           <div className="space-y-3">
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex items-center justify-between hover:bg-zinc-900/50 transition-colors cursor-pointer group">
               <div className="flex items-center gap-4">
-                <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Users className="w-5 h-5 text-primary" />
+                <div className="size-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                  <HeartHandshake className="w-5 h-5 text-emerald-500" />
                 </div>
                 <span className="font-medium text-sm">Prayer Requests</span>
               </div>
-              <div className="bg-primary/20 text-primary px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest">Active</div>
+              <div className="bg-emerald-500/20 text-emerald-500 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest">Active</div>
             </div>
             {[
               { icon: FileText, title: 'Personal Notes' },
@@ -139,12 +148,12 @@ export default function MorePage() {
             ].map((item, i) => (
               <div key={i} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex items-center justify-between hover:bg-zinc-900/50 transition-colors cursor-pointer group">
                 <div className="flex items-center gap-4">
-                  <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <item.icon className="w-5 h-5 text-primary" />
+                  <div className="size-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                    <item.icon className="w-5 h-5 text-emerald-500" />
                   </div>
                   <span className="font-medium text-sm">{item.title}</span>
                 </div>
-                <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-primary transition-colors" />
+                <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-emerald-500 transition-colors" />
               </div>
             ))}
           </div>
