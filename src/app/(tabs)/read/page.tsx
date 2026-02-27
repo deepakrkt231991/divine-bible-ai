@@ -12,7 +12,10 @@ import {
   Search,
   Settings2,
   ArrowRight,
-  RefreshCw
+  RefreshCw,
+  Plus,
+  Minus,
+  Check
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
@@ -24,6 +27,9 @@ import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { smartBibleSearch } from '@/ai/flows/smart-bible-search';
+
+// Global Cache for Instant Loading
+const BibleCache: Record<string, any[]> = {};
 
 const BIBLE_BOOKS = [
   { id: 1, name: "Genesis", hindi: "Utpatti", chapters: 50, canon: "standard", section: "Old Testament" },
@@ -69,12 +75,6 @@ export default function BibleReaderPage() {
   const [aiSearchLoading, setAiSearchLoading] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
 
-  const historyQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return query(collection(firestore, 'users', user.uid, 'search_history'), orderBy('createdAt', 'desc'), limit(5));
-  }, [firestore, user]);
-  const { data: searchHistory } = useCollection(historyQuery);
-
   const currentBook = useMemo(() => BIBLE_BOOKS.find(b => b.id === state.bookId) || BIBLE_BOOKS[0], [state.bookId]);
 
   const filteredBooksByCanon = useMemo(() => {
@@ -97,8 +97,24 @@ export default function BibleReaderPage() {
   }, []);
 
   const fetchBibleContent = useCallback(async (bId: number, chap: number, trans: string) => {
+    const cacheKey = `${trans}_${bId}_${chap}`;
+    
+    // 1. Check Memory Cache first (Instant)
+    if (BibleCache[cacheKey]) {
+      setVerses(BibleCache[cacheKey]);
+      return;
+    }
+
+    // 2. Check LocalStorage
+    const localSaved = localStorage.getItem(`cache_${cacheKey}`);
+    if (localSaved) {
+      const parsed = JSON.parse(localSaved);
+      BibleCache[cacheKey] = parsed;
+      setVerses(parsed);
+      return;
+    }
+
     setLoading(true);
-    setVerses([]);
     try {
       const b = parseInt(bId.toString()) || 1;
       const c = parseInt(chap.toString()) || 1;
@@ -115,6 +131,10 @@ export default function BibleReaderPage() {
         toast({ title: "Content Unavailable", description: "Ye chapter abhi available nahi hai." });
         setVerses([]);
       } else {
+        // Save to Caches
+        BibleCache[cacheKey] = data;
+        localStorage.setItem(`cache_${cacheKey}`, JSON.stringify(data));
+        
         setVerses(data);
         localStorage.setItem('bible_book_id', b.toString());
         localStorage.setItem('bible_chapter', c.toString());
@@ -122,11 +142,7 @@ export default function BibleReaderPage() {
       }
     } catch (e) {
       console.error("Fetch Error:", e);
-      toast({ 
-        title: "Error", 
-        description: "Vachan load nahi ho paye. Try again button click karein.", 
-        variant: "destructive" 
-      });
+      toast({ title: "Error", description: "Vachan load nahi ho paye.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -142,14 +158,6 @@ export default function BibleReaderPage() {
     setSearchResults([]);
     setAiSuggestions([]);
     
-    if (user && firestore) {
-      addDoc(collection(firestore, 'users', user.uid, 'search_history'), {
-        query: state.globalSearch,
-        createdAt: serverTimestamp(),
-        userId: user.uid
-      });
-    }
-
     try {
       const searchUrl = `https://bolls.life/search/${state.translation}/?search=${encodeURIComponent(state.globalSearch)}&match_case=false`;
       const response = await fetch(searchUrl);
@@ -177,6 +185,27 @@ export default function BibleReaderPage() {
     utterance.onend = () => setIsAudioPlaying(false);
     window.speechSynthesis.speak(utterance);
     setIsAudioPlaying(true);
+  };
+
+  const handleBookmark = async (v: any) => {
+    if (!user || !firestore) {
+      toast({ title: "Note", description: "Vachan save karne ke liye login karein." });
+      return;
+    }
+    const bookmarkId = `${state.bookId}_${state.chapter}_${v.verse}`;
+    const ref = doc(firestore, 'users', user.uid, 'bookmarks', bookmarkId);
+    
+    await setDoc(ref, {
+      userId: user.uid,
+      verseId: bookmarkId,
+      verseText: v.text,
+      bookName: currentBook.name,
+      chapter: state.chapter,
+      verseNumber: v.verse,
+      translation: state.translation,
+      createdAt: serverTimestamp()
+    });
+    toast({ title: "Vachan Saved", description: "Saved in your Divine Library." });
   };
 
   return (
@@ -235,8 +264,8 @@ export default function BibleReaderPage() {
         </div>
       </header>
 
-      {/* Main Content Area (Fixed with pb-32/120px) */}
-      <main className="flex-1 overflow-y-auto px-6 py-10 pb-[120px] scroll-smooth hide-scrollbar relative">
+      {/* Main Content Area (High Performance Scroll) */}
+      <main className="flex-1 overflow-y-auto px-6 py-10 pb-[120px] scroll-smooth hide-scrollbar relative bg-[#09090b]">
         {state.isSearchOpen && (
           <div className="absolute inset-0 bg-[#09090b] z-30 p-6 space-y-8 animate-in slide-in-from-top-4 overflow-y-auto">
             {aiSearchLoading ? (
@@ -292,7 +321,7 @@ export default function BibleReaderPage() {
                 <div 
                   key={v.pk} 
                   onClick={() => setState(prev => ({ ...prev, selectedVerse: v }))}
-                  className={cn("verse-row group relative", state.selectedVerse?.pk === v.pk && "highlight-emerald")}
+                  className={cn("verse-row group relative animate-in fade-in slide-in-from-bottom-2 duration-500", state.selectedVerse?.pk === v.pk && "highlight-emerald")}
                 >
                   <p style={{ fontSize: `${fontSize}px` }} className="leading-[1.9] text-zinc-200 font-serif">
                     <span className="text-emerald-500 font-bold mr-3">{v.verse}</span>
@@ -300,7 +329,7 @@ export default function BibleReaderPage() {
                   </p>
                   {state.selectedVerse?.pk === v.pk && (
                     <div className="flex items-center gap-2 mt-6 animate-in slide-in-from-top-2">
-                      <button className="p-3.5 bg-zinc-900 border border-zinc-800 rounded-2xl hover:text-emerald-500 transition-all shadow-xl"><Bookmark className="w-4 h-4" /></button>
+                      <button onClick={() => handleBookmark(v)} className="p-3.5 bg-zinc-900 border border-zinc-800 rounded-2xl hover:text-emerald-500 transition-all shadow-xl"><Bookmark className="w-4 h-4" /></button>
                       <button onClick={() => handleSpeak(v.text)} className="p-3.5 bg-zinc-900 border border-zinc-800 rounded-2xl hover:text-emerald-500 shadow-xl"><Volume2 className="w-4 h-4" /></button>
                       <button className="p-3.5 bg-zinc-900 border border-zinc-800 rounded-2xl hover:text-emerald-500 shadow-xl"><Share2 className="w-4 h-4" /></button>
                     </div>

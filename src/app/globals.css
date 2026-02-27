@@ -34,6 +34,7 @@
   html, body {
     height: 100%;
     margin: 0;
+    padding: 0;
     overflow: hidden; /* Screen ko hilne se rokega */
     @apply bg-[#09090b] text-zinc-100 antialiased selection:bg-emerald-500/30 font-sans;
   }
@@ -47,13 +48,7 @@
   max-width: 448px; /* Mobile width constraint */
   margin: 0 auto;
   position: relative;
-}
-
-.glass-panel {
-  background: rgba(15, 15, 15, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: #09090b;
 }
 
 .hide-scrollbar::-webkit-scrollbar {
@@ -73,5 +68,15 @@
 }
 
 .verse-row {
-  @apply cursor-pointer transition-all p-2 rounded-lg hover:bg-zinc-800/30;
+  @apply cursor-pointer transition-all p-3 rounded-xl hover:bg-zinc-800/30;
+}
+
+.glass-nav {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  z-index: 100;
+  background: rgba(9, 9, 11, 0.85);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
