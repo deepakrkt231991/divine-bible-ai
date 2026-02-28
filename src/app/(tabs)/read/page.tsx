@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef, Suspense, useTransition } from 'react';
@@ -62,29 +61,32 @@ function ReaderContent() {
       const json = await res.json();
       let foundVerses: string[] = [];
 
-      // Check if data is Array (Scrollmapper) or Object (Standard)
+      // Normalize Chapter ID to string for key lookup
+      const chapterKey = cid.toString();
+
       if (Array.isArray(json)) {
+        // Scrollmapper Array Format: [{book: "Matthew", chapter_nr: 1, chapter: {"1": {verse: "..."}}}]
         const entry = json.find(
           (item: any) =>
             item.book?.toLowerCase() === bid.toLowerCase() &&
-            item.chapter_nr?.toString() === cid.toString()
+            item.chapter_nr?.toString() === chapterKey
         );
         if (entry?.chapter) {
           foundVerses = Object.values(entry.chapter).map((v: any) => 
-            typeof v === 'string' ? v : (v as any).verse
+            typeof v === 'string' ? v : (v as any).verse || (v as any).text || ""
           );
         }
       } else if (typeof json === 'object' && json !== null) {
+        // Standard Object Format: {"matthew": {"1": ["verse1", "verse2"]}}
         const bookKey = Object.keys(json).find(k => k.toLowerCase() === bid.toLowerCase());
         const bookData = bookKey ? (json as any)[bookKey] : null;
         if (bookData) {
-          const chapterKey = cid.toString();
           const chapterData = bookData[chapterKey];
           if (Array.isArray(chapterData)) {
             foundVerses = chapterData;
           } else if (typeof chapterData === 'object' && chapterData !== null) {
             foundVerses = Object.values(chapterData).map((v: any) => 
-              typeof v === 'string' ? v : (v as any).verse
+              typeof v === 'string' ? v : (v as any).verse || (v as any).text || ""
             );
           }
         }
@@ -93,13 +95,14 @@ function ReaderContent() {
       if (foundVerses.length > 0) {
         setVerses(foundVerses);
       } else {
-        setVerses(["Chapter content not found. This section is being prepared."]);
+        console.warn(`Content not found for Book: ${bid}, Chapter: ${cid}`);
+        setVerses(["Is adhyay ka vachan abhi uplabdha nahi hai. Kripya /public/bible/ folder check karein ya doosra adhyay chunein."]);
       }
       
       if (scrollRef.current) scrollRef.current.scrollTop = 0;
     } catch (e) {
       console.error("Reader Load Error:", e);
-      setVerses(["Error loading scripture. Please check your data folder."]);
+      setVerses(["Error loading scripture. Kripya check karein ki /public/bible/ mein JSON files sahi hain."]);
     } finally {
       setLoading(false);
     }
@@ -116,7 +119,7 @@ function ReaderContent() {
     if (saved) setHighlights(JSON.parse(saved));
   }, []);
 
-  // Navigation Logic WITHOUT Reset
+  // Navigation Logic WITHOUT Reload (The Permanent Fix)
   const handleUpdateNavigation = (newBook: string, newChapter: number, newVersion?: string) => {
     setSelectorOpen(false);
     startTransition(() => {
@@ -124,6 +127,7 @@ function ReaderContent() {
       params.set('book', newBook);
       params.set('chapter', newChapter.toString());
       params.set('version', newVersion || version);
+      // Use scroll: false to maintain scroll position context
       router.push(`?${params.toString()}`, { scroll: false });
     });
   };
@@ -162,7 +166,7 @@ function ReaderContent() {
       userId: user.uid,
       verseId: `${bookId}_${chapterNum}_${activeVerseIndex}`,
       content: noteContent,
-      bookName: bookId,
+      bookName: localizedBookName,
       verseText: verses[activeVerseIndex],
       createdAt: serverTimestamp()
     };
