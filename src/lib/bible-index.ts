@@ -4,7 +4,7 @@ export type BibleBook = {
   hi: string;
   chapters: number;
   testament: 'old' | 'new' | 'deuterocanon';
-  bollsId: number; // Mapping for Bolls.life API
+  bollsId: number; 
 };
 
 export const BIBLE_BOOKS: BibleBook[] = [
