@@ -33,7 +33,7 @@ function ReaderContent() {
   const [isPending, startTransition] = useTransition();
 
   // URL state sync
-  const bookId = searchParams.get('book') || 'genesis';
+  const bookId = searchParams.get('book') || 'matthew';
   const chapterNum = parseInt(searchParams.get('chapter') || '1');
   const version = searchParams.get('version') || 'hin_irv';
   
@@ -62,6 +62,8 @@ function ReaderContent() {
       let foundVerses: string[] = [];
       const chapterKey = cid.toString();
 
+      console.log(`Searching for: ${bid}, Chapter: ${cid}`);
+
       // Case 1: JSON is an Array (Scrollmapper format)
       if (Array.isArray(fullData)) {
         const bookObj = fullData.find(item => 
@@ -69,7 +71,6 @@ function ReaderContent() {
           item.chapter_nr?.toString() === chapterKey
         );
         if (bookObj && bookObj.chapter) {
-          // Normalize verses from object/array inside chapter
           foundVerses = Object.values(bookObj.chapter).map((v: any) => 
             typeof v === 'string' ? v : (v.verse || v.text || "")
           );
@@ -123,6 +124,7 @@ function ReaderContent() {
       params.set('book', newBook);
       params.set('chapter', newChapter.toString());
       params.set('version', newVersion || version);
+      // Use scroll: false to prevent jumpy movement
       router.push(`?${params.toString()}`, { scroll: false });
     });
   };
