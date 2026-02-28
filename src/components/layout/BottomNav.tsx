@@ -21,25 +21,25 @@ export default function BottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-50 px-6 pb-6 pt-3 bg-[#09090b]/80 backdrop-blur-2xl border-t border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+    <nav className="fixed bottom-0 inset-x-0 z-50 px-6 pb-4 pt-2 bg-[#09090b]/90 backdrop-blur-2xl border-t border-white/5 shadow-[0_-8px_30px_rgba(0,0,0,0.6)]">
       <div className="max-w-md mx-auto flex items-center justify-between relative">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
 
           if (item.center) {
             return (
-              <div key={item.name} className="relative -top-10">
+              <div key={item.name} className="relative -top-8 flex flex-col items-center">
                 <Link
                   href={item.href}
                   className={cn(
-                    "size-16 bg-emerald-500 text-black rounded-[1.75rem] shadow-[0_10px_30px_rgba(16,185,129,0.4)] flex items-center justify-center hover:scale-110 transition-all border-[6px] border-[#09090b] active:scale-95 group",
-                    isActive && "ring-2 ring-emerald-500 ring-offset-4 ring-offset-[#09090b]"
+                    "size-14 bg-emerald-500 text-black rounded-2xl shadow-[0_8px_20px_rgba(16,185,129,0.3)] flex items-center justify-center hover:scale-110 transition-all border-[4px] border-[#09090b] active:scale-95 group",
+                    isActive && "ring-2 ring-emerald-500 ring-offset-2 ring-offset-[#09090b]"
                   )}
                 >
-                  <item.icon className="w-8 h-8 font-bold group-hover:animate-pulse" />
+                  <item.icon className="w-7 h-7 font-bold group-hover:animate-pulse" />
                 </Link>
                 <span className={cn(
-                  "text-[9px] font-black tracking-[0.2em] text-center block mt-2 uppercase",
+                  "text-[8px] font-black tracking-[0.15em] text-center block mt-1.5 uppercase",
                   isActive ? "text-emerald-500" : "text-zinc-600"
                 )}>
                   AI
@@ -53,17 +53,17 @@ export default function BottomNav() {
               key={item.name}
               href={item.href}
               className={cn(
-                "flex flex-col items-center gap-1.5 transition-all duration-300 px-2",
+                "flex flex-col items-center gap-1 transition-all duration-300 px-2 pb-1",
                 isActive ? "text-emerald-500" : "text-zinc-600 hover:text-zinc-400"
               )}
             >
               <div className="relative">
                 {isActive && (
-                  <div className="absolute -inset-3 bg-emerald-500/20 blur-xl rounded-full -z-10" />
+                  <div className="absolute -inset-2 bg-emerald-500/15 blur-lg rounded-full -z-10" />
                 )}
-                <item.icon className={cn("w-6 h-6 transition-all", isActive && "scale-110")} />
+                <item.icon className={cn("w-5 h-5 transition-all", isActive && "scale-110")} />
               </div>
-              <span className="text-[9px] font-black uppercase tracking-[0.1em] leading-normal">
+              <span className="text-[8px] font-black uppercase tracking-[0.05em] leading-normal">
                 {item.name}
               </span>
             </Link>
