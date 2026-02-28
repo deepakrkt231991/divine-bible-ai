@@ -54,13 +54,12 @@ export default function BibleReaderPage() {
       
       const data = await res.json();
       
-      // Auto-switch logic (If book not in mode, default to genesis)
+      // Auto-switch logic: If book not in mode, default to genesis
       const bookData = data[bid] || data['genesis'];
       const content = bookData?.[cid.toString()] || bookData?.['1'] || [];
       
       if (content.length === 0) {
-        // Fallback for missing chapters
-        setVerses(["Prabhu ke vachan dhoondhe ja rahe hain...", "Searching scriptures..."]);
+        setVerses(["Prabhu ke vachan load ho rahe hain...", "Scriptures are being prepared..."]);
       } else {
         setVerses(content);
       }
@@ -75,7 +74,7 @@ export default function BibleReaderPage() {
       if (scrollRef.current) scrollRef.current.scrollTop = 0;
     } catch (e) {
       console.error("Local Reader Load Error:", e);
-      setVerses(["Error loading offline scriptures. Please check /public/bible/ folder structure."]);
+      setVerses(["Vachan dhoondne mein dikkat hui. Please /public/bible/ folder check karein."]);
     } finally {
       setLoading(false);
     }
