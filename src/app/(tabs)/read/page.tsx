@@ -37,45 +37,53 @@ export default function BibleReaderPage() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const isHindi = version === 'hin_irv';
 
+  // Load highlights from localStorage
   useEffect(() => {
     const saved = localStorage.getItem('bible_highlights');
     if (saved) setHighlights(JSON.parse(saved));
   }, []);
 
-  const loadChapterData = useCallback(async () => {
+  // Fetch Chapter Content from Local JSON
+  const loadChapterData = useCallback(async (bid: string, cid: number, ver: string) => {
     setLoading(true);
     try {
-      const fileName = version === 'hin_irv' ? 'hin_irv.json' : 'kjv.json';
+      const fileName = ver === 'hin_irv' ? 'hin_irv.json' : 'kjv.json';
       const res = await fetch(`/bible/${fileName}`);
       
       if (!res.ok) throw new Error("Bible data file missing");
       
       const data = await res.json();
-      // Safe fallback logic
-      const bookData = data[book] || data['genesis'];
-      const content = bookData?.[chapter.toString()] || bookData?.['1'] || [];
       
-      setVerses(content.length > 0 ? content : ["Vachan load ho rahe hain...", "Preparing verses for your journey..."]);
+      // Auto-switch logic (If book not in mode, default to genesis)
+      const bookData = data[bid] || data['genesis'];
+      const content = bookData?.[cid.toString()] || bookData?.['1'] || [];
       
-      // Update URL silently
+      if (content.length === 0) {
+        // Fallback for missing chapters
+        setVerses(["Prabhu ke vachan dhoondhe ja rahe hain...", "Searching scriptures..."]);
+      } else {
+        setVerses(content);
+      }
+
+      // Sync URL
       const params = new URLSearchParams();
-      params.set('book', book);
-      params.set('chapter', chapter.toString());
-      params.set('version', version);
+      params.set('book', bid);
+      params.set('chapter', cid.toString());
+      params.set('version', ver);
       router.replace(`/read?${params.toString()}`);
       
       if (scrollRef.current) scrollRef.current.scrollTop = 0;
     } catch (e) {
       console.error("Local Reader Load Error:", e);
-      setVerses(["Error loading offline scriptures. Please check file path in /public/bible/"]);
+      setVerses(["Error loading offline scriptures. Please check /public/bible/ folder structure."]);
     } finally {
       setLoading(false);
     }
-  }, [book, chapter, version, router]);
+  }, [router]);
 
   useEffect(() => {
-    loadChapterData();
-  }, [loadChapterData]);
+    loadChapterData(book, chapter, version);
+  }, [book, chapter, version, loadChapterData]);
 
   const toggleAudio = () => {
     if (isPlaying) {
