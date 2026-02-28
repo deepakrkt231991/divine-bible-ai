@@ -31,7 +31,7 @@ function ReaderContent() {
   const { firestore, user } = useFirebase();
   const { toast } = useToast();
 
-  // State Management
+  // State Management initialized from URL or defaults
   const [book, setBook] = useState(searchParams.get('book') || 'genesis');
   const [chapter, setChapter] = useState(parseInt(searchParams.get('chapter') || '1'));
   const [version, setVersion] = useState(searchParams.get('version') || 'hin_irv');
@@ -48,6 +48,16 @@ function ReaderContent() {
 
   const isHindi = version === 'hin_irv';
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Sync state with URL when searchParams change (e.g., when navigation happens)
+  useEffect(() => {
+    const b = searchParams.get('book');
+    const c = searchParams.get('chapter');
+    const v = searchParams.get('version');
+    if (b) setBook(b);
+    if (c) setChapter(parseInt(c));
+    if (v) setVersion(v);
+  }, [searchParams]);
 
   // Load Highlights from LocalStorage
   useEffect(() => {
@@ -68,7 +78,7 @@ function ReaderContent() {
 
       // UNIVERSAL LOADER LOGIC
       if (Array.isArray(json)) {
-        // Scrollmapper Array Format
+        // Scrollmapper Array Format: [{book: "Genesis", chapter_nr: 1, chapter: {"1": {verse: "..."}}}, ...]
         const entry = json.find(
           (item: any) =>
             item.book?.toLowerCase() === bid.toLowerCase() &&
@@ -80,11 +90,12 @@ function ReaderContent() {
           );
         }
       } else if (typeof json === 'object' && json !== null) {
-        // Standard Object Format
+        // Standard Object Format: {"genesis": {"1": ["v1", "v2"], "2": [...]}}
         const bookKey = Object.keys(json).find(k => k.toLowerCase() === bid.toLowerCase());
         const bookData = bookKey ? (json as any)[bookKey] : null;
         if (bookData) {
-          const chapterData = bookData[cid.toString()] || bookData[cid];
+          const chapterKey = cid.toString();
+          const chapterData = bookData[chapterKey];
           if (Array.isArray(chapterData)) {
             foundVerses = chapterData;
           } else if (typeof chapterData === 'object' && chapterData !== null) {
@@ -98,39 +109,35 @@ function ReaderContent() {
       if (foundVerses.length > 0) {
         setVerses(foundVerses);
       } else {
-        setVerses(["Chapter content not found. Genesis 1 is loading..."]);
-        // If not found, load first chapter
+        // Fallback: If chapter not found, attempt Genesis 1 or show error
         if (bid !== 'genesis' || cid !== 1) {
            loadChapterData('genesis', 1, ver);
            return;
         }
+        setVerses(["Chapter content not found."]);
       }
       
-      // Update local states
+      // Update local state and URL without full reload
       setBook(bid);
       setChapter(cid);
+      const params = new URLSearchParams(searchParams);
+      params.set('book', bid);
+      params.set('chapter', cid.toString());
+      params.set('version', ver);
+      router.push(`?${params.toString()}`, { scroll: false });
 
       if (scrollRef.current) scrollRef.current.scrollTop = 0;
     } catch (e) {
       console.error("Reader Load Error:", e);
-      setVerses(["Error loading scripture. Please check JSON files."]);
+      setVerses(["Error loading scripture. Please ensure JSON files are present in public/bible/"]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [router, searchParams]);
 
   useEffect(() => {
     loadChapterData(book, chapter, version);
   }, [book, chapter, version, loadChapterData]);
-
-  // Sync URL after changes (without full navigation "back" effect)
-  useEffect(() => {
-    const params = new URLSearchParams();
-    params.set('book', book);
-    params.set('chapter', chapter.toString());
-    params.set('version', version);
-    window.history.replaceState({}, '', `/read?${params.toString()}`);
-  }, [book, chapter, version]);
 
   const toggleAudio = () => {
     if (isPlaying) {
@@ -221,6 +228,7 @@ function ReaderContent() {
               <div className="relative mt-4">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
                 <input 
+                  type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={isHindi ? "Pustak dhoondhein..." : "Search books..."} 
@@ -239,31 +247,33 @@ function ReaderContent() {
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="old" className="flex-1 overflow-hidden mt-2">
-                <ScrollArea className="h-[50vh] px-6 pb-10">
-                  <div className="grid grid-cols-1 gap-1.5 py-4">
-                    {filteredBooks('old').map((b) => (
-                      <BookItem key={b.id} b={b} expandedBook={expandedBook} currentChapter={chapter} isHindi={isHindi} onExpand={onExpandBook} onSelect={(bid, cid) => {
-                        loadChapterData(bid, cid, version);
-                        setSelectorOpen(false);
-                      }} />
-                    ))}
-                  </div>
-                </ScrollArea>
-              </TabsContent>
+              <div className="flex-1 overflow-hidden">
+                <TabsContent value="old" className="h-full mt-0 focus-visible:outline-none">
+                  <ScrollArea className="h-[50vh] px-6">
+                    <div className="grid grid-cols-1 gap-1.5 py-4">
+                      {filteredBooks('old').map((b) => (
+                        <BookItem key={b.id} b={b} expandedBook={expandedBook} currentChapter={chapter} isHindi={isHindi} onExpand={setExpandedBook} onSelect={(bid, cid) => {
+                          loadChapterData(bid, cid, version);
+                          setSelectorOpen(false);
+                        }} />
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </TabsContent>
 
-              <TabsContent value="new" className="flex-1 overflow-hidden mt-2">
-                <ScrollArea className="h-[50vh] px-6 pb-10">
-                  <div className="grid grid-cols-1 gap-1.5 py-4">
-                    {filteredBooks('new').map((b) => (
-                      <BookItem key={b.id} b={b} expandedBook={expandedBook} currentChapter={chapter} isHindi={isHindi} onExpand={onExpandBook} onSelect={(bid, cid) => {
-                        loadChapterData(bid, cid, version);
-                        setSelectorOpen(false);
-                      }} />
-                    ))}
-                  </div>
-                </ScrollArea>
-              </TabsContent>
+                <TabsContent value="new" className="h-full mt-0 focus-visible:outline-none">
+                  <ScrollArea className="h-[50vh] px-6">
+                    <div className="grid grid-cols-1 gap-1.5 py-4">
+                      {filteredBooks('new').map((b) => (
+                        <BookItem key={b.id} b={b} expandedBook={expandedBook} currentChapter={chapter} isHindi={isHindi} onExpand={setExpandedBook} onSelect={(bid, cid) => {
+                          loadChapterData(bid, cid, version);
+                          setSelectorOpen(false);
+                        }} />
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </TabsContent>
+              </div>
             </Tabs>
           </DialogContent>
         </Dialog>
@@ -395,7 +405,7 @@ function ReaderContent() {
           <div className="w-full max-w-md mx-auto bg-zinc-900 border border-white/10 rounded-[2.5rem] p-8 space-y-6 shadow-2xl">
             <div className="flex justify-between items-center">
               <h3 className="font-serif text-xl italic text-emerald-500">Reflections</h3>
-              <button onClick={() => setActiveVerseIndex(null)} className="p-2 hover:bg-white/5 rounded-full transition-colors">
+              <button type="button" onClick={() => setActiveVerseIndex(null)} className="p-2 hover:bg-white/5 rounded-full transition-colors">
                 <X className="w-6 h-6 text-zinc-500" />
               </button>
             </div>
@@ -418,10 +428,6 @@ function ReaderContent() {
       )}
     </div>
   );
-
-  function onExpandBook(id: string | null) {
-    setExpandedBook(id);
-  }
 }
 
 function BookItem({ b, expandedBook, currentChapter, isHindi, onExpand, onSelect }: { 
