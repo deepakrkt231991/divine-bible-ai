@@ -7,8 +7,10 @@ export default function TabsLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="relative">
-      <main className="pb-20 min-h-screen">{children}</main>
+    <div className="relative flex flex-col h-screen overflow-hidden bg-zinc-950">
+      <main className="flex-1 overflow-y-auto hide-scrollbar pb-32">
+        {children}
+      </main>
       <BottomNav />
     </div>
   );

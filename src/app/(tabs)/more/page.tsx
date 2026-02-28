@@ -42,9 +42,9 @@ export default function MorePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-zinc-100 flex flex-col pb-32">
+    <div className="flex flex-col w-full">
       {/* Top Header Panel */}
-      <header className="sticky top-0 z-50 flex items-center justify-between px-6 py-5 bg-[#09090b]/80 backdrop-blur-md border-b border-emerald-500/10">
+      <header className="sticky top-0 z-50 flex items-center justify-between px-6 py-5 bg-zinc-950/80 backdrop-blur-md border-b border-emerald-500/10">
         <div className="flex items-center gap-3">
           <div className="bg-emerald-500/20 p-2 rounded-lg">
             <LayoutGrid className="w-6 h-6 text-emerald-500" />
@@ -52,16 +52,18 @@ export default function MorePage() {
           <h1 className="text-xl font-bold tracking-tight font-serif italic text-white">More Resources</h1>
         </div>
         <div className="flex items-center gap-3">
-          <button className="text-[10px] font-black uppercase tracking-widest text-emerald-500 px-4 py-2 border border-emerald-500/30 rounded-full">
-            Register
-          </button>
+          <Link href="/register">
+            <button className="text-[10px] font-black uppercase tracking-widest text-emerald-500 px-4 py-2 border border-emerald-500/30 rounded-full">
+              Register
+            </button>
+          </Link>
           <Link href="/profile" className="flex items-center justify-center size-10 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400">
             <User className="w-5 h-5" />
           </Link>
         </div>
       </header>
 
-      <main className="flex-1 px-5 md:px-8 max-w-2xl mx-auto w-full space-y-12 py-10">
+      <div className="px-5 md:px-8 max-w-2xl mx-auto w-full space-y-12 py-10">
         {/* Language Selection */}
         <section>
           <div className="flex items-center gap-3 mb-6 px-2">
@@ -223,11 +225,11 @@ export default function MorePage() {
           </div>
         </section>
 
-        <div className="mt-16 text-center pb-10 border-t border-zinc-800/50 pt-12">
+        <div className="mt-16 text-center pb-20 border-t border-zinc-800/50 pt-12">
           <p className="text-zinc-600 text-[10px] font-black uppercase tracking-[0.4em]">Divine Compass v2.4.0</p>
           <p className="text-zinc-700 text-sm mt-4 italic font-serif">"Thy word is a lamp unto my feet"</p>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

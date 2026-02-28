@@ -1,8 +1,7 @@
-
 'use client';
 
 import React from 'react';
-import { Compass, Share2, Bookmark, BookOpen, Calendar, User, Sparkles, ArrowRight, Heart, Play } from 'lucide-react';
+import { Compass, Share2, BookOpen, User, Sparkles, Play } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
@@ -24,9 +23,9 @@ export default function BibleHomePage() {
   const { data: recentPrayers } = useCollection(prayerCircleQuery);
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-zinc-100 pb-32">
+    <div className="flex flex-col w-full">
       {/* Top Header Panel */}
-      <header className="sticky top-0 z-50 flex items-center justify-between px-6 py-4 bg-[#09090b]/80 backdrop-blur-md border-b border-emerald-500/10">
+      <header className="sticky top-0 z-50 flex items-center justify-between px-6 py-4 bg-zinc-950/80 backdrop-blur-md border-b border-emerald-500/10">
         <div className="flex items-center gap-3">
           <div className="bg-emerald-500/20 p-2 rounded-lg">
             <Compass className="w-5 h-5 text-emerald-500" />
@@ -40,7 +39,7 @@ export default function BibleHomePage() {
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 py-6 space-y-8">
+      <div className="max-w-2xl mx-auto px-4 py-6 space-y-8 pb-10">
         {/* Live Prayer Circle Widget */}
         <section>
           <div className="flex items-center justify-between mb-4 px-1">
@@ -48,7 +47,7 @@ export default function BibleHomePage() {
             <Link href="/community" className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest hover:underline">Join Now</Link>
           </div>
           <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
-            {recentPrayers?.map((prayer, i) => (
+            {recentPrayers?.map((prayer) => (
               <div key={prayer.id} className="flex-shrink-0 flex flex-col items-center gap-2 w-16 group cursor-pointer">
                 <div className={cn(
                   "size-14 rounded-full p-1 border-2 transition-all duration-500",
@@ -66,7 +65,7 @@ export default function BibleHomePage() {
             {/* Call to Action Circle */}
             <Link href="/community" className="flex-shrink-0 flex flex-col items-center gap-2 w-16">
               <div className="size-14 rounded-full border-2 border-dashed border-zinc-800 flex items-center justify-center text-zinc-600 hover:border-emerald-500/50 hover:text-emerald-500 transition-all">
-                <span className="material-symbols-outlined text-xl">add</span>
+                <span className="text-xl">+</span>
               </div>
               <span className="text-[8px] text-zinc-700 font-black uppercase">Pray</span>
             </Link>
@@ -124,7 +123,7 @@ export default function BibleHomePage() {
         </section>
 
         {/* Community Card */}
-        <section className="bg-zinc-900 border border-white/5 rounded-[2rem] p-8 text-center space-y-4 relative overflow-hidden">
+        <section className="bg-zinc-900 border border-white/5 rounded-[2rem] p-8 text-center space-y-4 relative overflow-hidden mb-10">
           <div className="absolute inset-0 bg-emerald-500/5 opacity-40"></div>
           <div className="relative z-10 space-y-4">
             <p className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500">Global Prayer Chain</p>
@@ -136,7 +135,7 @@ export default function BibleHomePage() {
             </Link>
           </div>
         </section>
-      </main>
+      </div>
     </div>
   );
 }
