@@ -10,12 +10,14 @@ import {
   Loader2,
   Volume2,
   Pause,
-  ArrowRight
+  ArrowRight,
+  BookOpen
 } from 'lucide-react';
 import { BIBLE_BOOKS } from '@/lib/bible-index';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from '@/hooks/use-toast';
 
 function ReaderContent() {
@@ -52,8 +54,6 @@ function ReaderContent() {
       if (!res.ok) throw new Error("Bible data file missing");
       
       const data = await res.json();
-      
-      // Auto-fallback logic
       const bookData = data[bid] || data['genesis'];
       const content = bookData?.[cid.toString()] || bookData?.['1'] || [];
       
@@ -108,14 +108,15 @@ function ReaderContent() {
   const currentBookData = BIBLE_BOOKS.find(b => b.id === book) || BIBLE_BOOKS[0];
   const localizedBookName = isHindi ? currentBookData.hi : currentBookData.en;
 
-  const filteredBooks = BIBLE_BOOKS.filter(b => 
-    b.en.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    b.hi.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredBooks = (testament: string) => BIBLE_BOOKS.filter(b => 
+    b.testament === testament && 
+    (b.en.toLowerCase().includes(searchQuery.toLowerCase()) || 
+     b.hi.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   return (
     <div className="flex flex-col h-screen bg-[#09090b] text-slate-100 max-w-md mx-auto overflow-hidden relative border-x border-white/5 shadow-2xl">
-      {/* Header - Compact */}
+      {/* Header */}
       <header className="px-4 py-3 border-b border-zinc-900 flex justify-between items-center bg-[#09090b]/95 backdrop-blur-md sticky top-0 z-[60]">
         <Dialog open={selectorOpen} onOpenChange={setSelectorOpen}>
           <DialogTrigger asChild>
@@ -131,61 +132,53 @@ function ReaderContent() {
               </span>
             </button>
           </DialogTrigger>
-          <DialogContent className="bg-zinc-950 border-zinc-900 p-0 max-h-[85vh] flex flex-col max-w-[92%] rounded-[2.5rem] shadow-2xl">
-            <DialogHeader className="p-5 border-b border-zinc-900">
-              <DialogTitle className="text-emerald-500 font-serif italic text-xl">
+          <DialogContent className="bg-zinc-950 border-zinc-900 p-0 max-h-[90vh] flex flex-col max-w-[95%] rounded-[2rem] shadow-2xl overflow-hidden">
+            <DialogHeader className="p-4 border-b border-zinc-900">
+              <DialogTitle className="text-emerald-500 font-serif italic text-xl flex items-center gap-2">
+                <BookOpen className="w-5 h-5" />
                 {isHindi ? "Pustak Chunein" : "Select Book"}
               </DialogTitle>
-              <div className="relative mt-4">
+              <div className="relative mt-3">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
                 <input 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={isHindi ? "Bible dhoondhein..." : "Search Bible..."} 
-                  className="w-full bg-zinc-900 border-none rounded-2xl pl-11 pr-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500/20 text-white"
+                  placeholder={isHindi ? "Dhoondhein..." : "Search..."} 
+                  className="w-full bg-zinc-900 border-none rounded-xl pl-11 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500/20 text-white"
                 />
               </div>
             </DialogHeader>
-            <ScrollArea className="flex-1 p-3">
-              <div className="grid grid-cols-1 gap-1.5">
-                {filteredBooks.map((b) => (
-                  <div key={b.id} className="space-y-1">
-                    <button 
-                      onClick={() => {
-                        setBook(b.id);
-                        setChapter(1);
-                      }}
-                      className={cn(
-                        "w-full flex items-center justify-between p-4 rounded-2xl transition-all",
-                        book === b.id ? "bg-emerald-500/10 text-emerald-500" : "hover:bg-zinc-900 text-zinc-400"
-                      )}
-                    >
-                      <span className="font-bold text-sm">{isHindi ? b.hi : b.en}</span>
-                      <span className="text-[9px] uppercase font-black opacity-30 tracking-widest">{b.chapters} Chapters</span>
-                    </button>
-                    {book === b.id && (
-                      <div className="grid grid-cols-5 gap-2 p-3 bg-zinc-900/50 rounded-[1.5rem] mb-3 border border-white/5 shadow-inner">
-                        {Array.from({ length: b.chapters }, (_, i) => i + 1).map(ch => (
-                          <button
-                            key={ch}
-                            onClick={() => {
-                              setChapter(ch);
-                              setSelectorOpen(false);
-                            }}
-                            className={cn(
-                              "size-10 rounded-xl flex items-center justify-center text-xs font-black transition-all",
-                              chapter === ch ? "bg-emerald-500 text-black shadow-lg" : "bg-zinc-800 text-zinc-500 hover:text-emerald-500"
-                            )}
-                          >
-                            {ch}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+
+            <Tabs defaultValue={currentBookData.testament} className="flex-1 flex flex-col">
+              <TabsList className="bg-zinc-900/50 p-1 mx-4 mt-4 rounded-xl border border-white/5">
+                <TabsTrigger value="old" className="flex-1 rounded-lg text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-emerald-500 data-[state=active]:text-black">
+                  {isHindi ? "Purana Niyam" : "Old Testament"}
+                </TabsTrigger>
+                <TabsTrigger value="new" className="flex-1 rounded-lg text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-emerald-500 data-[state=active]:text-black">
+                  {isHindi ? "Naya Niyam" : "New Testament"}
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="old" className="flex-1 overflow-hidden mt-0">
+                <ScrollArea className="h-[55vh] p-4">
+                  <div className="grid grid-cols-1 gap-1">
+                    {filteredBooks('old').map((b) => (
+                      <BookItem key={b.id} b={b} currentBook={book} currentChapter={chapter} isHindi={isHindi} onSelect={(bid, cid) => { setBook(bid); setChapter(cid); if(cid !== -1) setSelectorOpen(false); }} />
+                    ))}
                   </div>
-                ))}
-              </div>
-            </ScrollArea>
+                </ScrollArea>
+              </TabsContent>
+
+              <TabsContent value="new" className="flex-1 overflow-hidden mt-0">
+                <ScrollArea className="h-[55vh] p-4">
+                  <div className="grid grid-cols-1 gap-1">
+                    {filteredBooks('new').map((b) => (
+                      <BookItem key={b.id} b={b} currentBook={book} currentChapter={chapter} isHindi={isHindi} onSelect={(bid, cid) => { setBook(bid); setChapter(cid); if(cid !== -1) setSelectorOpen(false); }} />
+                    ))}
+                  </div>
+                </ScrollArea>
+              </TabsContent>
+            </Tabs>
           </DialogContent>
         </Dialog>
         
@@ -203,7 +196,7 @@ function ReaderContent() {
           <div className="flex flex-col items-center justify-center h-full space-y-6 opacity-30 py-32">
             <Loader2 className="w-12 h-12 text-emerald-500 animate-spin" />
             <p className="text-[10px] font-black uppercase tracking-[0.4em] text-emerald-500">
-              {isHindi ? "Pavitra Shastra Load Ho Raha Hai..." : "Preparing The Word..."}
+              {isHindi ? "Loading..." : "Preparing The Word..."}
             </p>
           </div>
         ) : (
@@ -250,7 +243,7 @@ function ReaderContent() {
         )}
       </main>
 
-      {/* Floating Audio Bar - Ultra Sleek */}
+      {/* Floating Audio Bar */}
       <div className="fixed bottom-14 left-1/2 -translate-x-1/2 w-[90%] max-w-sm z-[70]">
         <div className="bg-zinc-900/95 backdrop-blur-3xl border border-white/5 rounded-full p-1.5 flex items-center justify-between shadow-[0_20px_50px_rgba(0,0,0,0.8)]">
           <button 
@@ -287,6 +280,44 @@ function ReaderContent() {
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function BookItem({ b, currentBook, currentChapter, isHindi, onSelect }: { b: any, currentBook: string, currentChapter: number, isHindi: boolean, onSelect: (bid: string, cid: number) => void }) {
+  const isSelected = currentBook === b.id;
+  
+  return (
+    <div className="space-y-1">
+      <button 
+        onClick={() => onSelect(b.id, isSelected ? -1 : 1)}
+        className={cn(
+          "w-full flex items-center justify-between p-3.5 rounded-xl transition-all",
+          isSelected ? "bg-emerald-500/10 text-emerald-500" : "hover:bg-zinc-900 text-zinc-400"
+        )}
+      >
+        <div className="flex flex-col items-start">
+          <span className="font-bold text-sm">{isHindi ? b.hi : b.en}</span>
+          <span className="text-[8px] uppercase font-black opacity-40 tracking-widest mt-0.5">{b.chapters} Chapters</span>
+        </div>
+        {isSelected && <div className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />}
+      </button>
+      {isSelected && (
+        <div className="grid grid-cols-5 gap-1.5 p-3 bg-zinc-900/50 rounded-2xl mb-3 border border-white/5 shadow-inner animate-in slide-in-from-top-2">
+          {Array.from({ length: b.chapters }, (_, i) => i + 1).map(ch => (
+            <button
+              key={ch}
+              onClick={() => onSelect(b.id, ch)}
+              className={cn(
+                "size-9 rounded-lg flex items-center justify-center text-[10px] font-black transition-all",
+                currentChapter === ch ? "bg-emerald-500 text-black shadow-lg scale-110" : "bg-zinc-800 text-zinc-500 hover:text-emerald-500"
+              )}
+            >
+              {ch}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
