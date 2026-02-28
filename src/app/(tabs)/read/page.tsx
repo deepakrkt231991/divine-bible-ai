@@ -35,6 +35,7 @@ function ReaderContent() {
   const [highlights, setHighlights] = useState<Record<string, boolean>>({});
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [expandedBook, setExpandedBook] = useState<string | null>(searchParams.get('book') || 'genesis');
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const isHindi = version === 'hin_irv';
@@ -55,10 +56,9 @@ function ReaderContent() {
       
       const data = await res.json();
       
-      // FIX: Smart Normalization and Fallback
+      // Smart Normalization and Fallback
       const bookData = data[bid];
       if (!bookData) {
-        console.warn(`Book ${bid} not found. Falling back to Genesis.`);
         setBook('genesis');
         setChapter(1);
         return;
@@ -68,7 +68,6 @@ function ReaderContent() {
       const content = bookData[chapterKey];
 
       if (!content || content.length === 0) {
-        console.warn(`Chapter ${cid} not found for ${bid}. Falling back to first available chapter.`);
         const firstAvailableChapter = Object.keys(bookData)[0] || "1";
         setChapter(parseInt(firstAvailableChapter));
         setVerses(bookData[firstAvailableChapter] || []);
@@ -76,21 +75,21 @@ function ReaderContent() {
         setVerses(content);
       }
 
-      // Sync URL
+      // Sync URL without triggering full page reload back behavior
       const params = new URLSearchParams();
       params.set('book', bid);
       params.set('chapter', cid.toString());
       params.set('version', ver);
-      router.replace(`/read?${params.toString()}`);
+      window.history.replaceState({}, '', `/read?${params.toString()}`);
       
       if (scrollRef.current) scrollRef.current.scrollTop = 0;
     } catch (e) {
       console.error("Local Reader Load Error:", e);
-      setVerses(["Chapter not available. Please ensure /public/bible/kjv.json and hin_irv.json are uploaded."]);
+      setVerses(["Scripture content loading... Please ensure the data files are present in public/bible/"]);
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, []);
 
   useEffect(() => {
     loadChapterData(book, chapter, version);
@@ -131,6 +130,12 @@ function ReaderContent() {
      b.hi.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
+  const handleSelectChapter = (bid: string, cid: number) => {
+    setBook(bid);
+    setChapter(cid);
+    setSelectorOpen(false);
+  };
+
   return (
     <div className="flex flex-col h-screen bg-[#09090b] text-slate-100 max-w-md mx-auto overflow-hidden relative border-x border-white/5 shadow-2xl">
       {/* Header */}
@@ -149,24 +154,24 @@ function ReaderContent() {
               </span>
             </button>
           </DialogTrigger>
-          <DialogContent className="bg-zinc-950 border-zinc-900 p-0 max-h-[90vh] flex flex-col max-w-[95%] rounded-[2rem] shadow-2xl overflow-hidden">
+          <DialogContent className="bg-zinc-950 border-zinc-900 p-0 max-h-[90vh] flex flex-col max-w-[95%] rounded-[2rem] shadow-2xl overflow-hidden focus:outline-none">
             <DialogHeader className="p-4 border-b border-zinc-900">
               <DialogTitle className="text-emerald-500 font-serif italic text-xl flex items-center gap-2">
                 <BookOpen className="w-5 h-5" />
-                {isHindi ? "Pustak Chunein" : "Select Book"}
+                {isHindi ? "Purana aur Naya Niyam" : "Old & New Testament"}
               </DialogTitle>
               <div className="relative mt-3">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
                 <input 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={isHindi ? "Dhoondhein..." : "Search..."} 
+                  placeholder={isHindi ? "Dhoondhein..." : "Search books..."} 
                   className="w-full bg-zinc-900 border-none rounded-xl pl-11 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500/20 text-white"
                 />
               </div>
             </DialogHeader>
 
-            <Tabs defaultValue={currentBookData.testament} className="flex-1 flex flex-col">
+            <Tabs defaultValue={currentBookData.testament} className="flex-1 flex flex-col overflow-hidden">
               <TabsList className="bg-zinc-900/50 p-1 mx-4 mt-4 rounded-xl border border-white/5">
                 <TabsTrigger value="old" className="flex-1 rounded-lg text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-emerald-500 data-[state=active]:text-black">
                   {isHindi ? "Purana Niyam" : "Old Testament"}
@@ -178,9 +183,9 @@ function ReaderContent() {
 
               <TabsContent value="old" className="flex-1 overflow-hidden mt-0">
                 <ScrollArea className="h-[55vh] p-4">
-                  <div className="grid grid-cols-1 gap-1">
+                  <div className="grid grid-cols-1 gap-1 pb-10">
                     {filteredBooks('old').map((b) => (
-                      <BookItem key={b.id} b={b} currentBook={book} currentChapter={chapter} isHindi={isHindi} onSelect={(bid, cid) => { setBook(bid); setChapter(cid); if(cid !== -1) setSelectorOpen(false); }} />
+                      <BookItem key={b.id} b={b} expandedBook={expandedBook} currentChapter={chapter} isHindi={isHindi} onExpand={setExpandedBook} onSelect={handleSelectChapter} />
                     ))}
                   </div>
                 </ScrollArea>
@@ -188,9 +193,9 @@ function ReaderContent() {
 
               <TabsContent value="new" className="flex-1 overflow-hidden mt-0">
                 <ScrollArea className="h-[55vh] p-4">
-                  <div className="grid grid-cols-1 gap-1">
+                  <div className="grid grid-cols-1 gap-1 pb-10">
                     {filteredBooks('new').map((b) => (
-                      <BookItem key={b.id} b={b} currentBook={book} currentChapter={chapter} isHindi={isHindi} onSelect={(bid, cid) => { setBook(bid); setChapter(cid); if(cid !== -1) setSelectorOpen(false); }} />
+                      <BookItem key={b.id} b={b} expandedBook={expandedBook} currentChapter={chapter} isHindi={isHindi} onExpand={setExpandedBook} onSelect={handleSelectChapter} />
                     ))}
                   </div>
                 </ScrollArea>
@@ -301,30 +306,43 @@ function ReaderContent() {
   );
 }
 
-function BookItem({ b, currentBook, currentChapter, isHindi, onSelect }: { b: any, currentBook: string, currentChapter: number, isHindi: boolean, onSelect: (bid: string, cid: number) => void }) {
-  const isSelected = currentBook === b.id;
+function BookItem({ b, expandedBook, currentChapter, isHindi, onExpand, onSelect }: { 
+  b: any, 
+  expandedBook: string | null, 
+  currentChapter: number, 
+  isHindi: boolean, 
+  onExpand: (id: string | null) => void,
+  onSelect: (bid: string, cid: number) => void 
+}) {
+  const isExpanded = expandedBook === b.id;
   
   return (
     <div className="space-y-1">
       <button 
-        onClick={() => onSelect(b.id, isSelected ? -1 : 1)}
+        onClick={(e) => {
+          e.preventDefault();
+          onExpand(isExpanded ? null : b.id);
+        }}
         className={cn(
           "w-full flex items-center justify-between p-3.5 rounded-xl transition-all",
-          isSelected ? "bg-emerald-500/10 text-emerald-500" : "hover:bg-zinc-900 text-zinc-400"
+          isExpanded ? "bg-emerald-500/10 text-emerald-500" : "hover:bg-zinc-900 text-zinc-400"
         )}
       >
         <div className="flex flex-col items-start">
           <span className="font-bold text-sm">{isHindi ? b.hi : b.en}</span>
           <span className="text-[8px] uppercase font-black opacity-40 tracking-widest mt-0.5">{b.chapters} Chapters</span>
         </div>
-        {isSelected && <div className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />}
+        {isExpanded && <div className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />}
       </button>
-      {isSelected && (
+      {isExpanded && (
         <div className="grid grid-cols-5 gap-1.5 p-3 bg-zinc-900/50 rounded-2xl mb-3 border border-white/5 shadow-inner animate-in slide-in-from-top-2">
           {Array.from({ length: b.chapters }, (_, i) => i + 1).map(ch => (
             <button
               key={ch}
-              onClick={() => onSelect(b.id, ch)}
+              onClick={(e) => {
+                e.preventDefault();
+                onSelect(b.id, ch);
+              }}
               className={cn(
                 "size-9 rounded-lg flex items-center justify-center text-[10px] font-black transition-all",
                 currentChapter === ch ? "bg-emerald-500 text-black shadow-lg scale-110" : "bg-zinc-800 text-zinc-500 hover:text-emerald-500"
