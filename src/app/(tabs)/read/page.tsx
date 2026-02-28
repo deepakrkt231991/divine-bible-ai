@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -11,20 +11,26 @@ import {
   Volume2,
   Pause,
   ArrowRight,
-  BookOpen
+  BookOpen,
+  PlusCircle,
+  X,
+  Highlighter
 } from 'lucide-react';
 import { BIBLE_BOOKS } from '@/lib/bible-index';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useFirebase } from '@/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 function ReaderContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
+  const { firestore, user } = useFirebase();
   const { toast } = useToast();
 
+  // State Management
   const [book, setBook] = useState(searchParams.get('book') || 'genesis');
   const [chapter, setChapter] = useState(parseInt(searchParams.get('chapter') || '1'));
   const [version, setVersion] = useState(searchParams.get('version') || 'hin_irv');
@@ -36,46 +42,34 @@ function ReaderContent() {
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedBook, setExpandedBook] = useState<string | null>(searchParams.get('book') || 'genesis');
-  
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const isHindi = version === 'hin_irv';
+  const [noteContent, setNoteContent] = useState("");
+  const [activeVerseIndex, setActiveVerseIndex] = useState<number | null>(null);
 
-  // Load highlights from localStorage
+  const isHindi = version === 'hin_irv';
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Load Highlights from LocalStorage
   useEffect(() => {
     const saved = localStorage.getItem('bible_highlights');
     if (saved) setHighlights(JSON.parse(saved));
   }, []);
 
+  // MASTER LOADER: Fetch from Local JSON
   const loadChapterData = useCallback(async (bid: string, cid: number, ver: string) => {
     setLoading(true);
     try {
       const fileName = ver === 'hin_irv' ? 'hin_irv.json' : 'kjv.json';
       const res = await fetch(`/bible/${fileName}`);
-      
       if (!res.ok) throw new Error("Bible data file missing");
       
       const data = await res.json();
-      
-      // Smart Normalization and Fallback
-      const bookData = data[bid];
-      if (!bookData) {
-        setBook('genesis');
-        setChapter(1);
-        return;
-      }
-
+      const bookData = data[bid] || data['genesis'];
       const chapterKey = cid.toString();
-      const content = bookData[chapterKey];
+      const content = bookData[chapterKey] || bookData["1"] || [];
 
-      if (!content || content.length === 0) {
-        const firstAvailableChapter = Object.keys(bookData)[0] || "1";
-        setChapter(parseInt(firstAvailableChapter));
-        setVerses(bookData[firstAvailableChapter] || []);
-      } else {
-        setVerses(content);
-      }
-
-      // Sync URL without triggering full page reload back behavior
+      setVerses(content);
+      
+      // Sync URL without reload
       const params = new URLSearchParams();
       params.set('book', bid);
       params.set('chapter', cid.toString());
@@ -84,8 +78,8 @@ function ReaderContent() {
       
       if (scrollRef.current) scrollRef.current.scrollTop = 0;
     } catch (e) {
-      console.error("Local Reader Load Error:", e);
-      setVerses(["Scripture content loading... Please ensure the data files are present in public/bible/"]);
+      console.error("Reader Load Error:", e);
+      setVerses(["Scripture content could not be loaded. Please ensure /public/bible/ files are present."]);
     } finally {
       setLoading(false);
     }
@@ -95,6 +89,7 @@ function ReaderContent() {
     loadChapterData(book, chapter, version);
   }, [book, chapter, version, loadChapterData]);
 
+  // Audio: Web Speech API (FREE)
   const toggleAudio = () => {
     if (isPlaying) {
       window.speechSynthesis.cancel();
@@ -106,6 +101,7 @@ function ReaderContent() {
     const textToSpeak = verses.join(" ");
     const utterance = new SpeechSynthesisUtterance(textToSpeak);
     utterance.lang = isHindi ? 'hi-IN' : 'en-US';
+    utterance.rate = 0.9;
     
     utterance.onend = () => setIsPlaying(false);
     utterance.onerror = () => setIsPlaying(false);
@@ -119,83 +115,111 @@ function ReaderContent() {
     const newHighlights = { ...highlights, [id]: !highlights[id] };
     setHighlights(newHighlights);
     localStorage.setItem('bible_highlights', JSON.stringify(newHighlights));
+    toast({ title: highlights[id] ? "Highlight Removed" : "Verse Highlighted" });
+  };
+
+  const handleSaveNote = async () => {
+    if (!user || !firestore || activeVerseIndex === null) {
+      toast({ title: "Note", description: "Please sign in to save personal notes." });
+      return;
+    }
+    
+    const noteData = {
+      userId: user.uid,
+      verseId: `${book}_${chapter}_${activeVerseIndex}`,
+      content: noteContent,
+      bookName: book,
+      verseText: verses[activeVerseIndex],
+      createdAt: serverTimestamp()
+    };
+
+    try {
+      await addDoc(collection(firestore, 'users', user.uid, 'notes'), noteData);
+      toast({ title: "Note Saved", description: "Your reflection has been added to your profile." });
+      setNoteContent("");
+      setActiveVerseIndex(null);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const currentBookData = BIBLE_BOOKS.find(b => b.id === book) || BIBLE_BOOKS[0];
   const localizedBookName = isHindi ? currentBookData.hi : currentBookData.en;
 
-  const filteredBooks = (testament: string) => BIBLE_BOOKS.filter(b => 
+  const filteredBooks = (testament: 'old' | 'new') => BIBLE_BOOKS.filter(b => 
     b.testament === testament && 
     (b.en.toLowerCase().includes(searchQuery.toLowerCase()) || 
      b.hi.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const handleSelectChapter = (bid: string, cid: number) => {
-    setBook(bid);
-    setChapter(cid);
-    setSelectorOpen(false);
-  };
-
   return (
-    <div className="flex flex-col h-screen bg-[#09090b] text-slate-100 max-w-md mx-auto overflow-hidden relative border-x border-white/5 shadow-2xl">
-      {/* Header */}
-      <header className="px-4 py-3 border-b border-zinc-900 flex justify-between items-center bg-[#09090b]/95 backdrop-blur-md sticky top-0 z-[60]">
+    <div className="flex flex-col h-screen bg-[#09090b] text-zinc-100 overflow-hidden relative selection:bg-emerald-500/30">
+      {/* Top Navigation Header */}
+      <header className="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-[#09090b]/95 backdrop-blur-xl sticky top-0 z-[60]">
         <Dialog open={selectorOpen} onOpenChange={setSelectorOpen}>
           <DialogTrigger asChild>
-            <button className="flex flex-col items-center flex-1">
+            <button type="button" className="flex flex-col items-center flex-1 active:scale-95 transition-all">
               <div className="flex items-center gap-2">
-                <h2 className="font-serif text-base font-bold text-emerald-500 capitalize italic leading-none">
+                <h2 className="font-serif text-lg font-bold text-emerald-500 capitalize italic leading-none">
                   {localizedBookName} {chapter}
                 </h2>
-                <Search className="w-3.5 h-3.5 text-zinc-600" />
+                <Search className="w-4 h-4 text-zinc-600" />
               </div>
-              <span className="text-[8px] uppercase text-zinc-600 tracking-[0.2em] font-black mt-1">
+              <span className="text-[9px] uppercase text-zinc-600 tracking-[0.3em] font-black mt-1.5">
                 {isHindi ? "Hindi (IRV)" : "English (KJV)"}
               </span>
             </button>
           </DialogTrigger>
-          <DialogContent className="bg-zinc-950 border-zinc-900 p-0 max-h-[90vh] flex flex-col max-w-[95%] rounded-[2rem] shadow-2xl overflow-hidden focus:outline-none">
-            <DialogHeader className="p-4 border-b border-zinc-900">
-              <DialogTitle className="text-emerald-500 font-serif italic text-xl flex items-center gap-2">
-                <BookOpen className="w-5 h-5" />
-                {isHindi ? "Purana aur Naya Niyam" : "Old & New Testament"}
+          <DialogContent className="bg-[#09090b] border-white/5 p-0 max-h-[85vh] flex flex-col w-[95%] rounded-[2.5rem] shadow-2xl overflow-hidden focus:outline-none">
+            <DialogHeader className="p-6 border-b border-white/5 bg-zinc-900/20">
+              <DialogTitle className="text-emerald-500 font-serif italic text-2xl flex items-center gap-3">
+                <BookOpen className="w-6 h-6" />
+                {isHindi ? "Bible Chuniye" : "Select Scripture"}
               </DialogTitle>
-              <div className="relative mt-3">
+              <div className="relative mt-4">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
                 <input 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={isHindi ? "Dhoondhein..." : "Search books..."} 
-                  className="w-full bg-zinc-900 border-none rounded-xl pl-11 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500/20 text-white"
+                  placeholder={isHindi ? "Pustak dhoondhein..." : "Search books..."} 
+                  className="w-full bg-zinc-900/50 border border-white/5 rounded-2xl pl-12 pr-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500/20 text-white placeholder:text-zinc-600"
                 />
               </div>
             </DialogHeader>
 
             <Tabs defaultValue={currentBookData.testament} className="flex-1 flex flex-col overflow-hidden">
-              <TabsList className="bg-zinc-900/50 p-1 mx-4 mt-4 rounded-xl border border-white/5">
-                <TabsTrigger value="old" className="flex-1 rounded-lg text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-emerald-500 data-[state=active]:text-black">
+              <TabsList className="bg-zinc-900/50 p-1 mx-6 mt-4 rounded-2xl border border-white/5 h-12">
+                <TabsTrigger value="old" className="flex-1 rounded-xl text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-emerald-500 data-[state=active]:text-black transition-all">
                   {isHindi ? "Purana Niyam" : "Old Testament"}
                 </TabsTrigger>
-                <TabsTrigger value="new" className="flex-1 rounded-lg text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-emerald-500 data-[state=active]:text-black">
+                <TabsTrigger value="new" className="flex-1 rounded-xl text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-emerald-500 data-[state=active]:text-black transition-all">
                   {isHindi ? "Naya Niyam" : "New Testament"}
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="old" className="flex-1 overflow-hidden mt-0">
-                <ScrollArea className="h-[55vh] p-4">
-                  <div className="grid grid-cols-1 gap-1 pb-10">
+              <TabsContent value="old" className="flex-1 overflow-hidden mt-2">
+                <ScrollArea className="h-[50vh] px-6 pb-10">
+                  <div className="grid grid-cols-1 gap-1.5 py-4">
                     {filteredBooks('old').map((b) => (
-                      <BookItem key={b.id} b={b} expandedBook={expandedBook} currentChapter={chapter} isHindi={isHindi} onExpand={setExpandedBook} onSelect={handleSelectChapter} />
+                      <BookItem key={b.id} b={b} expandedBook={expandedBook} currentChapter={chapter} isHindi={isHindi} onExpand={setExpandedBook} onSelect={(bid, cid) => {
+                        setBook(bid);
+                        setChapter(cid);
+                        setSelectorOpen(false);
+                      }} />
                     ))}
                   </div>
                 </ScrollArea>
               </TabsContent>
 
-              <TabsContent value="new" className="flex-1 overflow-hidden mt-0">
-                <ScrollArea className="h-[55vh] p-4">
-                  <div className="grid grid-cols-1 gap-1 pb-10">
+              <TabsContent value="new" className="flex-1 overflow-hidden mt-2">
+                <ScrollArea className="h-[50vh] px-6 pb-10">
+                  <div className="grid grid-cols-1 gap-1.5 py-4">
                     {filteredBooks('new').map((b) => (
-                      <BookItem key={b.id} b={b} expandedBook={expandedBook} currentChapter={chapter} isHindi={isHindi} onExpand={setExpandedBook} onSelect={handleSelectChapter} />
+                      <BookItem key={b.id} b={b} expandedBook={expandedBook} currentChapter={chapter} isHindi={isHindi} onExpand={setExpandedBook} onSelect={(bid, cid) => {
+                        setBook(bid);
+                        setChapter(cid);
+                        setSelectorOpen(false);
+                      }} />
                     ))}
                   </div>
                 </ScrollArea>
@@ -205,42 +229,62 @@ function ReaderContent() {
         </Dialog>
         
         <button 
+          type="button"
           onClick={() => setVersion(isHindi ? 'kjv' : 'hin_irv')}
-          className="size-10 flex items-center justify-center rounded-xl bg-zinc-900 border border-zinc-800 text-emerald-500 hover:bg-emerald-500/10 transition-colors"
+          className="size-11 flex items-center justify-center rounded-2xl bg-zinc-900/50 border border-white/5 text-emerald-500 hover:bg-emerald-500/10 active:scale-90 transition-all"
         >
           <Languages className="w-5 h-5" />
         </button>
       </header>
 
-      {/* Main Content Area */}
-      <main ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-6 pb-48 hide-scrollbar bg-[#09090b]">
+      {/* Main Reading Area */}
+      <main ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-8 pb-56 hide-scrollbar">
         {loading ? (
-          <div className="flex flex-col items-center justify-center h-full space-y-6 opacity-30 py-32">
-            <Loader2 className="w-12 h-12 text-emerald-500 animate-spin" />
-            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-emerald-500">
-              {isHindi ? "Loading..." : "Preparing The Word..."}
+          <div className="flex flex-col items-center justify-center h-full space-y-8 opacity-40 py-40">
+            <Loader2 className="w-14 h-14 text-emerald-500 animate-spin" />
+            <p className="text-[10px] font-black uppercase tracking-[0.5em] text-emerald-500 animate-pulse">
+              {isHindi ? "Dhyan Lagayein..." : "Preparing The Word..."}
             </p>
           </div>
         ) : (
-          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+          <div className="space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-700">
+            <div className="text-center space-y-3 mb-12">
+              <h1 className="text-4xl font-serif font-bold italic text-white leading-tight">{localizedBookName}</h1>
+              <div className="flex items-center justify-center gap-4">
+                <div className="h-px w-8 bg-emerald-500/30" />
+                <span className="text-[11px] font-black uppercase tracking-[0.3em] text-emerald-500">Adhyay {chapter}</span>
+                <div className="h-px w-8 bg-emerald-500/30" />
+              </div>
+            </div>
+
             {verses.map((v, i) => (
               <div 
                 key={i} 
-                onClick={() => toggleHighlight(i)}
                 className={cn(
-                  "relative group cursor-pointer transition-all duration-300 p-3 -mx-2 rounded-2xl border-l-2",
+                  "relative group transition-all duration-500 p-5 -mx-3 rounded-[2rem] border-l-4",
                   highlights[`${book}_${chapter}_${i}`] 
-                    ? "bg-emerald-500/10 border-emerald-500/50 shadow-[inset_0_0_10px_rgba(16,185,129,0.1)]" 
+                    ? "bg-emerald-500/10 border-emerald-500/50 shadow-2xl" 
                     : "border-transparent hover:bg-white/5"
                 )}
               >
-                <span className="text-emerald-500 font-black text-[10px] absolute -left-1 top-4 opacity-40">{i + 1}</span>
-                <p className="pl-5 font-serif text-[1.15rem] leading-[1.8] text-zinc-100 italic">{v}</p>
+                <div className="flex justify-between items-start mb-2">
+                  <span className="text-emerald-500 font-black text-[10px] opacity-40 uppercase tracking-widest">{i + 1}</span>
+                  <div className="flex gap-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button type="button" onClick={() => toggleHighlight(i)} className="text-zinc-600 hover:text-emerald-500 transition-colors">
+                      <Highlighter className="w-4 h-4" />
+                    </button>
+                    <button type="button" onClick={() => setActiveVerseIndex(i)} className="text-zinc-600 hover:text-emerald-500 transition-colors">
+                      <PlusCircle className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+                <p className="font-serif text-[1.25rem] leading-[1.8] text-zinc-100 italic">{v}</p>
               </div>
             ))}
             
-            <div className="pt-16 pb-12 border-t border-zinc-900/50">
+            <div className="pt-20 pb-16 border-t border-white/5 text-center">
               <button 
+                type="button"
                 onClick={() => {
                   if (chapter < currentBookData.chapters) setChapter(chapter + 1);
                   else {
@@ -251,13 +295,13 @@ function ReaderContent() {
                     }
                   }
                 }}
-                className="w-full py-10 border-2 border-dashed border-zinc-900 rounded-[2.5rem] flex flex-col items-center justify-center gap-4 group hover:border-emerald-500/30 transition-all shadow-xl bg-zinc-900/20"
+                className="w-full py-14 border-2 border-dashed border-white/10 rounded-[3rem] flex flex-col items-center justify-center gap-6 group hover:border-emerald-500/30 hover:bg-emerald-500/5 transition-all shadow-2xl"
               >
-                <div className="size-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center group-hover:bg-emerald-500/20 transition-all border border-emerald-500/10">
-                  <ArrowRight className="w-6 h-6 text-emerald-500" />
+                <div className="size-16 rounded-[1.5rem] bg-emerald-500/10 flex items-center justify-center group-hover:scale-110 transition-all border border-emerald-500/20 shadow-xl shadow-emerald-500/5">
+                  <ArrowRight className="w-8 h-8 text-emerald-500" />
                 </div>
-                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-600 group-hover:text-emerald-500 transition-all">
-                  {isHindi ? "Agla Adhyay" : "Next Chapter"}
+                <span className="text-[11px] font-black uppercase tracking-[0.4em] text-zinc-600 group-hover:text-emerald-500 transition-colors">
+                  {isHindi ? "Agla Adhyay Padhein" : "Read Next Chapter"}
                 </span>
               </button>
             </div>
@@ -265,43 +309,73 @@ function ReaderContent() {
         )}
       </main>
 
-      {/* Floating Audio Bar */}
-      <div className="fixed bottom-14 left-1/2 -translate-x-1/2 w-[90%] max-w-sm z-[70]">
-        <div className="bg-zinc-900/95 backdrop-blur-3xl border border-white/5 rounded-full p-1.5 flex items-center justify-between shadow-[0_20px_50px_rgba(0,0,0,0.8)]">
+      {/* Floating Audio & Control Bar */}
+      <div className="fixed bottom-24 left-1/2 -translate-x-1/2 w-[92%] max-w-md z-[70]">
+        <div className="bg-zinc-950/90 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-2 flex items-center justify-between shadow-[0_30px_60px_rgba(0,0,0,0.9)]">
           <button 
+            type="button"
             onClick={() => setChapter(prev => Math.max(1, prev - 1))}
-            className="size-11 rounded-full hover:bg-white/5 flex items-center justify-center text-zinc-500 transition-colors"
+            className="size-12 rounded-full hover:bg-white/5 flex items-center justify-center text-zinc-500 transition-all active:scale-90"
           >
-            <ChevronLeft className="w-5 h-5" />
+            <ChevronLeft className="w-6 h-6" />
           </button>
           
           <button 
+            type="button"
             onClick={toggleAudio}
-            className="flex items-center gap-3 bg-emerald-500 text-black px-8 py-3 rounded-full shadow-2xl shadow-emerald-500/30 active:scale-95 transition-all group"
+            className="flex-1 mx-4 flex items-center justify-center gap-4 bg-emerald-500 text-black py-4 rounded-[1.75rem] shadow-xl shadow-emerald-500/20 active:scale-95 transition-all group"
           >
             {isPlaying ? (
               <>
-                <Pause className="w-4 h-4 fill-black animate-pulse" />
-                <span className="text-[10px] font-black uppercase tracking-widest">Stop</span>
+                <Pause className="w-5 h-5 fill-black animate-pulse" />
+                <span className="text-[11px] font-black uppercase tracking-[0.2em]">Stop Audio</span>
               </>
             ) : (
               <>
-                <Volume2 className="w-4 h-4 group-hover:animate-bounce" />
-                <span className="text-[10px] font-black uppercase tracking-widest">{isHindi ? "Sunein" : "Listen"}</span>
+                <Volume2 className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                <span className="text-[11px] font-black uppercase tracking-[0.2em]">{isHindi ? "Abhi Sunein" : "Listen Now"}</span>
               </>
             )}
           </button>
 
           <button 
+            type="button"
             onClick={() => {
               if (chapter < currentBookData.chapters) setChapter(chapter + 1);
             }}
-            className="size-11 rounded-full hover:bg-white/5 flex items-center justify-center text-zinc-500 transition-colors"
+            className="size-12 rounded-full hover:bg-white/5 flex items-center justify-center text-zinc-500 transition-all active:scale-90"
           >
-            <ChevronRight className="w-5 h-5" />
+            <ChevronRight className="w-6 h-6" />
           </button>
         </div>
       </div>
+
+      {/* Quick Notes Overlay */}
+      {activeVerseIndex !== null && (
+        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-end p-6 animate-in fade-in duration-300">
+          <div className="w-full max-w-md mx-auto bg-zinc-900 border border-white/10 rounded-[2.5rem] p-8 space-y-6 shadow-2xl">
+            <div className="flex justify-between items-center">
+              <h3 className="font-serif text-xl italic text-emerald-500">Reflections</h3>
+              <button onClick={() => setActiveVerseIndex(null)} className="p-2 hover:bg-white/5 rounded-full transition-colors">
+                <X className="w-6 h-6 text-zinc-500" />
+              </button>
+            </div>
+            <p className="text-zinc-500 text-xs italic line-clamp-2">"{verses[activeVerseIndex]}"</p>
+            <textarea 
+              value={noteContent}
+              onChange={(e) => setNoteContent(e.target.value)}
+              placeholder="Write your spiritual insight..."
+              className="w-full bg-zinc-950 border border-white/5 rounded-2xl p-5 text-sm h-32 focus:ring-2 focus:ring-emerald-500/20 text-zinc-200 resize-none"
+            />
+            <button 
+              onClick={handleSaveNote}
+              className="w-full bg-emerald-500 text-black font-black uppercase tracking-widest text-[11px] py-4 rounded-2xl shadow-xl shadow-emerald-500/10 active:scale-95 transition-all"
+            >
+              Save to Study
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -317,35 +391,37 @@ function BookItem({ b, expandedBook, currentChapter, isHindi, onExpand, onSelect
   const isExpanded = expandedBook === b.id;
   
   return (
-    <div className="space-y-1">
+    <div className="space-y-1.5 animate-in slide-in-from-top-2 duration-300">
       <button 
+        type="button"
         onClick={(e) => {
           e.preventDefault();
           onExpand(isExpanded ? null : b.id);
         }}
         className={cn(
-          "w-full flex items-center justify-between p-3.5 rounded-xl transition-all",
-          isExpanded ? "bg-emerald-500/10 text-emerald-500" : "hover:bg-zinc-900 text-zinc-400"
+          "w-full flex items-center justify-between p-4 rounded-2xl transition-all border",
+          isExpanded ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-500 shadow-xl" : "bg-zinc-900/40 border-white/5 hover:border-emerald-500/20 text-zinc-400"
         )}
       >
         <div className="flex flex-col items-start">
-          <span className="font-bold text-sm">{isHindi ? b.hi : b.en}</span>
-          <span className="text-[8px] uppercase font-black opacity-40 tracking-widest mt-0.5">{b.chapters} Chapters</span>
+          <span className="font-bold text-sm tracking-wide">{isHindi ? b.hi : b.en}</span>
+          <span className="text-[9px] uppercase font-black opacity-30 tracking-widest mt-1">{b.chapters} Chapters</span>
         </div>
-        {isExpanded && <div className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />}
+        <div className={cn("size-2 rounded-full transition-all duration-500", isExpanded ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" : "bg-white/10")} />
       </button>
       {isExpanded && (
-        <div className="grid grid-cols-5 gap-1.5 p-3 bg-zinc-900/50 rounded-2xl mb-3 border border-white/5 shadow-inner animate-in slide-in-from-top-2">
+        <div className="grid grid-cols-5 gap-2 p-4 bg-zinc-900/60 rounded-[2rem] border border-white/5 shadow-inner mt-2 animate-in zoom-in-95 duration-300">
           {Array.from({ length: b.chapters }, (_, i) => i + 1).map(ch => (
             <button
               key={ch}
+              type="button"
               onClick={(e) => {
                 e.preventDefault();
                 onSelect(b.id, ch);
               }}
               className={cn(
-                "size-9 rounded-lg flex items-center justify-center text-[10px] font-black transition-all",
-                currentChapter === ch ? "bg-emerald-500 text-black shadow-lg scale-110" : "bg-zinc-800 text-zinc-500 hover:text-emerald-500"
+                "size-10 rounded-xl flex items-center justify-center text-[10px] font-black transition-all active:scale-90",
+                currentChapter === ch ? "bg-emerald-500 text-black shadow-xl shadow-emerald-500/20" : "bg-zinc-950 text-zinc-600 hover:text-emerald-500 border border-white/5"
               )}
             >
               {ch}
@@ -360,8 +436,8 @@ function BookItem({ b, expandedBook, currentChapter, isHindi, onExpand, onSelect
 export default function BibleReaderPage() {
   return (
     <Suspense fallback={
-      <div className="flex h-screen w-full items-center justify-center bg-zinc-950">
-        <Loader2 className="w-10 h-10 text-emerald-500 animate-spin" />
+      <div className="flex h-screen w-full items-center justify-center bg-[#09090b]">
+        <Loader2 className="w-12 h-12 text-emerald-500 animate-spin" />
       </div>
     }>
       <ReaderContent />

@@ -35,6 +35,8 @@ export const BIBLE_BOOKS = [
   { id: "micah", en: "Micah", hi: "मीका", chapters: 7, testament: "old" },
   { id: "nahum", en: "Nahum", hi: "नहूम", chapters: 3, testament: "old" },
   { id: "habakkuk", en: "Habakkuk", hi: "हबक्कूक", chapters: 3, testament: "old" },
+  { id: "zephaniah", en: "Zephaniah", hi: "सपन्याह", chapters: 3, testament: "old" },
+  { id: "haggai", en: "Haggai", hi: "हाग्गै", chapters: 2, testament: "old" },
   { id: "zechariah", en: "Zechariah", hi: "जकर्याह", chapters: 14, testament: "old" },
   { id: "malachi", en: "Malachi", hi: "मलाकी", chapters: 4, testament: "old" },
 
