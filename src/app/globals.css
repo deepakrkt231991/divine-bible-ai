@@ -55,7 +55,7 @@
 main {
   flex: 1;
   overflow-y: auto;
-  padding-bottom: 250px; /* Space for fixed navigation and controls */
+  padding-bottom: 120px; /* Reduced for smaller nav */
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
 }

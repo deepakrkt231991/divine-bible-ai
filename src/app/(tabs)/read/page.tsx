@@ -351,7 +351,7 @@ export default function BibleReaderPage() {
       </header>
 
       {/* MAIN CONTENT AREA */}
-      <main className="flex-1 overflow-y-auto hide-scrollbar pb-[250px] scroll-smooth">
+      <main className="flex-1 overflow-y-auto hide-scrollbar pb-[140px] scroll-smooth">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-48 gap-8">
             <Loader2 className="w-12 h-12 text-emerald-500 animate-spin" />
@@ -441,33 +441,33 @@ export default function BibleReaderPage() {
         )}
       </main>
 
-      {/* BOTTOM NAV: Glassmorphism */}
-      <div className="fixed bottom-24 left-0 right-0 max-w-md mx-auto px-4 z-[40]">
-        <div className="bg-zinc-900/90 backdrop-blur-xl border border-white/5 rounded-full p-2 flex items-center justify-between shadow-2xl">
+      {/* BOTTOM NAV: Compact Control Panel */}
+      <div className="fixed bottom-20 left-0 right-0 max-w-md mx-auto px-4 z-[40]">
+        <div className="bg-zinc-900/95 backdrop-blur-xl border border-white/5 rounded-full p-1.5 flex items-center justify-between shadow-2xl">
           <button 
             onClick={() => loadChapter(state.bookId, state.chapter - 1, state.translation)} 
             disabled={state.chapter <= 1}
-            className="w-12 h-12 rounded-full hover:bg-white/5 flex items-center justify-center text-zinc-400 disabled:opacity-20"
+            className="w-10 h-10 rounded-full hover:bg-white/5 flex items-center justify-center text-zinc-400 disabled:opacity-20"
           >
-            <ChevronLeft className="w-6 h-6" />
+            <ChevronLeft className="w-5 h-5" />
           </button>
-          <div className="flex items-center gap-4">
-            <button className="w-14 h-14 rounded-full bg-emerald-500 text-black shadow-xl shadow-emerald-500/20 flex items-center justify-center hover:scale-105 active:scale-95 transition-all">
-              <PlayCircle className="w-8 h-8" />
+          <div className="flex items-center gap-3">
+            <button className="w-11 h-11 rounded-full bg-emerald-500 text-black shadow-lg shadow-emerald-500/20 flex items-center justify-center hover:scale-105 active:scale-95 transition-all">
+              <PlayCircle className="w-7 h-7" />
             </button>
             <div className="flex flex-col">
-              <span className="text-[9px] text-emerald-500 uppercase font-black tracking-widest">Audio Bible</span>
-              <span className="text-[11px] text-zinc-400 font-medium">Listening Ready</span>
+              <span className="text-[8px] text-emerald-500 uppercase font-black tracking-widest">Audio Bible</span>
+              <span className="text-[10px] text-zinc-400 font-medium">Ready</span>
             </div>
           </div>
           <button 
             onClick={() => loadChapter(state.bookId, state.chapter + 1, state.translation)} 
-            className="w-12 h-12 rounded-full hover:bg-white/5 flex items-center justify-center text-zinc-400"
+            className="w-10 h-10 rounded-full hover:bg-white/5 flex items-center justify-center text-zinc-400"
           >
-            <ChevronRight className="w-6 h-6" />
+            <ChevronRight className="w-5 h-5" />
           </button>
         </div>
       </div>
-    </div>
+    </nav>
   );
 }
