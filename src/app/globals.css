@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -55,7 +56,7 @@
 main {
   flex: 1;
   overflow-y: auto;
-  padding-bottom: 160px; /* Space for fixed bottom navigation */
+  padding-bottom: 180px; /* Enhanced space for fixed bottom navigation */
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
 }
@@ -85,7 +86,7 @@ main {
   bottom: 0;
   width: 100%;
   max-width: 448px;
-  z-index: 100; /* Ensured top visibility */
+  z-index: 50; /* Locked for visibility */
   background: rgba(9, 9, 11, 0.85);
   backdrop-filter: blur(20px);
   border-top: 1px solid rgba(255, 255, 255, 0.05);

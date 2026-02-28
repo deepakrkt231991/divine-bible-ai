@@ -26,11 +26,11 @@ import { Slider } from '@/components/ui/slider';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 // Database Config for Offline Support
-const DB_NAME = "DivineBibleDB_V6";
+const DB_NAME = "DivineBibleDB_V7";
 const STORE_NAME = "verses";
 const MemoryCache = new Map();
 
-// Bible Canon Config
+// Bible Canon Config (Full 81 Books)
 const BIBLE_SECTIONS = {
   "Old Testament": Array.from({ length: 39 }, (_, i) => i + 1),
   "New Testament": Array.from({ length: 27 }, (_, i) => i + 40),
@@ -82,24 +82,39 @@ export default function BibleReaderPage() {
     });
   }, []);
 
-  // Fetch Full Book List
+  // Fetch Full Book List with Fallback
   const fetchBookList = useCallback(async () => {
     try {
-      const res = await fetch(`https://bolls.life/get-books/${state.translation}/`);
+      const res = await fetch(`https://bolls.life/get-books/${state.translation}/`, {
+        next: { revalidate: 3600 }
+      });
       if (!res.ok) throw new Error("API failure");
       const books = await res.json();
-      setState(prev => ({ ...prev, bookList: Array.isArray(books) ? books : [] }));
+      
+      if (!Array.isArray(books) || books.length === 0) throw new Error("Invalid Data");
+      setState(prev => ({ ...prev, bookList: books }));
     } catch (e) {
       console.error("Book list fetch error:", e);
+      // Fallback: If API fails, provide a basic list to keep UI functional
+      if (state.bookList.length === 0) {
+        const fallback = [
+          { bookid: 1, name: "Genesis", chapters: 50 },
+          { bookid: 19, name: "Psalms", chapters: 150 },
+          { bookid: 40, name: "Matthew", chapters: 28 },
+          { bookid: 43, name: "John", chapters: 21 },
+          { bookid: 67, name: "Tobit", chapters: 14 }
+        ];
+        setState(prev => ({ ...prev, bookList: fallback }));
+      }
     }
-  }, [state.translation]);
+  }, [state.translation, state.bookList.length]);
 
-  // Load Chapter with Robust Error Handling
+  // Load Chapter with Auto-Switch for 81-book Canon
   const loadChapter = useCallback(async (bId: number, chap: number, trans: string) => {
-    // Auto-Switch for Extra Books
+    // CRITICAL: Auto-Switch for Extra Books (IDs > 66)
     let targetTrans = trans;
     if (bId > 66 && (trans === 'IRV_HIN' || trans === 'KJV' || trans === 'IRV_MAR')) {
-      targetTrans = 'NRSV';
+      targetTrans = 'NRSV'; // Switch to NRSV as it supports all 81 books
       setState(prev => ({ ...prev, translation: 'NRSV' }));
       toast({ title: "Version Switched", description: "Vachan NRSV (81 books) mein available hai." });
     }
@@ -136,12 +151,11 @@ export default function BibleReaderPage() {
       // 2. Fetch from API
       const url = `https://bolls.life/get-chapter/${targetTrans}/${bId}/${chap}/`;
       const response = await fetch(url);
-      if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
       
       const text = await response.text();
-      // Validate JSON
+      // Validate JSON (Fix for "Unexpected token T")
       if (!text.startsWith("{") && !text.startsWith("[")) {
-        throw new Error("Invalid API Data (Not JSON)");
+        throw new Error("API returned invalid content format.");
       }
 
       const data = JSON.parse(text);
@@ -158,7 +172,7 @@ export default function BibleReaderPage() {
       }
     } catch (e: any) {
       console.error("Bible Load Error:", e);
-      setError("Vachan load nahi ho paye. Kripaya internet check karein ya thodi der baad koshish karein.");
+      setError("Vachan load nahi ho paye. Kripaya internet check karein.");
     } finally {
       setLoading(false);
     }
@@ -190,7 +204,6 @@ export default function BibleReaderPage() {
       chapterPickerMode: false,
       selectedVerse: null
     }));
-    // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -341,16 +354,6 @@ export default function BibleReaderPage() {
                     ))}
                   </div>
                 </div>
-                <button 
-                  onClick={() => {
-                    indexedDB.deleteDatabase(DB_NAME);
-                    window.location.reload();
-                  }}
-                  className="w-full p-4 bg-red-500/5 border border-red-500/20 rounded-2xl text-red-500 text-[10px] font-black uppercase tracking-widest flex items-center justify-between"
-                >
-                  <span>Clear Storage</span>
-                  <Trash2 className="w-4 h-4" />
-                </button>
               </div>
             </DialogContent>
           </Dialog>
@@ -358,7 +361,7 @@ export default function BibleReaderPage() {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto hide-scrollbar pb-40">
+      <main className="flex-1 overflow-y-auto hide-scrollbar pb-[180px]">
         {isOffline && (
           <div className="bg-orange-500/10 border-b border-orange-500/20 py-2 flex items-center justify-center gap-2">
             <WifiOff className="w-3 h-3 text-orange-500" />
@@ -368,7 +371,7 @@ export default function BibleReaderPage() {
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-40 gap-6 opacity-40">
-            <RefreshCw className="w-14 h-14 text-emerald-500 animate-spin" />
+            <Loader2 className="w-14 h-14 text-emerald-500 animate-spin" />
             <p className="text-emerald-500 font-serif italic text-xl animate-pulse">Vachan load ho rahe hain...</p>
           </div>
         ) : error ? (
@@ -384,7 +387,7 @@ export default function BibleReaderPage() {
         ) : verses.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-40 text-center px-10 gap-6 opacity-50">
             <BookOpen className="w-16 h-16 text-zinc-700" />
-            <p className="text-xl font-serif italic">Vachan is version mein available nahi hain.</p>
+            <p className="text-xl font-serif italic">Yahan koi vachan nahi dikh raha hai. Check karein ya translation badlein.</p>
           </div>
         ) : (
           <div className="max-w-2xl mx-auto py-10 px-6 space-y-10">
@@ -430,4 +433,3 @@ export default function BibleReaderPage() {
     </div>
   );
 }
-
