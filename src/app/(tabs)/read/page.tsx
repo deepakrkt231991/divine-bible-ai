@@ -39,50 +39,42 @@ export default function BibleReaderPage() {
   
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // 1. Load Highlights from LocalStorage
+  // Load Highlights from LocalStorage
   useEffect(() => {
     const saved = localStorage.getItem('bible_highlights');
     if (saved) setHighlights(JSON.parse(saved));
   }, []);
 
-  // 2. Load Chapter Data from Local JSON
+  // Load Bible JSON data from public/bible/
   const loadChapterData = useCallback(async () => {
     setLoading(true);
     try {
-      // Direct local fetch as per Zero-Cost strategy
       const res = await fetch(`/bible/${version}.json`);
-      if (!res.ok) {
-        // Fallback or placeholder until real files are uploaded by user
-        console.warn(`Local file /bible/${version}.json not found. Make sure to upload it.`);
-        throw new Error("Local Bible data not found.");
-      }
+      if (!res.ok) throw new Error("Bible data file not found");
       const data = await res.json();
       
-      // Navigate data structure: data[book][chapter]
       const bookData = data[book];
       const content = bookData ? bookData[chapter.toString()] || [] : [];
       
       if (content.length === 0) {
-        // Safe Fallback: Genesis 1 if book/chapter is invalid
-        console.warn("Invalid selection, falling back to Genesis 1");
+        // Fallback to Chapter 1 if chapter is missing
+        const fallbackContent = bookData ? bookData["1"] || [] : [];
+        setVerses(fallbackContent);
+      } else {
+        setVerses(content);
       }
       
-      setVerses(content);
-      
-      // Update URL
+      // Update URL silently
       const params = new URLSearchParams();
       params.set('book', book);
       params.set('chapter', chapter.toString());
       params.set('version', version);
       router.replace(`/read?${params.toString()}`);
       
-      // Scroll to top on chapter change
       if (scrollRef.current) scrollRef.current.scrollTop = 0;
-
     } catch (e) {
-      console.error("Reader Error:", e);
-      // Fallback state for Dev/Missing data
-      setVerses(["Scripture data file is missing in /public/bible/.", "Please upload kjv.json or hin_irv.json to use the reader."]);
+      console.error("Reader Load Error:", e);
+      setVerses(["Scripture data load error. Please ensure Bible JSON files are in /public/bible/.", "KJV and Hindi IRV are supported."]);
     } finally {
       setLoading(false);
     }
@@ -92,14 +84,13 @@ export default function BibleReaderPage() {
     loadChapterData();
   }, [loadChapterData]);
 
-  // 3. Audio Logic (Web Speech API - Zero Cost)
+  // Zero-Cost Audio using Web Speech API
   const toggleAudio = () => {
     if (isPlaying) {
       window.speechSynthesis.cancel();
       setIsPlaying(false);
       return;
     }
-
     if (verses.length === 0) return;
 
     const currentVersion = BIBLE_INDEX.versions.find(v => v.id === version);
@@ -114,18 +105,17 @@ export default function BibleReaderPage() {
     setIsPlaying(true);
   };
 
-  // 4. Highlight Logic
   const toggleHighlight = (index: number) => {
     const id = `${book}_${chapter}_${index}`;
     const newHighlights = { ...highlights };
     if (newHighlights[id]) {
       delete newHighlights[id];
     } else {
-      newHighlights[id] = 'highlight-emerald';
+      newHighlights[id] = 'bg-emerald-500/20 border-l-4 border-emerald-500';
     }
     setHighlights(newHighlights);
     localStorage.setItem('bible_highlights', JSON.stringify(newHighlights));
-    toast({ title: "Verse Highlighted", description: "Saved to your local profile." });
+    toast({ title: "Verse Action", description: "Highlight saved locally." });
   };
 
   const filteredBooks = BIBLE_INDEX.books.filter(b => 
@@ -137,12 +127,12 @@ export default function BibleReaderPage() {
 
   return (
     <div className="flex flex-col h-screen bg-zinc-950 text-slate-100 max-w-md mx-auto overflow-hidden border-x border-white/5 font-sans relative">
-      {/* Top Header */}
+      {/* Header Panel */}
       <header className="px-4 py-3 border-b border-white/5 flex justify-between items-center bg-zinc-950/95 backdrop-blur-md sticky top-0 z-50">
         <Dialog open={selectorOpen} onOpenChange={setSelectorOpen}>
           <DialogTrigger asChild>
             <button className="flex flex-col items-center flex-1">
-              <div className="flex items-center gap-2 group">
+              <div className="flex items-center gap-2">
                 <h2 className="font-serif text-lg font-bold text-emerald-500 capitalize italic">
                   {currentBookData?.name.split(' (')[0]} {chapter}
                 </h2>
@@ -155,14 +145,14 @@ export default function BibleReaderPage() {
           </DialogTrigger>
           <DialogContent className="bg-zinc-950 border-zinc-900 p-0 max-h-[80vh] flex flex-col max-w-[95%]">
             <DialogHeader className="p-4 border-b border-zinc-900">
-              <DialogTitle className="text-emerald-500 font-serif italic text-xl">Pavitra Vachan</DialogTitle>
+              <DialogTitle className="text-emerald-500 font-serif italic text-xl">Search Bible</DialogTitle>
               <div className="relative mt-4">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
                 <input 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Dhoondhein: Matti, Tobit..." 
-                  className="w-full bg-zinc-900 border-none rounded-xl pl-10 pr-4 py-3 text-sm focus:ring-1 focus:ring-emerald-500/30"
+                  placeholder="Find book..." 
+                  className="w-full bg-zinc-900 border-none rounded-xl pl-10 pr-4 py-3 text-sm focus:ring-1 focus:ring-emerald-500/30 text-white"
                 />
               </div>
             </DialogHeader>
@@ -180,8 +170,8 @@ export default function BibleReaderPage() {
                         book === b.id ? "bg-emerald-500/10 text-emerald-500" : "hover:bg-white/5 text-zinc-300"
                       )}
                     >
-                      <span className="font-bold text-sm text-left">{b.name}</span>
-                      <span className="text-[9px] uppercase font-black tracking-widest opacity-40">{b.chapters} Ch.</span>
+                      <span className="font-bold text-sm">{b.name}</span>
+                      <span className="text-[9px] uppercase font-black opacity-40">{b.chapters} Ch.</span>
                     </button>
                     {book === b.id && (
                       <div className="grid grid-cols-5 gap-2 p-3 bg-zinc-900/50 rounded-xl mb-2">
@@ -210,23 +200,19 @@ export default function BibleReaderPage() {
         </Dialog>
         
         <button 
-          onClick={() => {
-            const nextV = version === 'hin_irv' ? 'kjv' : 'hin_irv';
-            setVersion(nextV);
-            toast({ title: "Bhasha Parivartan", description: `${nextV === 'kjv' ? 'English (KJV)' : 'Hindi (IRV)'} set.` });
-          }}
+          onClick={() => setVersion(version === 'hin_irv' ? 'kjv' : 'hin_irv')}
           className="p-2.5 rounded-xl bg-zinc-900 border border-white/5 text-emerald-500"
         >
           <Languages className="w-5 h-5" />
         </button>
       </header>
 
-      {/* Reader Content Area */}
-      <main ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-8 pb-56 hide-scrollbar bg-background-dark">
+      {/* Content Area */}
+      <main ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-8 pb-56 hide-scrollbar bg-zinc-950">
         {loading ? (
           <div className="flex flex-col items-center justify-center h-full space-y-4 opacity-40">
             <Loader2 className="w-10 h-10 text-emerald-500 animate-spin" />
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500 animate-pulse">Retrieving Sacred Words...</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500">Loading Sacred Text...</p>
           </div>
         ) : (
           <div className="space-y-8 animate-in fade-in duration-700">
@@ -236,7 +222,7 @@ export default function BibleReaderPage() {
                 onClick={() => toggleHighlight(i)}
                 className={cn(
                   "relative group cursor-pointer transition-all duration-300 p-2 -mx-2 rounded-xl",
-                  highlights[`${book}_${chapter}_${i}`] ? "bg-emerald-500/10 border-l-4 border-emerald-500 pl-4" : "hover:bg-white/5"
+                  highlights[`${book}_${chapter}_${i}`] || "hover:bg-white/5"
                 )}
               >
                 <span className="text-emerald-500 font-black text-[10px] absolute -left-1 top-2.5 opacity-40">{i + 1}</span>
@@ -244,8 +230,8 @@ export default function BibleReaderPage() {
               </div>
             ))}
             
-            {/* Navigation Footer */}
-            <div className="pt-16 pb-12 border-t border-white/5 flex flex-col gap-6">
+            {/* Next Nav */}
+            <div className="pt-16 pb-12 border-t border-white/5">
               <button 
                 onClick={() => {
                   const maxCh = currentBookData?.chapters || 1;
@@ -265,7 +251,6 @@ export default function BibleReaderPage() {
                 </div>
                 <div className="text-center">
                   <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600 group-hover:text-emerald-500 transition-all block">Next Chapter</span>
-                  <span className="text-[9px] text-zinc-700 italic font-serif">Continue your spiritual study</span>
                 </div>
               </button>
             </div>
@@ -273,7 +258,7 @@ export default function BibleReaderPage() {
         )}
       </main>
 
-      {/* Floating Audio Controls - Zero Cost */}
+      {/* Audio Bar */}
       <div className="fixed bottom-24 left-1/2 -translate-x-1/2 w-[85%] max-w-xs z-50">
         <div className="bg-zinc-900/90 backdrop-blur-2xl border border-white/10 rounded-full p-1.5 flex items-center justify-between shadow-2xl">
           <button 
