@@ -54,7 +54,7 @@ function ReaderContent() {
     if (saved) setHighlights(JSON.parse(saved));
   }, []);
 
-  // MASTER LOADER: Fetch from Local JSON
+  // MASTER LOADER: Fetch from Local JSON (Scrollmapper Format Compatible)
   const loadChapterData = useCallback(async (bid: string, cid: number, ver: string) => {
     setLoading(true);
     try {
@@ -62,15 +62,34 @@ function ReaderContent() {
       const res = await fetch(`/bible/${fileName}`);
       if (!res.ok) throw new Error("Bible data file missing");
       
-      const data = await res.json();
-      const bookData = data[bid] || data['genesis'];
-      const chapterKey = cid.toString();
-      const content = bookData[chapterKey] || bookData["1"] || [];
+      const json = await res.json();
+      
+      // Filter for the specific book and chapter based on Scrollmapper structure
+      // Usually Scrollmapper is an array: [{book: "Genesis", chapter_nr: 1, chapter: {"1": {verse: "..."}}}, ...]
+      const bookData = json.find(
+        (item: any) =>
+          item.book.toLowerCase() === bid.toLowerCase() &&
+          item.chapter_nr.toString() === cid.toString()
+      );
 
-      setVerses(content);
+      if (bookData) {
+        const chapterObj = bookData.chapter;
+        const cleanVerses = Object.values(chapterObj).map(
+          (v: any) => (v as any).verse
+        );
+        setVerses(cleanVerses);
+      } else {
+        // Fallback for different JSON structures (e.g. key-based)
+        const alternateData = json[bid]?.[cid.toString()] || [];
+        if (alternateData.length > 0) {
+          setVerses(alternateData);
+        } else {
+          setVerses(["Content not found. Please ensure JSON files are correctly formatted and placed in /public/bible/"]);
+        }
+      }
       
       // Sync URL without reload
-      const params = new URLSearchParams();
+      const params = new URLSearchParams(window.location.search);
       params.set('book', bid);
       params.set('chapter', cid.toString());
       params.set('version', ver);
@@ -257,7 +276,7 @@ function ReaderContent() {
               </div>
             </div>
 
-            {verses.map((v, i) => (
+            {verses.length > 0 ? verses.map((v, i) => (
               <div 
                 key={i} 
                 className={cn(
@@ -280,7 +299,11 @@ function ReaderContent() {
                 </div>
                 <p className="font-serif text-[1.25rem] leading-[1.8] text-zinc-100 italic">{v}</p>
               </div>
-            ))}
+            )) : (
+              <div className="text-center py-20 opacity-50">
+                 <p className="text-lg font-serif italic text-zinc-400">"{chapter}" is being prepared for your journey.</p>
+              </div>
+            )}
             
             <div className="pt-20 pb-16 border-t border-white/5 text-center">
               <button 
