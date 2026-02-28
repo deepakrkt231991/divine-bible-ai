@@ -10,9 +10,10 @@ import {
   Languages, 
   Loader2,
   Volume2,
-  Pause
+  Pause,
+  Bookmark
 } from 'lucide-react';
-import { BIBLE_INDEX } from '@/lib/bible-index';
+import { BIBLE_BOOKS } from '@/lib/bible-index';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -30,7 +31,7 @@ export default function BibleReaderPage() {
   const [verses, setVerses] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [highlights, setHighlights] = useState<Record<string, string>>({});
+  const [highlights, setHighlights] = useState<Record<string, boolean>>({});
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   
@@ -43,7 +44,7 @@ export default function BibleReaderPage() {
     if (saved) setHighlights(JSON.parse(saved));
   }, []);
 
-  // 100% Zero-Cost Local Loader
+  // Zero-Cost Local Loader
   const loadChapterData = useCallback(async () => {
     setLoading(true);
     try {
@@ -53,16 +54,11 @@ export default function BibleReaderPage() {
       if (!res.ok) throw new Error("Bible data file missing");
       
       const data = await res.json();
-      const bookData = data[book];
-      const content = bookData ? bookData[chapter.toString()] || [] : [];
+      const content = data[book]?.[chapter.toString()] || [];
       
       if (content.length === 0) {
-        setVerses(["Scripture text not found. Defaulting to first available.", "Vachan uplabdh nahi hain. Shuruat se load ho raha hai."]);
-        // Fallback to Genesis 1 if book not found
-        if (book !== 'genesis') {
-          setBook('genesis');
-          setChapter(1);
-        }
+        // Fallback or next available
+        setVerses(["Vachan taiyar kiye ja rahe hain...", "Preparing verses for your journey..."]);
       } else {
         setVerses(content);
       }
@@ -77,7 +73,7 @@ export default function BibleReaderPage() {
       if (scrollRef.current) scrollRef.current.scrollTop = 0;
     } catch (e) {
       console.error("Local Reader Load Error:", e);
-      setVerses(["Error loading offline scriptures. Please ensure local JSON files exist.", "Offline vachan load karne mein truti. File check karein."]);
+      setVerses(["Offline vachan load karne mein truti. Kripya check karein.", "Error loading offline scriptures. Please check file path."]);
     } finally {
       setLoading(false);
     }
@@ -87,7 +83,7 @@ export default function BibleReaderPage() {
     loadChapterData();
   }, [loadChapterData]);
 
-  // Zero-Cost Audio using Web Speech API
+  // Web Speech API Audio (100% Free)
   const toggleAudio = () => {
     if (isPlaying) {
       window.speechSynthesis.cancel();
@@ -96,10 +92,9 @@ export default function BibleReaderPage() {
     }
     if (verses.length === 0) return;
 
-    const currentVersion = BIBLE_INDEX.versions.find(v => v.id === version);
     const textToSpeak = verses.join(" ");
     const utterance = new SpeechSynthesisUtterance(textToSpeak);
-    utterance.lang = currentVersion?.lang || (isHindi ? 'hi-IN' : 'en-US');
+    utterance.lang = isHindi ? 'hi-IN' : 'en-US';
     
     utterance.onend = () => setIsPlaying(false);
     utterance.onerror = () => setIsPlaying(false);
@@ -110,41 +105,39 @@ export default function BibleReaderPage() {
 
   const toggleHighlight = (index: number) => {
     const id = `${book}_${chapter}_${index}`;
-    const newHighlights = { ...highlights };
-    if (newHighlights[id]) {
-      delete newHighlights[id];
-    } else {
-      newHighlights[id] = 'bg-emerald-500/10 border-l-4 border-emerald-500 rounded-r-lg';
-    }
+    const newHighlights = { ...highlights, [id]: !highlights[id] };
     setHighlights(newHighlights);
     localStorage.setItem('bible_highlights', JSON.stringify(newHighlights));
-    toast({ title: isHindi ? "Vachan Highlight Hua" : "Verse Highlighted" });
+    toast({ 
+      title: isHindi ? "Vachan Updated" : "Verse Updated", 
+      description: newHighlights[id] ? (isHindi ? "Highlight kiya gaya" : "Highlighted") : (isHindi ? "Highlight hataya gaya" : "Removed highlight")
+    });
   };
 
-  const currentBookData = BIBLE_INDEX.books.find(b => b.id === book);
-  const localizedBookName = currentBookData ? (isHindi ? currentBookData.hi : currentBookData.en) : "Genesis";
+  const currentBookData = BIBLE_BOOKS.find(b => b.id === book) || BIBLE_BOOKS[0];
+  const localizedBookName = isHindi ? currentBookData.hi : currentBookData.en;
 
-  const filteredBooks = BIBLE_INDEX.books.filter(b => 
+  const filteredBooks = BIBLE_BOOKS.filter(b => 
     b.en.toLowerCase().includes(searchQuery.toLowerCase()) || 
     b.hi.toLowerCase().includes(searchQuery.toLowerCase()) ||
     b.id.includes(searchQuery.toLowerCase())
   );
 
   return (
-    <div className="flex flex-col h-screen bg-[#09090b] text-slate-100 max-w-md mx-auto overflow-hidden border-x border-white/5 font-sans relative">
+    <div className="flex flex-col h-screen bg-zinc-950 text-slate-100 max-w-md mx-auto overflow-hidden border-x border-zinc-900 font-sans relative">
       {/* Ultra-Small Header Panel */}
-      <header className="px-4 py-3 border-b border-white/5 flex justify-between items-center bg-[#09090b]/95 backdrop-blur-md sticky top-0 z-[60]">
+      <header className="px-4 py-2 border-b border-zinc-900 flex justify-between items-center bg-zinc-950/95 backdrop-blur-md sticky top-0 z-[60]">
         <Dialog open={selectorOpen} onOpenChange={setSelectorOpen}>
           <DialogTrigger asChild>
             <button className="flex flex-col items-center flex-1">
               <div className="flex items-center gap-2">
-                <h2 className="font-serif text-lg font-bold text-emerald-500 capitalize italic leading-none">
+                <h2 className="font-serif text-base font-bold text-emerald-500 capitalize italic leading-none">
                   {localizedBookName} {chapter}
                 </h2>
-                <Search className="w-3.5 h-3.5 text-zinc-600" />
+                <Search className="w-3 h-3 text-zinc-600" />
               </div>
-              <span className="text-[8px] uppercase text-zinc-600 tracking-[0.2em] font-black mt-1">
-                {BIBLE_INDEX.versions.find(v => v.id === version)?.name}
+              <span className="text-[7px] uppercase text-zinc-600 tracking-[0.2em] font-black mt-0.5">
+                {isHindi ? "Hindi (IRV)" : "English (KJV)"}
               </span>
             </button>
           </DialogTrigger>
@@ -158,7 +151,7 @@ export default function BibleReaderPage() {
                 <input 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={isHindi ? "Pustak ka naam: Matti, Exodus..." : "Find book: Matthew, Job..."} 
+                  placeholder={isHindi ? "Matti, Exodus..." : "Find book..."} 
                   className="w-full bg-zinc-900 border-none rounded-xl pl-10 pr-4 py-3 text-sm focus:ring-1 focus:ring-emerald-500/30 text-white"
                 />
               </div>
@@ -174,11 +167,11 @@ export default function BibleReaderPage() {
                       }}
                       className={cn(
                         "w-full flex items-center justify-between p-4 rounded-xl transition-all",
-                        book === b.id ? "bg-emerald-500/10 text-emerald-500" : "hover:bg-white/5 text-zinc-300"
+                        book === b.id ? "bg-emerald-500/10 text-emerald-500" : "hover:bg-zinc-900 text-zinc-300"
                       )}
                     >
                       <span className="font-bold text-sm">{isHindi ? b.hi : b.en}</span>
-                      <span className="text-[9px] uppercase font-black opacity-40">{b.chapters} Ch.</span>
+                      <span className="text-[9px] uppercase font-black opacity-40">{b.chapters} Chapters</span>
                     </button>
                     {book === b.id && (
                       <div className="grid grid-cols-5 gap-2 p-3 bg-zinc-900/50 rounded-xl mb-2">
@@ -207,15 +200,15 @@ export default function BibleReaderPage() {
         </Dialog>
         
         <button 
-          onClick={() => setVersion(version === 'hin_irv' ? 'kjv' : 'hin_irv')}
-          className="p-2 rounded-xl bg-zinc-900 border border-white/5 text-emerald-500 hover:bg-emerald-500/10 transition-colors"
+          onClick={() => setVersion(isHindi ? 'kjv' : 'hin_irv')}
+          className="p-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-emerald-500 hover:bg-emerald-500/10 transition-colors"
         >
-          <Languages className="w-5 h-5" />
+          <Languages className="w-4 h-4" />
         </button>
       </header>
 
       {/* Main Content Area */}
-      <main ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-8 pb-56 hide-scrollbar bg-[#09090b]">
+      <main ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-8 pb-48 hide-scrollbar bg-zinc-950">
         {loading ? (
           <div className="flex flex-col items-center justify-center h-full space-y-4 opacity-40">
             <Loader2 className="w-10 h-10 text-emerald-500 animate-spin" />
@@ -224,45 +217,44 @@ export default function BibleReaderPage() {
             </p>
           </div>
         ) : (
-          <div className="space-y-8 animate-in fade-in duration-700">
+          <div className="space-y-6 animate-in fade-in duration-700">
             {verses.map((v, i) => (
               <div 
                 key={i} 
                 onClick={() => toggleHighlight(i)}
                 className={cn(
-                  "relative group cursor-pointer transition-all duration-300 p-2 -mx-2 rounded-xl",
-                  highlights[`${book}_${chapter}_${i}`] || "hover:bg-white/5"
+                  "relative group cursor-pointer transition-all duration-300 p-2 -mx-2 rounded-xl border-l-2",
+                  highlights[`${book}_${chapter}_${i}`] 
+                    ? "bg-emerald-500/10 border-emerald-500/50" 
+                    : "border-transparent hover:bg-zinc-900/50"
                 )}
               >
-                <span className="text-emerald-500 font-black text-[10px] absolute -left-1 top-2.5 opacity-40">{i + 1}</span>
-                <p className="pl-4 font-serif text-[1.2rem] leading-[1.8] text-slate-200 italic">{v}</p>
+                <span className="text-emerald-500 font-black text-[9px] absolute -left-1 top-2.5 opacity-40">{i + 1}</span>
+                <p className="pl-4 font-serif text-[1.1rem] leading-[1.7] text-slate-200 italic">{v}</p>
               </div>
             ))}
             
             {/* Seamless Navigation Button */}
-            <div className="pt-16 pb-12 border-t border-white/5">
+            <div className="pt-12 pb-8 border-t border-zinc-900">
               <button 
                 onClick={() => {
-                  const maxCh = currentBookData?.chapters || 1;
-                  if (chapter < maxCh) setChapter(chapter + 1);
+                  if (chapter < currentBookData.chapters) setChapter(chapter + 1);
                   else {
-                    const currentIndex = BIBLE_INDEX.books.findIndex(b => b.id === book);
-                    if (currentIndex < BIBLE_INDEX.books.length - 1) {
-                      setBook(BIBLE_INDEX.books[currentIndex + 1].id);
+                    const currentIndex = BIBLE_BOOKS.findIndex(b => b.id === book);
+                    if (currentIndex < BIBLE_BOOKS.length - 1) {
+                      setBook(BIBLE_BOOKS[currentIndex + 1].id);
                       setChapter(1);
                     }
                   }
                 }}
-                className="w-full py-10 border-2 border-dashed border-zinc-900 rounded-[2.5rem] flex flex-col items-center justify-center gap-4 group hover:border-emerald-500/30 transition-all"
+                className="w-full py-8 border-2 border-dashed border-zinc-900 rounded-[2rem] flex flex-col items-center justify-center gap-3 group hover:border-emerald-500/30 transition-all"
               >
-                <div className="size-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center group-hover:bg-emerald-500/20 transition-all">
-                  <ChevronRight className="w-6 h-6 text-emerald-500" />
+                <div className="size-10 rounded-xl bg-emerald-500/10 flex items-center justify-center group-hover:bg-emerald-500/20 transition-all">
+                  <ChevronRight className="w-5 h-5 text-emerald-500" />
                 </div>
-                <div className="text-center">
-                  <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600 group-hover:text-emerald-500 transition-all block">
-                    {isHindi ? "Agla Adhyay" : "Next Chapter"}
-                  </span>
-                </div>
+                <span className="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-600 group-hover:text-emerald-500 transition-all">
+                  {isHindi ? "Agla Adhyay" : "Next Chapter"}
+                </span>
               </button>
             </div>
           </div>
@@ -270,40 +262,39 @@ export default function BibleReaderPage() {
       </main>
 
       {/* Ultra-Small Audio Control Bar */}
-      <div className="fixed bottom-16 left-1/2 -translate-x-1/2 w-[85%] max-w-xs z-[70]">
-        <div className="bg-zinc-900/90 backdrop-blur-2xl border border-white/10 rounded-full p-1.5 flex items-center justify-between shadow-2xl">
+      <div className="fixed bottom-14 left-1/2 -translate-x-1/2 w-[80%] max-w-xs z-[70]">
+        <div className="bg-zinc-900/95 backdrop-blur-2xl border border-zinc-800 rounded-full p-1 flex items-center justify-between shadow-2xl">
           <button 
             onClick={() => setChapter(prev => Math.max(1, prev - 1))}
-            className="size-10 rounded-full hover:bg-white/5 flex items-center justify-center text-zinc-500 transition-colors"
+            className="size-9 rounded-full hover:bg-zinc-800 flex items-center justify-center text-zinc-500 transition-colors"
           >
-            <ChevronLeft className="w-5 h-5" />
+            <ChevronLeft className="w-4 h-4" />
           </button>
           
           <button 
             onClick={toggleAudio}
-            className="flex items-center gap-4 bg-emerald-500 text-black px-6 py-2 rounded-full shadow-xl shadow-emerald-500/20 active:scale-95 transition-all group"
+            className="flex items-center gap-3 bg-emerald-500 text-black px-5 py-2 rounded-full shadow-xl shadow-emerald-500/20 active:scale-95 transition-all"
           >
             {isPlaying ? (
               <>
-                <Pause className="w-4 h-4 fill-black animate-pulse" />
-                <span className="text-[9px] font-black uppercase tracking-widest">Stop</span>
+                <Pause className="w-3 h-3 fill-black animate-pulse" />
+                <span className="text-[8px] font-black uppercase tracking-widest">Stop</span>
               </>
             ) : (
               <>
-                <Volume2 className="w-4 h-4" />
-                <span className="text-[9px] font-black uppercase tracking-widest">{isHindi ? "Sunein" : "Listen"}</span>
+                <Volume2 className="w-3 h-3" />
+                <span className="text-[8px] font-black uppercase tracking-widest">{isHindi ? "Sunein" : "Listen"}</span>
               </>
             )}
           </button>
 
           <button 
             onClick={() => {
-              const maxCh = currentBookData?.chapters || 1;
-              if (chapter < maxCh) setChapter(chapter + 1);
+              if (chapter < currentBookData.chapters) setChapter(chapter + 1);
             }}
-            className="size-10 rounded-full hover:bg-white/5 flex items-center justify-center text-zinc-500 transition-colors"
+            className="size-9 rounded-full hover:bg-zinc-800 flex items-center justify-center text-zinc-500 transition-colors"
           >
-            <ChevronRight className="w-5 h-5" />
+            <ChevronRight className="w-4 h-4" />
           </button>
         </div>
       </div>
