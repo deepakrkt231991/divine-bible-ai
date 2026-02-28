@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -35,27 +36,14 @@
     height: 100%;
     margin: 0;
     padding: 0;
-    overflow: hidden; /* Screen ko hilne se rokega */
+    overflow: hidden;
     @apply bg-[#09090b] text-zinc-100 antialiased selection:bg-emerald-500/30 font-sans;
   }
-}
-
-#app-container {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  width: 100%;
-  max-width: 448px; 
-  margin: 0 auto;
-  position: relative;
-  background: #09090b;
-  overflow: hidden;
 }
 
 main {
   flex: 1;
   overflow-y: auto;
-  padding-bottom: 120px; /* Reduced for smaller nav */
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
 }
@@ -78,15 +66,4 @@ main {
 
 .highlight-emerald {
   @apply bg-emerald-500/10 border-l-4 border-emerald-500 rounded-r-2xl;
-}
-
-.glass-nav {
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-  max-width: 448px;
-  z-index: 50;
-  background: rgba(9, 9, 11, 0.9);
-  backdrop-filter: blur(20px);
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
