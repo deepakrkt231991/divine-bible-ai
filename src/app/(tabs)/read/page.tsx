@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { 
   ChevronLeft, 
@@ -10,7 +10,7 @@ import {
   Loader2,
   Volume2,
   Pause,
-  BookOpen
+  ArrowRight
 } from 'lucide-react';
 import { BIBLE_BOOKS } from '@/lib/bible-index';
 import { cn } from '@/lib/utils';
@@ -18,7 +18,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from '@/hooks/use-toast';
 
-export default function BibleReaderPage() {
+function ReaderContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { toast } = useToast();
@@ -43,7 +43,6 @@ export default function BibleReaderPage() {
     if (saved) setHighlights(JSON.parse(saved));
   }, []);
 
-  // Fetch Chapter Content from Local JSON
   const loadChapterData = useCallback(async (bid: string, cid: number, ver: string) => {
     setLoading(true);
     try {
@@ -54,15 +53,11 @@ export default function BibleReaderPage() {
       
       const data = await res.json();
       
-      // Auto-switch logic: If book not in mode, default to genesis
+      // Auto-fallback logic
       const bookData = data[bid] || data['genesis'];
       const content = bookData?.[cid.toString()] || bookData?.['1'] || [];
       
-      if (content.length === 0) {
-        setVerses(["Prabhu ke vachan load ho rahe hain...", "Scriptures are being prepared..."]);
-      } else {
-        setVerses(content);
-      }
+      setVerses(content);
 
       // Sync URL
       const params = new URLSearchParams();
@@ -74,7 +69,7 @@ export default function BibleReaderPage() {
       if (scrollRef.current) scrollRef.current.scrollTop = 0;
     } catch (e) {
       console.error("Local Reader Load Error:", e);
-      setVerses(["Vachan dhoondne mein dikkat hui. Please /public/bible/ folder check karein."]);
+      setVerses(["Vachan dhoondne mein dikkat hui. Please check /public/bible/kjv.json and hin_irv.json files."]);
     } finally {
       setLoading(false);
     }
@@ -119,7 +114,7 @@ export default function BibleReaderPage() {
   );
 
   return (
-    <div className="flex flex-col h-screen bg-[#09090b] text-slate-100 max-w-md mx-auto overflow-hidden relative">
+    <div className="flex flex-col h-screen bg-[#09090b] text-slate-100 max-w-md mx-auto overflow-hidden relative border-x border-white/5 shadow-2xl">
       {/* Header - Compact */}
       <header className="px-4 py-3 border-b border-zinc-900 flex justify-between items-center bg-[#09090b]/95 backdrop-blur-md sticky top-0 z-[60]">
         <Dialog open={selectorOpen} onOpenChange={setSelectorOpen}>
@@ -136,23 +131,23 @@ export default function BibleReaderPage() {
               </span>
             </button>
           </DialogTrigger>
-          <DialogContent className="bg-zinc-950 border-zinc-900 p-0 max-h-[85vh] flex flex-col max-w-[92%] rounded-[2rem]">
-            <DialogHeader className="p-4 border-b border-zinc-900">
+          <DialogContent className="bg-zinc-950 border-zinc-900 p-0 max-h-[85vh] flex flex-col max-w-[92%] rounded-[2.5rem] shadow-2xl">
+            <DialogHeader className="p-5 border-b border-zinc-900">
               <DialogTitle className="text-emerald-500 font-serif italic text-xl">
                 {isHindi ? "Pustak Chunein" : "Select Book"}
               </DialogTitle>
-              <div className="relative mt-3">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
+              <div className="relative mt-4">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
                 <input 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={isHindi ? "Dhoondhein..." : "Search..."} 
-                  className="w-full bg-zinc-900 border-none rounded-xl pl-10 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-emerald-500/30 text-white"
+                  placeholder={isHindi ? "Bible dhoondhein..." : "Search Bible..."} 
+                  className="w-full bg-zinc-900 border-none rounded-2xl pl-11 pr-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500/20 text-white"
                 />
               </div>
             </DialogHeader>
-            <ScrollArea className="flex-1 p-2">
-              <div className="grid grid-cols-1 gap-1">
+            <ScrollArea className="flex-1 p-3">
+              <div className="grid grid-cols-1 gap-1.5">
                 {filteredBooks.map((b) => (
                   <div key={b.id} className="space-y-1">
                     <button 
@@ -161,15 +156,15 @@ export default function BibleReaderPage() {
                         setChapter(1);
                       }}
                       className={cn(
-                        "w-full flex items-center justify-between p-3.5 rounded-xl transition-all",
-                        book === b.id ? "bg-emerald-500/10 text-emerald-500" : "hover:bg-zinc-900 text-zinc-300"
+                        "w-full flex items-center justify-between p-4 rounded-2xl transition-all",
+                        book === b.id ? "bg-emerald-500/10 text-emerald-500" : "hover:bg-zinc-900 text-zinc-400"
                       )}
                     >
                       <span className="font-bold text-sm">{isHindi ? b.hi : b.en}</span>
-                      <span className="text-[9px] uppercase font-black opacity-40">{b.chapters} Ch</span>
+                      <span className="text-[9px] uppercase font-black opacity-30 tracking-widest">{b.chapters} Chapters</span>
                     </button>
                     {book === b.id && (
-                      <div className="grid grid-cols-5 gap-2 p-3 bg-zinc-900/50 rounded-xl mb-2">
+                      <div className="grid grid-cols-5 gap-2 p-3 bg-zinc-900/50 rounded-[1.5rem] mb-3 border border-white/5 shadow-inner">
                         {Array.from({ length: b.chapters }, (_, i) => i + 1).map(ch => (
                           <button
                             key={ch}
@@ -178,8 +173,8 @@ export default function BibleReaderPage() {
                               setSelectorOpen(false);
                             }}
                             className={cn(
-                              "size-9 rounded-lg flex items-center justify-center text-[11px] font-black transition-all",
-                              chapter === ch ? "bg-emerald-500 text-black shadow-lg" : "bg-zinc-800 text-zinc-400"
+                              "size-10 rounded-xl flex items-center justify-center text-xs font-black transition-all",
+                              chapter === ch ? "bg-emerald-500 text-black shadow-lg" : "bg-zinc-800 text-zinc-500 hover:text-emerald-500"
                             )}
                           >
                             {ch}
@@ -196,40 +191,40 @@ export default function BibleReaderPage() {
         
         <button 
           onClick={() => setVersion(isHindi ? 'kjv' : 'hin_irv')}
-          className="p-2 rounded-lg bg-zinc-900 border border-zinc-800 text-emerald-500 hover:bg-emerald-500/10 transition-colors"
+          className="size-10 flex items-center justify-center rounded-xl bg-zinc-900 border border-zinc-800 text-emerald-500 hover:bg-emerald-500/10 transition-colors"
         >
-          <Languages className="w-4 h-4" />
+          <Languages className="w-5 h-5" />
         </button>
       </header>
 
       {/* Main Content Area */}
       <main ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-6 pb-48 hide-scrollbar bg-[#09090b]">
         {loading ? (
-          <div className="flex flex-col items-center justify-center h-full space-y-4 opacity-40 py-20">
-            <Loader2 className="w-10 h-10 text-emerald-500 animate-spin" />
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500">
-              {isHindi ? "Vachan load ho rahe hain..." : "Loading Scriptures..."}
+          <div className="flex flex-col items-center justify-center h-full space-y-6 opacity-30 py-32">
+            <Loader2 className="w-12 h-12 text-emerald-500 animate-spin" />
+            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-emerald-500">
+              {isHindi ? "Pavitra Shastra Load Ho Raha Hai..." : "Preparing The Word..."}
             </p>
           </div>
         ) : (
-          <div className="space-y-6 animate-in fade-in duration-700">
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
             {verses.map((v, i) => (
               <div 
                 key={i} 
                 onClick={() => toggleHighlight(i)}
                 className={cn(
-                  "relative group cursor-pointer transition-all duration-300 p-2 -mx-2 rounded-xl border-l-2",
+                  "relative group cursor-pointer transition-all duration-300 p-3 -mx-2 rounded-2xl border-l-2",
                   highlights[`${book}_${chapter}_${i}`] 
-                    ? "bg-emerald-500/10 border-emerald-500/50" 
-                    : "border-transparent hover:bg-zinc-900/40"
+                    ? "bg-emerald-500/10 border-emerald-500/50 shadow-[inset_0_0_10px_rgba(16,185,129,0.1)]" 
+                    : "border-transparent hover:bg-white/5"
                 )}
               >
-                <span className="text-emerald-500 font-black text-[9px] absolute -left-1 top-2.5 opacity-40">{i + 1}</span>
-                <p className="pl-4 font-serif text-[1.1rem] leading-[1.8] text-slate-200 italic">{v}</p>
+                <span className="text-emerald-500 font-black text-[10px] absolute -left-1 top-4 opacity-40">{i + 1}</span>
+                <p className="pl-5 font-serif text-[1.15rem] leading-[1.8] text-zinc-100 italic">{v}</p>
               </div>
             ))}
             
-            <div className="pt-12 pb-8 border-t border-zinc-900">
+            <div className="pt-16 pb-12 border-t border-zinc-900/50">
               <button 
                 onClick={() => {
                   if (chapter < currentBookData.chapters) setChapter(chapter + 1);
@@ -241,12 +236,12 @@ export default function BibleReaderPage() {
                     }
                   }
                 }}
-                className="w-full py-8 border-2 border-dashed border-zinc-900 rounded-[2rem] flex flex-col items-center justify-center gap-3 group hover:border-emerald-500/30 transition-all"
+                className="w-full py-10 border-2 border-dashed border-zinc-900 rounded-[2.5rem] flex flex-col items-center justify-center gap-4 group hover:border-emerald-500/30 transition-all shadow-xl bg-zinc-900/20"
               >
-                <div className="size-10 rounded-xl bg-emerald-500/10 flex items-center justify-center group-hover:bg-emerald-500/20 transition-all">
-                  <ChevronRight className="w-5 h-5 text-emerald-500" />
+                <div className="size-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center group-hover:bg-emerald-500/20 transition-all border border-emerald-500/10">
+                  <ArrowRight className="w-6 h-6 text-emerald-500" />
                 </div>
-                <span className="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-600 group-hover:text-emerald-500 transition-all">
+                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-600 group-hover:text-emerald-500 transition-all">
                   {isHindi ? "Agla Adhyay" : "Next Chapter"}
                 </span>
               </button>
@@ -255,29 +250,29 @@ export default function BibleReaderPage() {
         )}
       </main>
 
-      {/* Floating Audio Bar */}
-      <div className="fixed bottom-14 left-1/2 -translate-x-1/2 w-[85%] max-w-xs z-[70]">
-        <div className="bg-zinc-900/95 backdrop-blur-2xl border border-zinc-800 rounded-full p-1.5 flex items-center justify-between shadow-2xl">
+      {/* Floating Audio Bar - Ultra Sleek */}
+      <div className="fixed bottom-14 left-1/2 -translate-x-1/2 w-[90%] max-w-sm z-[70]">
+        <div className="bg-zinc-900/95 backdrop-blur-3xl border border-white/5 rounded-full p-1.5 flex items-center justify-between shadow-[0_20px_50px_rgba(0,0,0,0.8)]">
           <button 
             onClick={() => setChapter(prev => Math.max(1, prev - 1))}
-            className="size-10 rounded-full hover:bg-zinc-800 flex items-center justify-center text-zinc-500 transition-colors"
+            className="size-11 rounded-full hover:bg-white/5 flex items-center justify-center text-zinc-500 transition-colors"
           >
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft className="w-5 h-5" />
           </button>
           
           <button 
             onClick={toggleAudio}
-            className="flex items-center gap-3 bg-emerald-500 text-black px-6 py-2.5 rounded-full shadow-xl shadow-emerald-500/20 active:scale-95 transition-all"
+            className="flex items-center gap-3 bg-emerald-500 text-black px-8 py-3 rounded-full shadow-2xl shadow-emerald-500/30 active:scale-95 transition-all group"
           >
             {isPlaying ? (
               <>
                 <Pause className="w-4 h-4 fill-black animate-pulse" />
-                <span className="text-[9px] font-black uppercase tracking-widest">Stop</span>
+                <span className="text-[10px] font-black uppercase tracking-widest">Stop</span>
               </>
             ) : (
               <>
-                <Volume2 className="w-4 h-4" />
-                <span className="text-[9px] font-black uppercase tracking-widest">{isHindi ? "Sunein" : "Listen"}</span>
+                <Volume2 className="w-4 h-4 group-hover:animate-bounce" />
+                <span className="text-[10px] font-black uppercase tracking-widest">{isHindi ? "Sunein" : "Listen"}</span>
               </>
             )}
           </button>
@@ -286,12 +281,24 @@ export default function BibleReaderPage() {
             onClick={() => {
               if (chapter < currentBookData.chapters) setChapter(chapter + 1);
             }}
-            className="size-10 rounded-full hover:bg-zinc-800 flex items-center justify-center text-zinc-500 transition-colors"
+            className="size-11 rounded-full hover:bg-white/5 flex items-center justify-center text-zinc-500 transition-colors"
           >
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="w-5 h-5" />
           </button>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function BibleReaderPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen w-full items-center justify-center bg-zinc-950">
+        <Loader2 className="w-10 h-10 text-emerald-500 animate-spin" />
+      </div>
+    }>
+      <ReaderContent />
+    </Suspense>
   );
 }

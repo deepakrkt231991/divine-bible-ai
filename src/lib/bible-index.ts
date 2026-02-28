@@ -28,7 +28,7 @@ export const BIBLE_BOOKS = [
   { id: "daniel", en: "Daniel", hi: "दानिय्येल", chapters: 12 },
   { id: "hosea", en: "Hosea", hi: "होशे", chapters: 14 },
   { id: "joel", en: "Joel", hi: "योएल", chapters: 3 },
-  { id: "amos", en: "Amos", hi: "आमोस", chapters: 9 },
+  { id: "amos", en: "Amos", hi: "आमोos", chapters: 9 },
   { id: "obadiah", en: "Obadiah", hi: "ओबद्याह", chapters: 1 },
   { id: "jonah", en: "Jonah", hi: "योना", chapters: 4 },
   { id: "micah", en: "Micah", hi: "मीका", chapters: 7 },
