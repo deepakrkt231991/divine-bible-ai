@@ -3,7 +3,7 @@ export type BibleBook = {
   en: string;
   hi: string;
   chapters: number;
-  testament: 'old' | 'new';
+  testament: 'old' | 'new' | 'deuterocanon';
 };
 
 export const BIBLE_BOOKS: BibleBook[] = [
@@ -47,6 +47,23 @@ export const BIBLE_BOOKS: BibleBook[] = [
   { id: "haggai", hi: "हाग्गै", en: "Haggai", chapters: 2, testament: "old" },
   { id: "zechariah", hi: "जकर्याह", en: "Zechariah", chapters: 14, testament: "old" },
   { id: "malachi", hi: "मलाकी", en: "Malachi", chapters: 4, testament: "old" },
+
+  // DEUTEROCANONICAL / APOCRYPHA (15 Books)
+  { id: "tobit", en: "Tobit", hi: "तोबियाह", chapters: 14, testament: "deuterocanon" },
+  { id: "judith", en: "Judith", hi: "यहूदीत", chapters: 16, testament: "deuterocanon" },
+  { id: "wisdom", en: "Wisdom", hi: "बुद्धि", chapters: 19, testament: "deuterocanon" },
+  { id: "sirach", en: "Sirach", hi: "सिराख", chapters: 51, testament: "deuterocanon" },
+  { id: "baruch", en: "Baruch", hi: "बारूक", chapters: 5, testament: "deuterocanon" },
+  { id: "letter_of_jeremiah", en: "Letter of Jeremiah", hi: "यिर्मयाह का पत्र", chapters: 1, testament: "deuterocanon" },
+  { id: "prayer_of_azariah", en: "Prayer of Azariah", hi: "अजरयाह की प्रार्थना", chapters: 1, testament: "deuterocanon" },
+  { id: "susanna", en: "Susanna", hi: "सूसाना", chapters: 1, testament: "deuterocanon" },
+  { id: "bel_and_dragon", en: "Bel and the Dragon", hi: "बेल और अजगर", chapters: 1, testament: "deuterocanon" },
+  { id: "1_maccabees", en: "1 Maccabees", hi: "1 मक्काबी", chapters: 16, testament: "deuterocanon" },
+  { id: "2_maccabees", en: "2 Maccabees", hi: "2 मक्काबी", chapters: 15, testament: "deuterocanon" },
+  { id: "1_esdras", en: "1 Esdras", hi: "1 एज्रा", chapters: 9, testament: "deuterocanon" },
+  { id: "prayer_of_manasseh", en: "Prayer of Manasseh", hi: "मनश्शे की प्रार्थना", chapters: 1, testament: "deuterocanon" },
+  { id: "3_maccabees", en: "3 Maccabees", hi: "3 मक्काबी", chapters: 7, testament: "deuterocanon" },
+  { id: "4_maccabees", en: "4 Maccabees", hi: "4 मक्काबी", chapters: 18, testament: "deuterocanon" },
 
   // NEW TESTAMENT (27 Books)
   { id: "matthew", en: "Matthew", hi: "मत्ती", chapters: 28, testament: "new" },
