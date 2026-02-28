@@ -13,7 +13,6 @@ import {
   ArrowRight,
   BookOpen,
   PlusCircle,
-  X,
   Highlighter
 } from 'lucide-react';
 import { BIBLE_BOOKS } from '@/lib/bible-index';
@@ -21,14 +20,11 @@ import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useFirebase } from '@/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 function ReaderContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { firestore, user } = useFirebase();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
 
@@ -44,8 +40,6 @@ function ReaderContent() {
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedBook, setExpandedBook] = useState<string | null>(bookId);
-  const [noteContent, setNoteContent] = useState("");
-  const [activeVerseIndex, setActiveVerseIndex] = useState<number | null>(null);
 
   const isHindi = version === 'hin_irv';
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -115,7 +109,11 @@ function ReaderContent() {
   };
 
   const toggleAudio = () => {
-    if (isPlaying) { window.speechSynthesis.cancel(); setIsPlaying(false); return; }
+    if (isPlaying) { 
+      window.speechSynthesis.cancel(); 
+      setIsPlaying(false); 
+      return; 
+    }
     if (verses.length === 0) return;
     const utterance = new SpeechSynthesisUtterance(verses.join(" "));
     utterance.lang = isHindi ? 'hi-IN' : 'en-US';
@@ -183,9 +181,27 @@ function ReaderContent() {
               </TabsList>
 
               <ScrollArea className="flex-1 px-6 py-4">
-                <TabsContent value="old" className="m-0"><div className="grid grid-cols-1 gap-1.5">{filteredBooks('old').map(b => <BookItem key={b.id} b={b} currentChapter={chapterNum} isHindi={isHindi} onExpand={setExpandedBook} expandedBook={expandedBook} onSelect={handleUpdateNavigation} />)}</div></TabsContent>
-                <TabsContent value="deuterocanon" className="m-0"><div className="grid grid-cols-1 gap-1.5">{filteredBooks('deuterocanon').map(b => <BookItem key={b.id} b={b} currentChapter={chapterNum} isHindi={isHindi} onExpand={setExpandedBook} expandedBook={expandedBook} onSelect={handleUpdateNavigation} />)}</div></TabsContent>
-                <TabsContent value="new" className="m-0"><div className="grid grid-cols-1 gap-1.5">{filteredBooks('new').map(b => <BookItem key={b.id} b={b} currentChapter={chapterNum} isHindi={isHindi} onExpand={setExpandedBook} expandedBook={expandedBook} onSelect={handleUpdateNavigation} />)}</div></TabsContent>
+                <TabsContent value="old" className="m-0">
+                  <div className="grid grid-cols-1 gap-1.5">
+                    {filteredBooks('old').map(b => (
+                      <BookItem key={b.id} b={b} currentChapter={chapterNum} isHindi={isHindi} onExpand={setExpandedBook} expandedBook={expandedBook} onSelect={handleUpdateNavigation} />
+                    ))}
+                  </div>
+                </TabsContent>
+                <TabsContent value="deuterocanon" className="m-0">
+                  <div className="grid grid-cols-1 gap-1.5">
+                    {filteredBooks('deuterocanon').map(b => (
+                      <BookItem key={b.id} b={b} currentChapter={chapterNum} isHindi={isHindi} onExpand={setExpandedBook} expandedBook={expandedBook} onSelect={handleUpdateNavigation} />
+                    ))}
+                  </div>
+                </TabsContent>
+                <TabsContent value="new" className="m-0">
+                  <div className="grid grid-cols-1 gap-1.5">
+                    {filteredBooks('new').map(b => (
+                      <BookItem key={b.id} b={b} currentChapter={chapterNum} isHindi={isHindi} onExpand={setExpandedBook} expandedBook={expandedBook} onSelect={handleUpdateNavigation} />
+                    ))}
+                  </div>
+                </TabsContent>
               </ScrollArea>
             </Tabs>
           </DialogContent>
@@ -223,7 +239,6 @@ function ReaderContent() {
                   <span className="text-emerald-500 font-black text-[10px] opacity-40 uppercase tracking-widest">{i + 1}</span>
                   <div className="flex gap-4 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button type="button" onClick={() => toggleHighlight(i)} className="text-zinc-600 hover:text-emerald-500"><Highlighter className="w-4 h-4" /></button>
-                    <button type="button" onClick={() => setActiveVerseIndex(i)} className="text-zinc-600 hover:text-emerald-500"><PlusCircle className="w-4 h-4" /></button>
                   </div>
                 </div>
                 <p className="font-serif text-[1.25rem] leading-[1.8] text-zinc-100 italic">{v}</p>
