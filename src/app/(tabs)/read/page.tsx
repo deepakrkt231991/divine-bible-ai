@@ -54,7 +54,7 @@ function ReaderContent() {
     if (saved) setHighlights(JSON.parse(saved));
   }, []);
 
-  // MASTER LOADER: Fetch from Local JSON (Scrollmapper Format Compatible)
+  // MASTER LOADER: Robust fetch for both Array and Object JSON formats
   const loadChapterData = useCallback(async (bid: string, cid: number, ver: string) => {
     setLoading(true);
     try {
@@ -63,32 +63,45 @@ function ReaderContent() {
       if (!res.ok) throw new Error("Bible data file missing");
       
       const json = await res.json();
-      
-      // Filter for the specific book and chapter based on Scrollmapper structure
-      // Usually Scrollmapper is an array: [{book: "Genesis", chapter_nr: 1, chapter: {"1": {verse: "..."}}}, ...]
-      const bookData = json.find(
-        (item: any) =>
-          item.book.toLowerCase() === bid.toLowerCase() &&
-          item.chapter_nr.toString() === cid.toString()
-      );
+      let foundVerses: string[] = [];
 
-      if (bookData) {
-        const chapterObj = bookData.chapter;
-        const cleanVerses = Object.values(chapterObj).map(
-          (v: any) => (v as any).verse
+      // Logic 1: Handle Array Format (Scrollmapper standard)
+      if (Array.isArray(json)) {
+        const entry = json.find(
+          (item: any) =>
+            item.book?.toLowerCase() === bid.toLowerCase() &&
+            item.chapter_nr?.toString() === cid.toString()
         );
-        setVerses(cleanVerses);
-      } else {
-        // Fallback for different JSON structures (e.g. key-based)
-        const alternateData = json[bid]?.[cid.toString()] || [];
-        if (alternateData.length > 0) {
-          setVerses(alternateData);
-        } else {
-          setVerses(["Content not found. Please ensure JSON files are correctly formatted and placed in /public/bible/"]);
+        if (entry?.chapter) {
+          foundVerses = Object.values(entry.chapter).map((v: any) => 
+            typeof v === 'string' ? v : (v as any).verse
+          );
+        }
+      } 
+      // Logic 2: Handle Object Format (Keyed by book name)
+      else if (typeof json === 'object' && json !== null) {
+        const bookKey = Object.keys(json).find(k => k.toLowerCase() === bid.toLowerCase());
+        const bookData = bookKey ? (json as any)[bookKey] : null;
+        if (bookData) {
+          const chapterData = bookData[cid.toString()] || bookData[cid];
+          if (Array.isArray(chapterData)) {
+            foundVerses = chapterData;
+          } else if (typeof chapterData === 'object' && chapterData !== null) {
+            foundVerses = Object.values(chapterData).map((v: any) => 
+              typeof v === 'string' ? v : (v as any).verse
+            );
+          }
         }
       }
+
+      if (foundVerses.length > 0) {
+        setVerses(foundVerses);
+      } else {
+        // Fallback: If chapter not found, default to first chapter of the book
+        setVerses(["Content loading or not found. Please ensure JSON files are correct."]);
+      }
       
-      // Sync URL without reload
+      // Sync URL without reload (No-Back Navigation)
       const params = new URLSearchParams(window.location.search);
       params.set('book', bid);
       params.set('chapter', cid.toString());
@@ -98,7 +111,7 @@ function ReaderContent() {
       if (scrollRef.current) scrollRef.current.scrollTop = 0;
     } catch (e) {
       console.error("Reader Load Error:", e);
-      setVerses(["Scripture content could not be loaded. Please ensure /public/bible/ files are present."]);
+      setVerses(["Error loading scripture. Please check your data files in /public/bible/"]);
     } finally {
       setLoading(false);
     }
@@ -177,7 +190,7 @@ function ReaderContent() {
       <header className="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-[#09090b]/95 backdrop-blur-xl sticky top-0 z-[60]">
         <Dialog open={selectorOpen} onOpenChange={setSelectorOpen}>
           <DialogTrigger asChild>
-            <button type="button" className="flex flex-col items-center flex-1 active:scale-95 transition-all">
+            <button type="button" className="flex flex-col items-center flex-1 active:scale-95 transition-all outline-none">
               <div className="flex items-center gap-2">
                 <h2 className="font-serif text-lg font-bold text-emerald-500 capitalize italic leading-none">
                   {localizedBookName} {chapter}
@@ -201,7 +214,7 @@ function ReaderContent() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={isHindi ? "Pustak dhoondhein..." : "Search books..."} 
-                  className="w-full bg-zinc-900/50 border border-white/5 rounded-2xl pl-12 pr-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500/20 text-white placeholder:text-zinc-600"
+                  className="w-full bg-zinc-900/50 border border-white/5 rounded-2xl pl-12 pr-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500/20 text-white placeholder:text-zinc-600 outline-none"
                 />
               </div>
             </DialogHeader>
@@ -250,7 +263,7 @@ function ReaderContent() {
         <button 
           type="button"
           onClick={() => setVersion(isHindi ? 'kjv' : 'hin_irv')}
-          className="size-11 flex items-center justify-center rounded-2xl bg-zinc-900/50 border border-white/5 text-emerald-500 hover:bg-emerald-500/10 active:scale-90 transition-all"
+          className="size-11 flex items-center justify-center rounded-2xl bg-zinc-900/50 border border-white/5 text-emerald-500 hover:bg-emerald-500/10 active:scale-90 transition-all outline-none"
         >
           <Languages className="w-5 h-5" />
         </button>
@@ -422,11 +435,11 @@ function BookItem({ b, expandedBook, currentChapter, isHindi, onExpand, onSelect
           onExpand(isExpanded ? null : b.id);
         }}
         className={cn(
-          "w-full flex items-center justify-between p-4 rounded-2xl transition-all border",
+          "w-full flex items-center justify-between p-4 rounded-2xl transition-all border outline-none",
           isExpanded ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-500 shadow-xl" : "bg-zinc-900/40 border-white/5 hover:border-emerald-500/20 text-zinc-400"
         )}
       >
-        <div className="flex flex-col items-start">
+        <div className="flex flex-col items-start text-left">
           <span className="font-bold text-sm tracking-wide">{isHindi ? b.hi : b.en}</span>
           <span className="text-[9px] uppercase font-black opacity-30 tracking-widest mt-1">{b.chapters} Chapters</span>
         </div>
@@ -443,7 +456,7 @@ function BookItem({ b, expandedBook, currentChapter, isHindi, onExpand, onSelect
                 onSelect(b.id, ch);
               }}
               className={cn(
-                "size-10 rounded-xl flex items-center justify-center text-[10px] font-black transition-all active:scale-90",
+                "size-10 rounded-xl flex items-center justify-center text-[10px] font-black transition-all active:scale-90 outline-none",
                 currentChapter === ch ? "bg-emerald-500 text-black shadow-xl shadow-emerald-500/20" : "bg-zinc-950 text-zinc-600 hover:text-emerald-500 border border-white/5"
               )}
             >
