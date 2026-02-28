@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
@@ -39,6 +38,8 @@ export default function BibleReaderPage() {
   
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  const isHindi = version === 'hin_irv';
+
   // Load Highlights from LocalStorage
   useEffect(() => {
     const saved = localStorage.getItem('bible_highlights');
@@ -57,9 +58,7 @@ export default function BibleReaderPage() {
       const content = bookData ? bookData[chapter.toString()] || [] : [];
       
       if (content.length === 0) {
-        // Fallback to Chapter 1 if chapter is missing
-        const fallbackContent = bookData ? bookData["1"] || [] : [];
-        setVerses(fallbackContent);
+        setVerses(["Scripture text not found for this chapter.", "Pavitra vachan is adhyay ke liye uplabdh nahi hain."]);
       } else {
         setVerses(content);
       }
@@ -74,7 +73,7 @@ export default function BibleReaderPage() {
       if (scrollRef.current) scrollRef.current.scrollTop = 0;
     } catch (e) {
       console.error("Reader Load Error:", e);
-      setVerses(["Scripture data load error. Please ensure Bible JSON files are in /public/bible/.", "KJV and Hindi IRV are supported."]);
+      setVerses(["Error loading scripture. Ensure /public/bible/hin_irv.json exists.", "Vachan load karne mein truti aayi. Kripaya file check karein."]);
     } finally {
       setLoading(false);
     }
@@ -111,19 +110,21 @@ export default function BibleReaderPage() {
     if (newHighlights[id]) {
       delete newHighlights[id];
     } else {
-      newHighlights[id] = 'bg-emerald-500/20 border-l-4 border-emerald-500';
+      newHighlights[id] = 'bg-emerald-500/10 border-l-4 border-emerald-500';
     }
     setHighlights(newHighlights);
     localStorage.setItem('bible_highlights', JSON.stringify(newHighlights));
-    toast({ title: "Verse Action", description: "Highlight saved locally." });
+    toast({ title: isHindi ? "Vachan Highlight Hua" : "Verse Highlighted" });
   };
+
+  const currentBookData = BIBLE_INDEX.books.find(b => b.id === book);
+  const localizedBookName = currentBookData ? (isHindi ? currentBookData.name_hi : currentBookData.name) : "Genesis";
 
   const filteredBooks = BIBLE_INDEX.books.filter(b => 
     b.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    b.name_hi.toLowerCase().includes(searchQuery.toLowerCase()) ||
     b.id.includes(searchQuery.toLowerCase())
   );
-
-  const currentBookData = BIBLE_INDEX.books.find(b => b.id === book);
 
   return (
     <div className="flex flex-col h-screen bg-zinc-950 text-slate-100 max-w-md mx-auto overflow-hidden border-x border-white/5 font-sans relative">
@@ -134,7 +135,7 @@ export default function BibleReaderPage() {
             <button className="flex flex-col items-center flex-1">
               <div className="flex items-center gap-2">
                 <h2 className="font-serif text-lg font-bold text-emerald-500 capitalize italic">
-                  {currentBookData?.name.split(' (')[0]} {chapter}
+                  {localizedBookName} {chapter}
                 </h2>
                 <Search className="w-3.5 h-3.5 text-zinc-600" />
               </div>
@@ -145,13 +146,15 @@ export default function BibleReaderPage() {
           </DialogTrigger>
           <DialogContent className="bg-zinc-950 border-zinc-900 p-0 max-h-[80vh] flex flex-col max-w-[95%]">
             <DialogHeader className="p-4 border-b border-zinc-900">
-              <DialogTitle className="text-emerald-500 font-serif italic text-xl">Search Bible</DialogTitle>
+              <DialogTitle className="text-emerald-500 font-serif italic text-xl">
+                {isHindi ? "Bible Dhoondhein" : "Search Bible"}
+              </DialogTitle>
               <div className="relative mt-4">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
                 <input 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Find book..." 
+                  placeholder={isHindi ? "Pustak ka naam..." : "Find book..."} 
                   className="w-full bg-zinc-900 border-none rounded-xl pl-10 pr-4 py-3 text-sm focus:ring-1 focus:ring-emerald-500/30 text-white"
                 />
               </div>
@@ -170,7 +173,7 @@ export default function BibleReaderPage() {
                         book === b.id ? "bg-emerald-500/10 text-emerald-500" : "hover:bg-white/5 text-zinc-300"
                       )}
                     >
-                      <span className="font-bold text-sm">{b.name}</span>
+                      <span className="font-bold text-sm">{isHindi ? b.name_hi : b.name}</span>
                       <span className="text-[9px] uppercase font-black opacity-40">{b.chapters} Ch.</span>
                     </button>
                     {book === b.id && (
@@ -212,7 +215,9 @@ export default function BibleReaderPage() {
         {loading ? (
           <div className="flex flex-col items-center justify-center h-full space-y-4 opacity-40">
             <Loader2 className="w-10 h-10 text-emerald-500 animate-spin" />
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500">Loading Sacred Text...</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500">
+              {isHindi ? "Pavitra Vachan load ho rahe hain..." : "Loading Sacred Text..."}
+            </p>
           </div>
         ) : (
           <div className="space-y-8 animate-in fade-in duration-700">
@@ -250,7 +255,9 @@ export default function BibleReaderPage() {
                   <ChevronRight className="w-6 h-6 text-emerald-500" />
                 </div>
                 <div className="text-center">
-                  <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600 group-hover:text-emerald-500 transition-all block">Next Chapter</span>
+                  <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600 group-hover:text-emerald-500 transition-all block">
+                    {isHindi ? "Agla Adhyay" : "Next Chapter"}
+                  </span>
                 </div>
               </button>
             </div>
@@ -280,13 +287,16 @@ export default function BibleReaderPage() {
             ) : (
               <>
                 <Volume2 className="w-4 h-4" />
-                <span className="text-[10px] font-black uppercase tracking-widest">Listen</span>
+                <span className="text-[10px] font-black uppercase tracking-widest">{isHindi ? "Sunein" : "Listen"}</span>
               </>
             )}
           </button>
 
           <button 
-            onClick={() => setChapter(prev => prev + 1)}
+            onClick={() => {
+              const maxCh = currentBookData?.chapters || 1;
+              if (chapter < maxCh) setChapter(chapter + 1);
+            }}
             className="size-10 rounded-full hover:bg-white/5 flex items-center justify-center text-zinc-500 transition-colors"
           >
             <ChevronRight className="w-5 h-5" />
