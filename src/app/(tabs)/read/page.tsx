@@ -43,44 +43,43 @@ function ReaderContent() {
   const isHindi = version === 'hin_irv';
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // HYBRID LOADER (Tries Local JSON, Falls back to Bolls.life API)
+  // HYBRID LOADER: Tries local JSON, falls back to API
   const loadChapterData = useCallback(async (bid: string, cid: number, ver: string) => {
     setLoading(true);
     try {
       const fileName = ver === 'hin_irv' ? 'hin_irv.json' : ver === 'orthodox' ? 'orthodox.json' : 'kjv.json';
       let foundVerses: string[] = [];
 
-      // 1. Try Local Fetch First
+      // 1. TRY LOCAL FETCH
       try {
         const res = await fetch(`/bible/${fileName}`);
         if (res.ok) {
-          const fullData = await res.json();
+          const data = await res.json();
           const chapterKey = cid.toString();
 
-          if (Array.isArray(fullData)) {
-            const bookObj = fullData.find(item => 
+          // Handle Array Format (Scrollmapper)
+          if (Array.isArray(data)) {
+            const bookObj = data.find(item => 
               item.book?.toLowerCase() === bid.toLowerCase() && 
               item.chapter_nr?.toString() === chapterKey
             );
             if (bookObj && bookObj.chapter) {
-              foundVerses = Object.values(bookObj.chapter).map((v: any) => 
-                typeof v === 'string' ? v : (v.verse || v.text || "")
-              );
+              foundVerses = Object.values(bookObj.chapter).map((v: any) => v.verse || v.text || "");
             }
-          } else if (typeof fullData === 'object') {
-            const bookKey = Object.keys(fullData).find(k => k.toLowerCase() === bid.toLowerCase());
-            const bookData = bookKey ? fullData[bookKey] : null;
+          } 
+          // Handle Object Format (Flat)
+          else if (typeof data === 'object') {
+            const bookData = data[bid];
             if (bookData && bookData[chapterKey]) {
-              const chapterData = bookData[chapterKey];
-              foundVerses = Array.isArray(chapterData) ? chapterData : Object.values(chapterData).map((v: any) => typeof v === 'string' ? v : (v.verse || v.text || ""));
+              foundVerses = Array.isArray(bookData[chapterKey]) ? bookData[chapterKey] : Object.values(bookData[chapterKey]);
             }
           }
         }
       } catch (localErr) {
-        console.warn("Local file missing, trying API fallback...");
+        console.warn("Local file missing or error, trying API fallback...");
       }
 
-      // 2. Fallback to API if local data not found
+      // 2. FALLBACK TO BOLLS API
       if (foundVerses.length === 0) {
         const bookData = BIBLE_BOOKS.find(b => b.id === bid) || BIBLE_BOOKS[0];
         const bollsVer = ver === 'hin_irv' ? 'IRV_HIN' : 'KJV';
@@ -94,11 +93,16 @@ function ReaderContent() {
         }
       }
 
-      setVerses(foundVerses.length > 0 ? foundVerses : ["Content load nahi ho paya. Please check internet connection."]);
+      if (foundVerses.length > 0) {
+        setVerses(foundVerses);
+      } else {
+        setVerses(["Is adhyay ka content upload ho raha hai. Please check connection."]);
+      }
+      
       if (scrollRef.current) scrollRef.current.scrollTop = 0;
     } catch (e) {
       console.error("Reader Load Error:", e);
-      setVerses(["Scripture load nahi ho saki. Please try again later."]);
+      setVerses(["Scripture load nahi ho saki. /public/bible/ check karein ya internet connect karein."]);
     } finally {
       setLoading(false);
     }
@@ -107,6 +111,12 @@ function ReaderContent() {
   useEffect(() => {
     loadChapterData(bookId, chapterNum, version);
   }, [bookId, chapterNum, version, loadChapterData]);
+
+  // Persistent Highlights Load
+  useEffect(() => {
+    const saved = localStorage.getItem('bible_highlights');
+    if (saved) setHighlights(JSON.parse(saved));
+  }, []);
 
   const handleUpdateNavigation = (newBook: string, newChapter: number, newVersion?: string) => {
     setSelectorOpen(false);
@@ -151,10 +161,11 @@ function ReaderContent() {
 
   return (
     <div className="flex flex-col h-screen bg-[#09090b] text-zinc-100 overflow-hidden relative">
+      {/* Header Panel */}
       <header className="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-[#09090b]/95 backdrop-blur-xl sticky top-0 z-[60]">
         <Dialog open={selectorOpen} onOpenChange={setSelectorOpen}>
           <DialogTrigger asChild>
-            <button type="button" className="flex flex-col items-center flex-1 active:scale-95 transition-all outline-none group">
+            <button type="button" className="flex flex-col items-center flex-1 active:scale-95 transition-all outline-none">
               <div className="flex items-center gap-2">
                 <h2 className="font-serif text-lg font-bold text-emerald-500 capitalize italic leading-none">
                   {localizedBookName} {chapterNum}
@@ -166,7 +177,7 @@ function ReaderContent() {
               </span>
             </button>
           </DialogTrigger>
-          <DialogContent className="bg-[#09090b] border-white/5 p-0 max-h-[85vh] flex flex-col w-[95%] rounded-[2.5rem] shadow-2xl overflow-hidden focus:outline-none">
+          <DialogContent className="bg-[#09090b] border-white/5 p-0 max-h-[85vh] flex flex-col w-[95%] rounded-[2.5rem] shadow-2xl overflow-hidden">
             <DialogHeader className="p-6 border-b border-white/5 bg-zinc-900/20">
               <DialogTitle className="text-emerald-500 font-serif italic text-2xl flex items-center gap-3">
                 <BookOpen className="w-6 h-6" />
@@ -179,7 +190,7 @@ function ReaderContent() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search books..." 
-                  className="w-full bg-zinc-900/50 border border-white/5 rounded-2xl pl-12 pr-4 py-3 text-sm text-white outline-none"
+                  className="w-full bg-zinc-900/50 border border-white/5 rounded-2xl pl-12 pr-4 py-3 text-sm text-white outline-none focus:ring-1 focus:ring-emerald-500/30"
                 />
               </div>
             </DialogHeader>
@@ -227,11 +238,12 @@ function ReaderContent() {
         </button>
       </header>
 
+      {/* Main Content */}
       <main ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-8 pb-56 hide-scrollbar">
         {loading || isPending ? (
           <div className="flex flex-col items-center justify-center h-full space-y-8 opacity-40 py-40">
             <Loader2 className="w-14 h-14 text-emerald-500 animate-spin" />
-            <p className="text-[10px] font-black uppercase tracking-[0.5em] text-emerald-500 animate-pulse">Meditation in progress...</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.5em] text-emerald-500 animate-pulse">Consulting Scriptures...</p>
           </div>
         ) : (
           <div className="space-y-10 animate-in fade-in duration-700">
@@ -278,13 +290,14 @@ function ReaderContent() {
         )}
       </main>
 
+      {/* Floating Audio Controls */}
       <div className="fixed bottom-24 left-1/2 -translate-x-1/2 w-[92%] max-w-md z-[70]">
         <div className="bg-zinc-950/90 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-2 flex items-center justify-between shadow-2xl">
-          <button type="button" onClick={() => handleUpdateNavigation(bookId, Math.max(1, chapterNum - 1))} className="size-12 rounded-full hover:bg-white/5 flex items-center justify-center text-zinc-500"><ChevronLeft className="w-6 h-6" /></button>
-          <button type="button" onClick={toggleAudio} className="flex-1 mx-4 flex items-center justify-center gap-4 bg-emerald-500 text-black py-4 rounded-[1.75rem] shadow-xl group">
-            {isPlaying ? <><Pause className="w-5 h-5 fill-black animate-pulse" /><span className="text-[11px] font-black uppercase tracking-[0.2em]">Stop Audio</span></> : <><Volume2 className="w-5 h-5 group-hover:scale-110" /><span className="text-[11px] font-black uppercase tracking-[0.2em]">Listen</span></>}
+          <button type="button" onClick={() => handleUpdateNavigation(bookId, Math.max(1, chapterNum - 1))} className="size-12 rounded-full hover:bg-white/5 flex items-center justify-center text-zinc-500 transition-colors"><ChevronLeft className="w-6 h-6" /></button>
+          <button type="button" onClick={toggleAudio} className="flex-1 mx-4 flex items-center justify-center gap-4 bg-emerald-500 text-black py-4 rounded-[1.75rem] shadow-xl group hover:bg-emerald-400 transition-all">
+            {isPlaying ? <><Pause className="w-5 h-5 fill-black animate-pulse" /><span className="text-[11px] font-black uppercase tracking-[0.2em]">Stop Audio</span></> : <><Volume2 className="w-5 h-5 group-hover:scale-110 transition-transform" /><span className="text-[11px] font-black uppercase tracking-[0.2em]">Listen</span></>}
           </button>
-          <button type="button" onClick={() => { if (chapterNum < currentBookData.chapters) handleUpdateNavigation(bookId, chapterNum + 1); }} className="size-12 rounded-full hover:bg-white/5 flex items-center justify-center text-zinc-500"><ChevronRight className="w-6 h-6" /></button>
+          <button type="button" onClick={() => { if (chapterNum < currentBookData.chapters) handleUpdateNavigation(bookId, chapterNum + 1); }} className="size-12 rounded-full hover:bg-white/5 flex items-center justify-center text-zinc-500 transition-colors"><ChevronRight className="w-6 h-6" /></button>
         </div>
       </div>
     </div>

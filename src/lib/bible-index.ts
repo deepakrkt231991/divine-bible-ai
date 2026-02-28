@@ -53,7 +53,7 @@ export const BIBLE_BOOKS: BibleBook[] = [
   { id: "tobit", en: "Tobit", hi: "तोबियाह", chapters: 14, testament: "deuterocanon", bollsId: 67 },
   { id: "judith", en: "Judith", hi: "यहूदीत", chapters: 16, testament: "deuterocanon", bollsId: 68 },
   { id: "wisdom", en: "Wisdom", hi: "बुद्धि", chapters: 19, testament: "deuterocanon", bollsId: 69 },
-  { id: "sirach", en: "Sirach", hi: "सिराkh", chapters: 51, testament: "deuterocanon", bollsId: 70 },
+  { id: "sirach", en: "Sirach", hi: "सिराख", chapters: 51, testament: "deuterocanon", bollsId: 70 },
   { id: "baruch", en: "Baruch", hi: "बारूक", chapters: 5, testament: "deuterocanon", bollsId: 71 },
   { id: "letter_of_jeremiah", en: "Letter of Jeremiah", hi: "यिर्मयाह का पत्र", chapters: 1, testament: "deuterocanon", bollsId: 72 },
   { id: "prayer_of_azariah", en: "Prayer of Azariah", hi: "अजरयाह की प्रार्थना", chapters: 1, testament: "deuterocanon", bollsId: 73 },
