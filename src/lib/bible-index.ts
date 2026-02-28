@@ -1,4 +1,12 @@
-export const BIBLE_BOOKS = [
+export type BibleBook = {
+  id: string;
+  en: string;
+  hi: string;
+  chapters: number;
+  testament: 'old' | 'new';
+};
+
+export const BIBLE_BOOKS: BibleBook[] = [
   // OLD TESTAMENT (39 Books)
   { id: "genesis", en: "Genesis", hi: "उत्पत्ति", chapters: 50, testament: "old" },
   { id: "exodus", en: "Exodus", hi: "निर्गमन", chapters: 40, testament: "old" },

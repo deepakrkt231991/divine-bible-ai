@@ -32,7 +32,7 @@ function ReaderContent() {
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
 
-  // State initialization FROM URL (Single Source of Truth)
+  // URL state sync
   const bookId = searchParams.get('book') || 'genesis';
   const chapterNum = parseInt(searchParams.get('chapter') || '1');
   const version = searchParams.get('version') || 'hin_irv';
@@ -50,7 +50,7 @@ function ReaderContent() {
   const isHindi = version === 'hin_irv';
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Robust Fetcher for Array & Object JSON formats
+  // SMART LOADER (Handles Array and Object JSON)
   const loadChapterData = useCallback(async (bid: string, cid: number, ver: string) => {
     setLoading(true);
     try {
@@ -58,35 +58,35 @@ function ReaderContent() {
       const res = await fetch(`/bible/${fileName}`);
       if (!res.ok) throw new Error("Bible data file missing");
       
-      const json = await res.json();
+      const fullData = await res.json();
       let foundVerses: string[] = [];
-
-      // Normalize Chapter ID to string for key lookup
       const chapterKey = cid.toString();
 
-      if (Array.isArray(json)) {
-        // Scrollmapper Array Format: [{book: "Matthew", chapter_nr: 1, chapter: {"1": {verse: "..."}}}]
-        const entry = json.find(
-          (item: any) =>
-            item.book?.toLowerCase() === bid.toLowerCase() &&
-            item.chapter_nr?.toString() === chapterKey
+      // Case 1: JSON is an Array (Scrollmapper format)
+      if (Array.isArray(fullData)) {
+        const bookObj = fullData.find(item => 
+          item.book?.toLowerCase() === bid.toLowerCase() && 
+          item.chapter_nr?.toString() === chapterKey
         );
-        if (entry?.chapter) {
-          foundVerses = Object.values(entry.chapter).map((v: any) => 
-            typeof v === 'string' ? v : (v as any).verse || (v as any).text || ""
+        if (bookObj && bookObj.chapter) {
+          // Normalize verses from object/array inside chapter
+          foundVerses = Object.values(bookObj.chapter).map((v: any) => 
+            typeof v === 'string' ? v : (v.verse || v.text || "")
           );
         }
-      } else if (typeof json === 'object' && json !== null) {
-        // Standard Object Format: {"matthew": {"1": ["verse1", "verse2"]}}
-        const bookKey = Object.keys(json).find(k => k.toLowerCase() === bid.toLowerCase());
-        const bookData = bookKey ? (json as any)[bookKey] : null;
+      } 
+      // Case 2: JSON is an Object (Flat format)
+      else if (typeof fullData === 'object' && fullData !== null) {
+        // Try direct key access
+        const bookKey = Object.keys(fullData).find(k => k.toLowerCase() === bid.toLowerCase());
+        const bookData = bookKey ? (fullData as any)[bookKey] : null;
         if (bookData) {
           const chapterData = bookData[chapterKey];
           if (Array.isArray(chapterData)) {
             foundVerses = chapterData;
           } else if (typeof chapterData === 'object' && chapterData !== null) {
             foundVerses = Object.values(chapterData).map((v: any) => 
-              typeof v === 'string' ? v : (v as any).verse || (v as any).text || ""
+              typeof v === 'string' ? v : (v.verse || v.text || "")
             );
           }
         }
@@ -95,31 +95,27 @@ function ReaderContent() {
       if (foundVerses.length > 0) {
         setVerses(foundVerses);
       } else {
-        console.warn(`Content not found for Book: ${bid}, Chapter: ${cid}`);
-        setVerses(["Is adhyay ka vachan abhi uplabdha nahi hai. Kripya /public/bible/ folder check karein ya doosra adhyay chunein."]);
+        setVerses(["Is adhyay ka content abhi upload ho raha hai..."]);
       }
       
       if (scrollRef.current) scrollRef.current.scrollTop = 0;
     } catch (e) {
       console.error("Reader Load Error:", e);
-      setVerses(["Error loading scripture. Kripya check karein ki /public/bible/ mein JSON files sahi hain."]);
+      setVerses(["Scripture load nahi ho saki. /public/bible/ check karein."]);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Sync with URL changes
   useEffect(() => {
     loadChapterData(bookId, chapterNum, version);
   }, [bookId, chapterNum, version, loadChapterData]);
 
-  // Load Highlights
   useEffect(() => {
     const saved = localStorage.getItem('bible_highlights');
     if (saved) setHighlights(JSON.parse(saved));
   }, []);
 
-  // Navigation Logic WITHOUT Reload (The Permanent Fix)
   const handleUpdateNavigation = (newBook: string, newChapter: number, newVersion?: string) => {
     setSelectorOpen(false);
     startTransition(() => {
@@ -127,7 +123,6 @@ function ReaderContent() {
       params.set('book', newBook);
       params.set('chapter', newChapter.toString());
       params.set('version', newVersion || version);
-      // Use scroll: false to maintain scroll position context
       router.push(`?${params.toString()}`, { scroll: false });
     });
   };
