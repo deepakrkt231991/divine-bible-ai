@@ -4,7 +4,6 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   Loader2, 
   Bookmark, 
-  Volume2, 
   Share2,
   Search,
   Settings2,
@@ -12,7 +11,7 @@ import {
   WifiOff,
   BookOpen,
   Info,
-  X,
+  ChevronLeft,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFirebase } from '@/firebase';
@@ -25,7 +24,7 @@ import { Slider } from '@/components/ui/slider';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 // Offline Database Config (IndexedDB for 81 Books)
-const DB_NAME = "DivineCompass_V10";
+const DB_NAME = "DivineBible_V12";
 const STORE_NAME = "verses";
 
 // 81 Books Fallback Data (Manager's Critical Fix)
@@ -91,8 +90,18 @@ export default function BibleReaderPage() {
 
   const fetchBookList = useCallback(async () => {
     try {
-      const res = await fetch(`https://bolls.life/get-books/${state.translation}/`);
-      if (!res.ok) throw new Error("API Failure");
+      const trans = state.translation || 'IRV_HIN';
+      const res = await fetch(`https://bolls.life/get-books/${trans}/`);
+      
+      if (!res.ok) {
+        throw new Error("API Limit reached or Invalid Translation");
+      }
+      
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("Invalid Response Type");
+      }
+
       const books = await res.json();
       setState(prev => ({ ...prev, bookList: Array.isArray(books) ? books : BIBLE_81_FALLBACK }));
     } catch (e) {
@@ -107,7 +116,7 @@ export default function BibleReaderPage() {
     if (bId > 66 && (trans === 'IRV_HIN' || trans === 'KJV')) {
       targetTrans = 'NRSV';
       setState(prev => ({ ...prev, translation: 'NRSV' }));
-      toast({ title: "Auto-Switch", description: "This book is available in NRSV (81 books canon)." });
+      toast({ title: "Auto-Switch", description: "Ye book NRSV (81 books canon) mein khul rahi hai." });
     }
 
     const cacheKey = `${targetTrans}_${bId}_${chap}`;
@@ -132,8 +141,12 @@ export default function BibleReaderPage() {
 
       // 2. Fetch from API
       const response = await fetch(`https://bolls.life/get-chapter/${targetTrans}/${bId}/${chap}/`);
-      const textData = await response.text();
+      
+      if (!response.ok) {
+        throw new Error("Bolls.life API Error " + response.status);
+      }
 
+      const textData = await response.text();
       if (textData.startsWith("{") || textData.startsWith("[")) {
         const data = JSON.parse(textData);
         if (Array.isArray(data)) {
@@ -142,14 +155,14 @@ export default function BibleReaderPage() {
           const saveTx = db.transaction(STORE_NAME, "readwrite");
           saveTx.objectStore(STORE_NAME).put({ id: cacheKey, data, timestamp: Date.now() });
         } else {
-          throw new Error("Invalid Data Format");
+          throw new Error("Verses not found in valid format");
         }
       } else {
-        throw new Error("Server returned non-JSON data");
+        throw new Error("API returned non-JSON data");
       }
     } catch (e) {
       console.error("Bible Load Error:", e);
-      setError("Vachan load nahi ho paye. Kripaya dobara koshish karein ya version switch karein.");
+      setError("Vachan load nahi ho paye. Kripaya internet check karein ya version badlein.");
     } finally {
       setLoading(false);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -167,7 +180,7 @@ export default function BibleReaderPage() {
       window.removeEventListener('online', handleStatus);
       window.removeEventListener('offline', handleStatus);
     };
-  }, [state.bookId, state.chapter, state.translation]);
+  }, [state.bookId, state.chapter, state.translation, fetchBookList, loadChapter]);
 
   // Instant Filtered Book List for 81 Books
   const filteredBooks = useMemo(() => {
@@ -194,7 +207,7 @@ export default function BibleReaderPage() {
 
   const handleBookmark = async (v: any) => {
     if (!user || !firestore) {
-      toast({ title: "Note", description: "Vachan save karne ke liye sign in karein." });
+      toast({ title: "Login Required", description: "Vachan save karne ke liye sign in karein." });
       return;
     }
     const bookmarkId = `${state.bookId}_${state.chapter}_${v.verse}`;
@@ -209,15 +222,18 @@ export default function BibleReaderPage() {
       translation: state.translation,
       createdAt: serverTimestamp()
     }, { merge: true });
-    toast({ title: "Vachan Saved" });
+    toast({ title: "Bookmark Saved", description: "Vachan aapke profile mein save ho gaya hai." });
   };
 
   return (
     <div className="relative flex h-screen w-full flex-col overflow-hidden bg-[#09090b]">
-      {/* Top Header Panel (Sticky & Locked) */}
+      {/* Top Header Panel */}
       <header className="sticky top-0 z-[100] bg-[#09090b]/90 backdrop-blur-2xl border-b border-white/5 px-6 py-5">
         <div className="flex items-center justify-between max-w-2xl mx-auto w-full">
-          <Dialog open={state.isBookSelectorOpen} onOpenChange={(open) => setState(prev => ({ ...prev, isBookSelectorOpen: open, chapterPickerMode: false, searchQuery: '' }))}>
+          <Dialog 
+            open={state.isBookSelectorOpen} 
+            onOpenChange={(open) => setState(prev => ({ ...prev, isBookSelectorOpen: open, chapterPickerMode: false }))}
+          >
             <DialogTrigger asChild>
               <button className="flex items-center gap-3 group">
                 <div className="bg-emerald-500/10 p-2.5 rounded-xl border border-emerald-500/20 group-hover:bg-emerald-500/20 transition-all shadow-lg">
@@ -225,9 +241,9 @@ export default function BibleReaderPage() {
                 </div>
                 <div className="text-left">
                   <h2 className="text-lg font-bold font-serif italic text-white leading-none">
-                    {state.bookList.find(b => b.bookid === state.bookId)?.name || "Genesis"} {state.chapter}
+                    {state.bookList.find(b => b.bookid === state.bookId)?.name || "Utpatti"} {state.chapter}
                   </h2>
-                  <span className="text-[10px] text-zinc-500 font-black uppercase tracking-widest mt-1">Select Book</span>
+                  <span className="text-[10px] text-zinc-500 font-black uppercase tracking-widest mt-1">Sahi Pustak Chunein</span>
                 </div>
               </button>
             </DialogTrigger>
@@ -236,11 +252,11 @@ export default function BibleReaderPage() {
                 <div className="flex flex-col gap-4">
                   <div className="flex items-center justify-between">
                     <DialogTitle className="font-serif italic text-2xl text-emerald-500">
-                      {state.chapterPickerMode ? `Chapters: ${state.selectedBookForPicker?.name}` : "Pavitra Shastra"}
+                      {state.chapterPickerMode ? `${state.selectedBookForPicker?.name}` : "Pavitra Shastra"}
                     </DialogTitle>
                     {state.chapterPickerMode && (
                       <Button variant="ghost" size="sm" onClick={() => setState(prev => ({ ...prev, chapterPickerMode: false }))} className="text-emerald-500">
-                        Back to Books
+                        <ChevronLeft className="w-4 h-4 mr-1" /> Wapas
                       </Button>
                     )}
                   </div>
@@ -248,7 +264,7 @@ export default function BibleReaderPage() {
                     <div className="relative">
                       <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
                       <Input 
-                        placeholder="Matti, Psalms, Tobit..." 
+                        placeholder="Dhoondhein: Matti, Tobit ya ID..." 
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="bg-zinc-950 border-zinc-800 rounded-2xl pl-12 h-12 text-sm focus:ring-emerald-500/20"
@@ -259,29 +275,25 @@ export default function BibleReaderPage() {
               </DialogHeader>
               <ScrollArea className="h-[65vh] p-6">
                 {!state.chapterPickerMode ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {filteredBooks.length === 0 ? (
-                      <div className="col-span-full py-10 text-center text-zinc-600 font-serif italic">Koi book nahi mili...</div>
-                    ) : (
-                      filteredBooks.map(book => (
-                        <button 
-                          key={book.bookid} 
-                          onClick={() => handleBookSelect(book)}
-                          className={cn(
-                            "p-5 rounded-2xl border text-left transition-all relative group overflow-hidden",
-                            state.bookId === book.bookid ? "bg-emerald-500/10 border-emerald-500 text-emerald-500" : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-emerald-500/30"
-                          )}
-                        >
-                          <div className="relative z-10 flex flex-col">
-                            <span className="text-sm font-bold font-serif">{book.name}</span>
-                            <span className="text-[9px] uppercase font-black tracking-widest opacity-50 mt-1">{book.chapters} Chapters</span>
-                          </div>
-                        </button>
-                      ))
-                    )}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-20">
+                    {filteredBooks.map(book => (
+                      <button 
+                        key={book.bookid} 
+                        onClick={() => handleBookSelect(book)}
+                        className={cn(
+                          "p-5 rounded-2xl border text-left transition-all relative group overflow-hidden",
+                          state.bookId === book.bookid ? "bg-emerald-500/10 border-emerald-500 text-emerald-500" : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-emerald-500/30"
+                        )}
+                      >
+                        <div className="relative z-10 flex flex-col">
+                          <span className="text-sm font-bold font-serif">{book.name}</span>
+                          <span className="text-[9px] uppercase font-black tracking-widest opacity-50 mt-1">{book.chapters} Chapters</span>
+                        </div>
+                      </button>
+                    ))}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-5 gap-3 pb-10">
+                  <div className="grid grid-cols-5 gap-3 pb-20">
                     {Array.from({ length: state.selectedBookForPicker?.chapters || 1 }, (_, i) => i + 1).map(chap => (
                       <button 
                         key={chap} 
@@ -316,7 +328,7 @@ export default function BibleReaderPage() {
                 </button>
               </DialogTrigger>
               <DialogContent className="bg-zinc-950 border-zinc-800 rounded-[2.5rem] p-8 z-[120]">
-                <DialogHeader><DialogTitle className="font-serif italic text-emerald-500 text-2xl">Reading Style</DialogTitle></DialogHeader>
+                <DialogHeader><DialogTitle className="font-serif italic text-emerald-500 text-2xl">Vachan Settings</DialogTitle></DialogHeader>
                 <div className="space-y-10 pt-6">
                   <div className="space-y-4">
                     <div className="flex justify-between items-center text-[10px] font-black text-zinc-600 uppercase tracking-widest">
@@ -326,7 +338,7 @@ export default function BibleReaderPage() {
                     <Slider value={[fontSize]} onValueChange={(val) => setFontSize(val[0])} min={14} max={36} step={1} />
                   </div>
                   <div className="space-y-4">
-                    <span className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Translation</span>
+                    <span className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Anuvad (Translation)</span>
                     <div className="grid grid-cols-1 gap-2.5">
                       {BIBLE_VERSIONS.map(v => (
                         <button 
@@ -350,12 +362,12 @@ export default function BibleReaderPage() {
         </div>
       </header>
 
-      {/* Main Content Area (Scrollable with Bottom Padding) */}
-      <main className="flex-1 overflow-y-auto hide-scrollbar pb-[200px] scroll-smooth">
+      {/* Main Content Area */}
+      <main className="flex-1 overflow-y-auto hide-scrollbar pb-[250px] scroll-smooth">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-48 gap-8 opacity-40">
             <Loader2 className="w-16 h-16 text-emerald-500 animate-spin" />
-            <p className="text-emerald-500 font-serif italic text-2xl animate-pulse">Consulting Scriptures...</p>
+            <p className="text-emerald-500 font-serif italic text-2xl animate-pulse">Vachan taiyar ho rahe hain...</p>
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center py-40 text-center px-10 gap-8">
@@ -363,19 +375,18 @@ export default function BibleReaderPage() {
               <Info className="w-12 h-12 text-red-500" />
             </div>
             <p className="text-xl font-serif italic text-zinc-400 max-w-xs">{error}</p>
-            <Button variant="outline" onClick={() => loadChapter(state.bookId, state.chapter, state.translation)} className="rounded-full px-12 py-6 border-emerald-500 text-emerald-500 font-black uppercase tracking-widest text-[11px] hover:bg-emerald-500/10">
-              Retry Connection
+            <Button 
+              variant="outline" 
+              onClick={() => loadChapter(state.bookId, state.chapter, state.translation)} 
+              className="rounded-full px-12 py-6 border-emerald-500 text-emerald-500 font-black uppercase tracking-widest text-[11px] hover:bg-emerald-500/10"
+            >
+              Retry Load
             </Button>
-          </div>
-        ) : verses.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-40 text-center px-10 gap-6 opacity-40">
-            <BookOpen className="w-20 h-20 text-zinc-800" />
-            <p className="text-xl font-serif italic">Is chapter mein koi vachan nahi mila.</p>
           </div>
         ) : (
           <div className="max-w-2xl mx-auto py-12 px-8 space-y-12">
             <div className="space-y-4 mb-16">
-              <span className="text-[10px] font-black uppercase tracking-[0.4em] text-emerald-500 bg-emerald-500/10 px-4 py-1.5 rounded-full border border-emerald-500/20">Holy Word</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.4em] text-emerald-500 bg-emerald-500/10 px-4 py-1.5 rounded-full border border-emerald-500/20">Holy Scriptures</span>
               <h1 className="text-5xl font-bold font-serif italic text-white leading-tight">
                 {state.bookList.find(b => b.bookid === state.bookId)?.name} {state.chapter}
               </h1>
@@ -390,7 +401,7 @@ export default function BibleReaderPage() {
                   className={cn(
                     "p-5 rounded-[2rem] transition-all duration-700 relative group border border-transparent cursor-pointer",
                     state.selectedVerse?.pk === v.pk 
-                      ? "bg-emerald-500/5 border-emerald-500/20 shadow-2xl scale-[1.03] ring-1 ring-emerald-500/10" 
+                      ? "bg-emerald-500/5 border-emerald-500/20 shadow-2xl scale-[1.03]" 
                       : "hover:bg-zinc-900/40"
                   )}
                 >
@@ -411,7 +422,12 @@ export default function BibleReaderPage() {
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (navigator.share) navigator.share({ title: 'Divine Compass Verse', text: `"${v.text}" — ${state.bookList.find(b => b.bookid === state.bookId)?.name} ${state.chapter}:${v.verse}` });
+                          if (navigator.share) {
+                            navigator.share({ 
+                              title: 'Divine Compass Verse', 
+                              text: `"${v.text}" — ${state.bookList.find(b => b.bookid === state.bookId)?.name} ${state.chapter}:${v.verse}` 
+                            });
+                          }
                         }} 
                         className="flex items-center gap-3 bg-zinc-950 border border-zinc-800 px-6 py-3 rounded-2xl hover:text-emerald-500 shadow-2xl active:scale-90 transition-all"
                       >
@@ -435,8 +451,8 @@ export default function BibleReaderPage() {
                 <ArrowRight className="w-8 h-8 group-hover:translate-x-2 transition-transform" />
               </div>
               <div className="text-center">
-                <span className="text-[10px] font-black uppercase tracking-[0.6em] text-zinc-600 block mb-2">Continue Path</span>
-                <span className="text-xl font-bold font-serif italic text-zinc-200">Next Chapter {state.chapter + 1}</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.6em] text-zinc-600 block mb-2">Padhna Jari Rakhein</span>
+                <span className="text-xl font-bold font-serif italic text-zinc-200">Agla Chapter {state.chapter + 1}</span>
               </div>
             </button>
           </div>
@@ -445,3 +461,4 @@ export default function BibleReaderPage() {
     </div>
   );
 }
+
