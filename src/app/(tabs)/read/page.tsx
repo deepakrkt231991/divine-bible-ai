@@ -94,7 +94,7 @@ export default function BibleReaderPage() {
     try {
       const trans = state.translation || 'IRV_HIN';
       const res = await fetch(`https://bolls.life/get-books/${trans}/`);
-      if (!res.ok) throw new Error("API Failure");
+      if (!res.ok) throw new Error("API failure");
       const books = await res.json();
       setState(prev => ({ ...prev, bookList: Array.isArray(books) ? books : BIBLE_81_FALLBACK }));
     } catch (e) {
@@ -132,9 +132,8 @@ export default function BibleReaderPage() {
       }
 
       const response = await fetch(`https://bolls.life/get-chapter/${currentTrans}/${bId}/${chap}/`);
-      if (!response.ok) throw new Error("API Limit Reached");
-
       const textData = await response.text();
+
       if (textData.startsWith("{") || textData.startsWith("[")) {
         const data = JSON.parse(textData);
         if (Array.isArray(data)) {
@@ -145,14 +144,16 @@ export default function BibleReaderPage() {
           throw new Error("Invalid Format");
         }
       } else {
-        throw new Error("Non-JSON response");
+        throw new Error("Non-JSON response from server");
       }
     } catch (e) {
       console.error("Bible Engine Error:", e);
       setError("Vachan load nahi hue. Kripaya internet check karein ya Retry dabayein.");
     } finally {
       setLoading(false);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (typeof window !== 'undefined') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
     }
   }, [openDB, toast]);
 
@@ -351,7 +352,7 @@ export default function BibleReaderPage() {
       </header>
 
       {/* MAIN CONTENT AREA */}
-      <main className="flex-1 overflow-y-auto hide-scrollbar pb-[140px] scroll-smooth">
+      <main className="flex-1 overflow-y-auto hide-scrollbar pb-[200px] scroll-smooth">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-48 gap-8">
             <Loader2 className="w-12 h-12 text-emerald-500 animate-spin" />
@@ -468,6 +469,6 @@ export default function BibleReaderPage() {
           </button>
         </div>
       </div>
-    </nav>
+    </div>
   );
 }
