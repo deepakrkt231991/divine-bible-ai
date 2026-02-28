@@ -54,10 +54,27 @@ function ReaderContent() {
       if (!res.ok) throw new Error("Bible data file missing");
       
       const data = await res.json();
-      const bookData = data[bid] || data['genesis'];
-      const content = bookData?.[cid.toString()] || bookData?.['1'] || [];
       
-      setVerses(content);
+      // FIX: Smart Normalization and Fallback
+      const bookData = data[bid];
+      if (!bookData) {
+        console.warn(`Book ${bid} not found. Falling back to Genesis.`);
+        setBook('genesis');
+        setChapter(1);
+        return;
+      }
+
+      const chapterKey = cid.toString();
+      const content = bookData[chapterKey];
+
+      if (!content || content.length === 0) {
+        console.warn(`Chapter ${cid} not found for ${bid}. Falling back to first available chapter.`);
+        const firstAvailableChapter = Object.keys(bookData)[0] || "1";
+        setChapter(parseInt(firstAvailableChapter));
+        setVerses(bookData[firstAvailableChapter] || []);
+      } else {
+        setVerses(content);
+      }
 
       // Sync URL
       const params = new URLSearchParams();
@@ -69,7 +86,7 @@ function ReaderContent() {
       if (scrollRef.current) scrollRef.current.scrollTop = 0;
     } catch (e) {
       console.error("Local Reader Load Error:", e);
-      setVerses(["Vachan dhoondne mein dikkat hui. Please check /public/bible/kjv.json and hin_irv.json files."]);
+      setVerses(["Chapter not available. Please ensure /public/bible/kjv.json and hin_irv.json are uploaded."]);
     } finally {
       setLoading(false);
     }
