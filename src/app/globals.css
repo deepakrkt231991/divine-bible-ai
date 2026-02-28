@@ -35,7 +35,7 @@
     height: 100%;
     margin: 0;
     padding: 0;
-    overflow: hidden; /* Prevents whole page from scrolling/bouncing */
+    overflow: hidden; /* Screen ko hilne se rokega */
     @apply bg-[#09090b] text-zinc-100 antialiased selection:bg-emerald-500/30 font-sans;
   }
 }
@@ -55,7 +55,7 @@
 main {
   flex: 1;
   overflow-y: auto;
-  padding-bottom: 200px; /* Enhanced space for fixed bottom navigation */
+  padding-bottom: 250px; /* Space for fixed navigation and controls */
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
 }
@@ -72,12 +72,12 @@ main {
   box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
 }
 
-.highlight-emerald {
-  @apply bg-emerald-500/10 border-l-4 border-emerald-500 rounded-r-xl transition-all duration-300;
+.verse-line {
+  @apply cursor-pointer transition-all p-4 rounded-2xl hover:bg-emerald-500/5;
 }
 
-.verse-row {
-  @apply cursor-pointer transition-all p-3 rounded-xl hover:bg-zinc-800/30;
+.highlight-emerald {
+  @apply bg-emerald-500/10 border-l-4 border-emerald-500 rounded-r-2xl;
 }
 
 .glass-nav {
@@ -85,8 +85,8 @@ main {
   bottom: 0;
   width: 100%;
   max-width: 448px;
-  z-index: 50; /* Locked for visibility */
-  background: rgba(9, 9, 11, 0.85);
+  z-index: 50;
+  background: rgba(9, 9, 11, 0.9);
   backdrop-filter: blur(20px);
   border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
