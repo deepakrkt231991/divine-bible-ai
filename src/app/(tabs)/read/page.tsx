@@ -12,7 +12,6 @@ import {
   Pause,
   ArrowRight,
   BookOpen,
-  PlusCircle,
   Highlighter
 } from 'lucide-react';
 import { BIBLE_BOOKS } from '@/lib/bible-index';
@@ -31,7 +30,7 @@ function ReaderContent() {
   // URL state sync
   const bookId = searchParams.get('book') || 'genesis';
   const chapterNum = parseInt(searchParams.get('chapter') || '1');
-  const version = searchParams.get('version') || 'orthodox'; // Default to full 81-book Bible
+  const version = searchParams.get('version') || 'orthodox';
   
   const [verses, setVerses] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,50 +43,62 @@ function ReaderContent() {
   const isHindi = version === 'hin_irv';
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // SMART LOADER (Handles Array and Object JSON)
+  // HYBRID LOADER (Tries Local JSON, Falls back to Bolls.life API)
   const loadChapterData = useCallback(async (bid: string, cid: number, ver: string) => {
     setLoading(true);
     try {
       const fileName = ver === 'hin_irv' ? 'hin_irv.json' : ver === 'orthodox' ? 'orthodox.json' : 'kjv.json';
-      const res = await fetch(`/bible/${fileName}`);
-      if (!res.ok) throw new Error("Bible data file missing");
-      
-      const fullData = await res.json();
       let foundVerses: string[] = [];
-      const chapterKey = cid.toString();
 
-      // Universal Logic for Array (Scrollmapper) or Object (Flat)
-      if (Array.isArray(fullData)) {
-        const bookObj = fullData.find(item => 
-          item.book?.toLowerCase() === bid.toLowerCase() && 
-          item.chapter_nr?.toString() === chapterKey
-        );
-        if (bookObj && bookObj.chapter) {
-          foundVerses = Object.values(bookObj.chapter).map((v: any) => 
-            typeof v === 'string' ? v : (v.verse || v.text || "")
-          );
-        }
-      } else if (typeof fullData === 'object') {
-        const bookKey = Object.keys(fullData).find(k => k.toLowerCase() === bid.toLowerCase());
-        const bookData = bookKey ? fullData[bookKey] : null;
-        if (bookData) {
-          const chapterData = bookData[chapterKey];
-          if (Array.isArray(chapterData)) foundVerses = chapterData;
-          else if (typeof chapterData === 'object') {
-            foundVerses = Object.values(chapterData).map((v: any) => 
-              typeof v === 'string' ? v : (v.verse || v.text || "")
+      // 1. Try Local Fetch First
+      try {
+        const res = await fetch(`/bible/${fileName}`);
+        if (res.ok) {
+          const fullData = await res.json();
+          const chapterKey = cid.toString();
+
+          if (Array.isArray(fullData)) {
+            const bookObj = fullData.find(item => 
+              item.book?.toLowerCase() === bid.toLowerCase() && 
+              item.chapter_nr?.toString() === chapterKey
             );
+            if (bookObj && bookObj.chapter) {
+              foundVerses = Object.values(bookObj.chapter).map((v: any) => 
+                typeof v === 'string' ? v : (v.verse || v.text || "")
+              );
+            }
+          } else if (typeof fullData === 'object') {
+            const bookKey = Object.keys(fullData).find(k => k.toLowerCase() === bid.toLowerCase());
+            const bookData = bookKey ? fullData[bookKey] : null;
+            if (bookData && bookData[chapterKey]) {
+              const chapterData = bookData[chapterKey];
+              foundVerses = Array.isArray(chapterData) ? chapterData : Object.values(chapterData).map((v: any) => typeof v === 'string' ? v : (v.verse || v.text || ""));
+            }
           }
+        }
+      } catch (localErr) {
+        console.warn("Local file missing, trying API fallback...");
+      }
+
+      // 2. Fallback to API if local data not found
+      if (foundVerses.length === 0) {
+        const bookData = BIBLE_BOOKS.find(b => b.id === bid) || BIBLE_BOOKS[0];
+        const bollsVer = ver === 'hin_irv' ? 'IRV_HIN' : 'KJV';
+        const apiRes = await fetch(`https://bolls.life/get-chapter/${bollsVer}/${bookData.bollsId}/${cid}/`);
+        
+        if (apiRes.ok) {
+          const apiData = await apiRes.json();
+          foundVerses = apiData.map((v: any) => v.text);
+        } else {
+          throw new Error("API Fallback failed");
         }
       }
 
-      if (foundVerses.length > 0) setVerses(foundVerses);
-      else setVerses(["Is adhyay ka content abhi upload ho raha hai..."]);
-      
+      setVerses(foundVerses.length > 0 ? foundVerses : ["Content load nahi ho paya. Please check internet connection."]);
       if (scrollRef.current) scrollRef.current.scrollTop = 0;
     } catch (e) {
       console.error("Reader Load Error:", e);
-      setVerses(["Scripture load nahi ho saki. Please check local JSON files."]);
+      setVerses(["Scripture load nahi ho saki. Please try again later."]);
     } finally {
       setLoading(false);
     }
