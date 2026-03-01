@@ -9,7 +9,7 @@ export type BibleBook = {
 };
 
 export const BIBLE_BOOKS: BibleBook[] = [
-  // OLD TESTAMENT (39 Books)
+  // OLD TESTAMENT (39 Books) - IDs 1-39
   { id: "GEN", usfm: "GEN", en: "Genesis", hi: "उत्पत्ति", chapters: 50, testament: "old", bollsId: 1 },
   { id: "EXO", usfm: "EXO", en: "Exodus", hi: "निर्गमन", chapters: 40, testament: "old", bollsId: 2 },
   { id: "LEV", usfm: "LEV", en: "Leviticus", hi: "लैव्यव्यवस्था", chapters: 27, testament: "old", bollsId: 3 },
@@ -50,7 +50,7 @@ export const BIBLE_BOOKS: BibleBook[] = [
   { id: "ZEC", usfm: "ZEC", en: "Zechariah", hi: "जकर्याह", chapters: 14, testament: "old", bollsId: 38 },
   { id: "MAL", usfm: "MAL", en: "Malachi", hi: "मलाकी", chapters: 4, testament: "old", bollsId: 39 },
 
-  // DEUTEROCANONICAL / APOCRYPHA (15 Books)
+  // DEUTEROCANONICAL / APOCRYPHA (15 Books) - IDs 67-81
   { id: "TOB", usfm: "TOB", en: "Tobit", hi: "तोबियाह", chapters: 14, testament: "deuterocanon", bollsId: 67 },
   { id: "JDT", usfm: "JDT", en: "Judith", hi: "यहूदीत", chapters: 16, testament: "deuterocanon", bollsId: 68 },
   { id: "WIS", usfm: "WIS", en: "Wisdom", hi: "बुद्धि", chapters: 19, testament: "deuterocanon", bollsId: 69 },
@@ -67,7 +67,7 @@ export const BIBLE_BOOKS: BibleBook[] = [
   { id: "3MA", usfm: "3MA", en: "3 Maccabees", hi: "3 मक्काबी", chapters: 7, testament: "deuterocanon", bollsId: 80 },
   { id: "4MA", usfm: "4MA", en: "4 Maccabees", hi: "4 मक्काबी", chapters: 18, testament: "deuterocanon", bollsId: 81 },
 
-  // NEW TESTAMENT (27 Books)
+  // NEW TESTAMENT (27 Books) - IDs 40-66
   { id: "MAT", usfm: "MAT", en: "Matthew", hi: "मत्ती", chapters: 28, testament: "new", bollsId: 40 },
   { id: "MRK", usfm: "MRK", en: "Mark", hi: "मरकुस", chapters: 16, testament: "new", bollsId: 41 },
   { id: "LUK", usfm: "LUK", en: "Luke", hi: "लूका", chapters: 24, testament: "new", bollsId: 42 },

@@ -24,10 +24,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from '@/hooks/use-toast';
 
-const YOUVERSION_API_KEY = "IUbCPlFtzubFZp2RXPeUglroSB2EGGfCx52N67Xtw8AknzH6";
-const BIBLE_ID_HIN = "27931f79a0224647-01"; // Hindi IRV
-const BIBLE_ID_ENG = "de4e12af7f29f59f-01"; // English KJV
-
 function ReaderContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -37,9 +33,9 @@ function ReaderContent() {
   // URL State handling
   const bookParam = searchParams.get('book') || 'MAT';
   const chapterNum = parseInt(searchParams.get('chapter') || '1');
-  const version = searchParams.get('version') || 'hin_irv';
+  const version = searchParams.get('version') || 'HI_IRV'; // Default to Hindi IRV
   
-  const [content, setContent] = useState<string>("");
+  const [verses, setVerses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [selectorOpen, setSelectorOpen] = useState(false);
@@ -47,7 +43,6 @@ function ReaderContent() {
   const [fontSize, setFontSize] = useState(1.2);
   const [expandedBook, setExpandedBook] = useState<string | null>(null);
 
-  const isHindi = version === 'hin_irv';
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const loadBibleContent = useCallback(async (bid: string, cid: number, ver: string) => {
@@ -60,65 +55,32 @@ function ReaderContent() {
         b.hi === bid
       ) || BIBLE_BOOKS.find(b => b.id === 'MAT')!;
 
-      const bibleId = ver === 'hin_irv' ? BIBLE_ID_HIN : BIBLE_ID_ENG;
-      
-      // LAYER 1: TRY YOUVERSION API (Best for Formatting)
-      try {
-        const url = `https://api.scripture.api.bible/v1/bibles/${bibleId}/chapters/${bookData.usfm}${cid}?content-type=html&include-notes=false&include-titles=true&include-chapter-numbers=true&include-verse-numbers=true`;
-        const res = await fetch(url, {
-          headers: { "api-key": YOUVERSION_API_KEY, "Accept": "application/json" }
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          if (data.data && data.data.content) {
-            // Check if verse numbers are present in HTML, if not, we'll need to process
-            let html = data.data.content;
-            if (!html.includes('class="v"') && !html.includes('class="verse"')) {
-               // If no verse markers, might need manual numbering or fallback
-               console.warn("YouVersion content lacks verse markers, trying fallback...");
-               throw new Error("No verse markers");
-            }
-            setContent(html);
-            if (scrollRef.current) scrollRef.current.scrollTop = 0;
-            setLoading(false);
-            return;
-          }
-        }
-      } catch (e) {
-        console.warn("YouVersion failed or incomplete, using Bolls.life fallback...");
-      }
-
-      // LAYER 2: FALLBACK TO BOLLS.LIFE API (Reliable for Matthew 2 / Exodus 7)
-      const bollsCode = ver === 'hin_irv' ? 'HINIRV' : 'KJV';
-      const bollsRes = await fetch(`https://bolls.life/get-text/${bollsCode}/${bookData.bollsId}/${cid}/`);
+      // PRIMARY ENGINE: Bolls.life (HI_IRV)
+      // HI_IRV is standard for Hindi Indian Revised Version on Bolls
+      const bollsCode = ver === 'kjv' ? 'KJV' : 'HI_IRV';
+      const bollsRes = await fetch(`https://bolls.life/get-chapter/${bollsCode}/${bookData.bollsId}/${cid}/`);
       
       if (bollsRes.ok) {
         const bollsData = await bollsRes.json();
         if (Array.isArray(bollsData) && bollsData.length > 0) {
-          const html = bollsData.map((v: any) => 
-            `<p><span class="v">${v.verse}</span> ${v.text}</p>`
-          ).join("");
-          setContent(`<h3 class="fallback-title">${isHindi ? bookData.hi : bookData.en} ${cid}</h3>${html}`);
+          setVerses(bollsData);
           if (scrollRef.current) scrollRef.current.scrollTop = 0;
           setLoading(false);
           return;
         }
       }
 
-      // LAYER 3: ERROR STATE
-      setContent(`<div class="flex flex-col items-center py-20 text-zinc-500 text-center gap-4">
-        <AlertCircle class="w-12 h-12 opacity-20" />
-        <p class="italic">${isHindi ? bookData.hi : bookData.en} ${cid} load nahi ho paya.<br/>Internet check karein ya USFM code dekhein.</p>
-      </div>`);
+      // ERROR STATE
+      setVerses([]);
+      toast({ title: "Content not found", description: "Vachan load nahi ho paye. Internet check karein.", variant: "destructive" });
       
     } catch (e) {
       console.error("Reader Error:", e);
-      setContent("<p class='text-center py-20 text-red-500 italic'>Connection error! Please refresh.</p>");
+      setVerses([]);
     } finally {
       setLoading(false);
     }
-  }, [isHindi]);
+  }, [toast]);
 
   useEffect(() => {
     loadBibleContent(bookParam, chapterNum, version);
@@ -141,10 +103,10 @@ function ReaderContent() {
       setIsPlaying(false); 
       return; 
     }
-    const text = document.querySelector('.bible-content')?.textContent || "";
+    const text = verses.map(v => v.text.replace(/<(?:.|\n)*?>/gm, '')).join(" ");
     if (!text) return;
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = isHindi ? 'hi-IN' : 'en-US';
+    utterance.lang = version === 'HI_IRV' ? 'hi-IN' : 'en-US';
     utterance.onend = () => setIsPlaying(false);
     window.speechSynthesis.speak(utterance);
     setIsPlaying(true);
@@ -157,6 +119,7 @@ function ReaderContent() {
     b.hi === bookParam
   ) || BIBLE_BOOKS[0];
   
+  const isHindi = version === 'HI_IRV';
   const localizedBookName = isHindi ? currentBookData.hi : currentBookData.en;
 
   const filteredBooks = (testament: 'old' | 'new' | 'deuterocanon') => BIBLE_BOOKS.filter(b => 
@@ -233,7 +196,7 @@ function ReaderContent() {
         
         <button 
           type="button"
-          onClick={() => handleUpdateNavigation(bookParam, chapterNum, version === 'kjv' ? 'hin_irv' : 'kjv')}
+          onClick={() => handleUpdateNavigation(bookParam, chapterNum, version === 'kjv' ? 'HI_IRV' : 'kjv')}
           className="size-11 flex items-center justify-center rounded-2xl bg-zinc-900/50 border border-white/5 text-emerald-500 hover:bg-emerald-500/10 transition-all outline-none"
         >
           <Languages className="w-5 h-5" />
@@ -249,9 +212,25 @@ function ReaderContent() {
         ) : (
           <div className="space-y-10 animate-in fade-in duration-700">
             <div className="bible-content prose prose-invert prose-emerald max-w-none"
-                 style={{ fontSize: `${fontSize}rem` }}
-                 dangerouslySetInnerHTML={{ __html: content }} 
-            />
+                 style={{ fontSize: `${fontSize}rem` }}>
+              {verses.length > 0 ? (
+                verses.map((v: any) => (
+                  <div key={v.verse} className="flex gap-4 mb-6 items-start">
+                    <span className="text-emerald-500 font-black text-xs mt-1.5 min-w-[20px] opacity-60">
+                      {v.verse}
+                    </span>
+                    <p className="text-xl leading-relaxed text-zinc-100 font-serif italic m-0">
+                      {v.text.replace(/<(?:.|\n)*?>/gm, '')}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <div className="flex flex-col items-center py-20 text-zinc-500 text-center gap-4">
+                  <AlertCircle className="w-12 h-12 opacity-20" />
+                  <p className="italic">{localizedBookName} {chapterNum} load nahi ho paya.<br/>Internet check karein.</p>
+                </div>
+              )}
+            </div>
             
             <div className="pt-20 pb-16 text-center">
               <button 
@@ -284,14 +263,6 @@ function ReaderContent() {
           <button type="button" onClick={() => { if (chapterNum < currentBookData.chapters) handleUpdateNavigation(currentBookData.id, chapterNum + 1); }} className="size-12 rounded-full hover:bg-white/5 flex items-center justify-center text-zinc-500 transition-colors"><ChevronRight className="w-6 h-6" /></button>
         </div>
       </div>
-
-      <style jsx global>{`
-        .bible-content .v { font-weight: 900; color: #10b981; margin-right: 10px; font-size: 0.75em; opacity: 0.6; display: inline-block; width: 20px; }
-        .bible-content p { margin-bottom: 1.5rem; line-height: 1.8; font-family: var(--font-serif); font-style: italic; color: #e4e4e7; }
-        .bible-content h3 { font-size: 1.5rem; color: #10b981; font-family: var(--font-serif); font-weight: bold; margin-bottom: 1rem; margin-top: 2rem; border-left: 4px solid #10b981; padding-left: 1rem; }
-        .bible-content .fallback-title { text-align: center; border: none; padding: 0; }
-        .bible-content .s1 { font-weight: bold; color: #10b981; margin-bottom: 1rem; display: block; text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.9rem; }
-      `}</style>
     </div>
   );
 }
