@@ -14,8 +14,8 @@ import {
   ArrowRight,
   BookOpen,
   AlertCircle,
-  Share2,
-  Bookmark
+  Bookmark,
+  Share2
 } from 'lucide-react';
 import { BIBLE_BOOKS } from '@/lib/bible-index';
 import { cn } from '@/lib/utils';
@@ -36,7 +36,7 @@ function ReaderContent() {
   // URL State handling
   const bookParam = searchParams.get('book') || 'MAT';
   const chapterNum = parseInt(searchParams.get('chapter') || '1');
-  const version = searchParams.get('version') || 'HINIRV';
+  const versionParam = searchParams.get('version') || 'HINIRV';
   
   const [verses, setVerses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,7 +47,7 @@ function ReaderContent() {
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Find book data
+  // Find book data with maximum resilience
   const currentBookData = BIBLE_BOOKS.find(b => 
     b.id.toUpperCase() === bookParam.toUpperCase() || 
     b.usfm.toUpperCase() === bookParam.toUpperCase() ||
@@ -58,7 +58,8 @@ function ReaderContent() {
 
   const loadBibleContent = useCallback(async (bid: string, cid: number, ver: string) => {
     setLoading(true);
-    setVerses([]); // Clear previous to show loading state properly
+    setErrorState(null);
+    
     try {
       const bookData = BIBLE_BOOKS.find(b => 
         b.id.toUpperCase() === bid.toUpperCase() || 
@@ -68,42 +69,52 @@ function ReaderContent() {
         b.bollsId.toString() === bid
       ) || BIBLE_BOOKS.find(b => b.id === 'MAT')!;
 
-      // PRIMARY ENGINE: Bolls.life API
-      // Standard Codes: HINIRV (Hindi), KJV (English)
-      const bollsCode = ver.toUpperCase() === 'KJV' ? 'KJV' : 'HINIRV';
-      const url = `https://bolls.life/get-chapter/${bollsCode}/${bookData.bollsId}/${cid}/`;
-      
-      const res = await fetch(url);
-      
-      if (res.ok) {
-        const data = await res.json();
-        // Bolls get-chapter returns an array of verse objects [{verse: 1, text: "..."}, ...]
-        if (Array.isArray(data) && data.length > 0) {
-          setVerses(data);
-          if (scrollRef.current) scrollRef.current.scrollTop = 0;
-          setLoading(false);
-          return;
+      // HYBRID ENGINE LOGIC: Try multiple versions if one fails
+      const versionsToTry = ver.toUpperCase() === 'KJV' 
+        ? ['KJV', 'HINIRV', 'HI_IRV'] 
+        : ['HINIRV', 'HI_IRV', 'KJV'];
+
+      let success = false;
+      for (const vCode of versionsToTry) {
+        if (success) break;
+        
+        try {
+          const url = `https://bolls.life/get-chapter/${vCode}/${bookData.bollsId}/${cid}/`;
+          const res = await fetch(url);
+          
+          if (res.ok) {
+            const data = await res.json();
+            if (Array.isArray(data) && data.length > 0) {
+              setVerses(data);
+              success = true;
+              break;
+            }
+          }
+        } catch (e) {
+          console.warn(`Version ${vCode} failed, trying next...`);
         }
       }
 
-      // FALLBACK: If API fails, try a secondary mapping or show error
-      throw new Error("No data found");
+      if (!success) {
+        throw new Error("Content not available");
+      }
+
+      if (scrollRef.current) scrollRef.current.scrollTop = 0;
+      setLoading(false);
       
     } catch (e) {
       console.error("Reader Error:", e);
       setVerses([]);
       setLoading(false);
-      toast({ 
-        title: "Vachan nahi mile", 
-        description: "Internet check karein ya dusra chapter chunein.", 
-        variant: "destructive" 
-      });
+      setErrorState("Bhai, vachan nahi mile. Internet check karein ya doosra chapter chunein.");
     }
-  }, [toast]);
+  }, []);
+
+  const [errorState, setErrorState] = useState<string | null>(null);
 
   useEffect(() => {
-    loadBibleContent(bookParam, chapterNum, version);
-  }, [bookParam, chapterNum, version, loadBibleContent]);
+    loadBibleContent(bookParam, chapterNum, versionParam);
+  }, [bookParam, chapterNum, versionParam, loadBibleContent]);
 
   const handleUpdateNavigation = (newBook: string, newChapter: number, newVersion?: string) => {
     setSelectorOpen(false);
@@ -111,7 +122,7 @@ function ReaderContent() {
       const params = new URLSearchParams();
       params.set('book', newBook);
       params.set('chapter', newChapter.toString());
-      params.set('version', newVersion || version);
+      params.set('version', newVersion || versionParam);
       router.push(`?${params.toString()}`, { scroll: false });
     });
   };
@@ -128,7 +139,7 @@ function ReaderContent() {
       chapter: chapterNum,
       verseNumber: v.verse,
       verseText: cleanText,
-      translation: version,
+      translation: versionParam,
       createdAt: serverTimestamp()
     });
     toast({ title: "Bookmarked!", description: "Vachan aapke profile mein save ho gaya hai." });
@@ -143,13 +154,13 @@ function ReaderContent() {
     const text = verses.map(v => v.text.replace(/<(?:.|\n)*?>/gm, '')).join(" ");
     if (!text) return;
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = version.toUpperCase() === 'HINIRV' ? 'hi-IN' : 'en-US';
+    utterance.lang = versionParam.toUpperCase().includes('HIN') ? 'hi-IN' : 'en-US';
     utterance.onend = () => setIsPlaying(false);
     window.speechSynthesis.speak(utterance);
     setIsPlaying(true);
   };
 
-  const isHindi = version.toUpperCase() === 'HINIRV';
+  const isHindi = versionParam.toUpperCase().includes('HIN');
   const localizedBookName = isHindi ? currentBookData.hi : currentBookData.en;
 
   const filteredBooks = (testament: 'old' | 'new' | 'deuterocanon') => BIBLE_BOOKS.filter(b => 
@@ -227,7 +238,7 @@ function ReaderContent() {
         
         <button 
           type="button"
-          onClick={() => handleUpdateNavigation(bookParam, chapterNum, version.toUpperCase() === 'KJV' ? 'HINIRV' : 'KJV')}
+          onClick={() => handleUpdateNavigation(bookParam, chapterNum, versionParam.toUpperCase() === 'KJV' ? 'HINIRV' : 'KJV')}
           className="size-11 flex items-center justify-center rounded-2xl bg-zinc-900/50 border border-white/5 text-emerald-500 hover:bg-emerald-500/10 transition-all outline-none"
         >
           <Languages className="w-5 h-5" />
@@ -239,6 +250,19 @@ function ReaderContent() {
           <div className="flex flex-col items-center justify-center h-full space-y-8 opacity-40 py-40">
             <Loader2 className="w-14 h-14 text-emerald-500 animate-spin" />
             <p className="text-[10px] font-black uppercase tracking-[0.5em] text-emerald-500 animate-pulse">Vachan load ho rahe hain...</p>
+          </div>
+        ) : errorState ? (
+          <div className="flex flex-col items-center py-20 text-zinc-500 text-center gap-6">
+            <AlertCircle className="w-16 h-16 text-emerald-500/20" />
+            <div className="space-y-2">
+              <p className="font-serif italic text-lg">{errorState}</p>
+              <button 
+                onClick={() => loadBibleContent(bookParam, chapterNum, versionParam)}
+                className="text-emerald-500 text-[10px] font-black uppercase tracking-widest border border-emerald-500/30 px-6 py-2 rounded-full mt-4"
+              >
+                Retry Loading
+              </button>
+            </div>
           </div>
         ) : (
           <div className="space-y-10 animate-in fade-in duration-700">
@@ -254,7 +278,7 @@ function ReaderContent() {
                         onClick={() => handleBookmark(v)}
                         className="opacity-0 group-hover:opacity-100 transition-opacity text-zinc-600 hover:text-emerald-500"
                       >
-                        <Bookmark className="w-3 h-3" />
+                        <Bookmark className="w-3.5 h-3.5" />
                       </button>
                     </div>
                     <p className="text-xl leading-relaxed text-zinc-100 font-serif italic m-0">
@@ -265,7 +289,7 @@ function ReaderContent() {
               ) : (
                 <div className="flex flex-col items-center py-20 text-zinc-500 text-center gap-4">
                   <AlertCircle className="w-12 h-12 opacity-20" />
-                  <p className="italic">Vachan load nahi ho paye.<br/>Chapter {chapterNum} check karein.</p>
+                  <p className="italic">Is book ke vachan is bhasha mein nahi mil paye.</p>
                 </div>
               )}
             </div>
