@@ -32,7 +32,7 @@ function ReaderContent() {
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
 
-  const bookId = searchParams.get('book') || 'matthew';
+  const bookId = searchParams.get('book') || 'MAT';
   const chapterNum = parseInt(searchParams.get('chapter') || '1');
   const version = searchParams.get('version') || 'hin_irv';
   
@@ -50,10 +50,11 @@ function ReaderContent() {
   const loadBibleContent = useCallback(async (bid: string, cid: number, ver: string) => {
     setLoading(true);
     try {
-      const bookData = BIBLE_BOOKS.find(b => b.id === bid) || BIBLE_BOOKS.find(b => b.id === 'matthew')!;
+      const bookData = BIBLE_BOOKS.find(b => b.id === bid) || BIBLE_BOOKS.find(b => b.id === 'MAT')!;
       const bibleId = ver === 'hin_irv' ? BIBLE_ID_HIN : BIBLE_ID_ENG;
       
-      const url = `https://api.scripture.api.bible/v1/bibles/${bibleId}/chapters/${bookData.usfm}.${cid}?content-type=html&include-notes=false&include-titles=true&include-chapter-numbers=true&include-verse-numbers=true`;
+      // Fixed: Removed the dot between book and chapter as per YouVersion Scripture API standards
+      const url = `https://api.scripture.api.bible/v1/bibles/${bibleId}/chapters/${bookData.usfm}${cid}?content-type=html&include-notes=false&include-titles=true&include-chapter-numbers=true&include-verse-numbers=true`;
 
       const res = await fetch(url, {
         headers: { "api-key": API_KEY }
@@ -64,7 +65,7 @@ function ReaderContent() {
       if (data.data && data.data.content) {
         setContent(data.data.content);
       } else {
-        setContent("<p class='text-center py-20 text-zinc-500 italic'>Adhyay ka vachan load nahi ho paya. USFM code check karein.</p>");
+        setContent(`<p class='text-center py-20 text-zinc-500 italic'>${bid} ${cid} ka vachan load nahi ho paya. USFM code check karein.</p>`);
       }
       
       if (scrollRef.current) scrollRef.current.scrollTop = 0;
@@ -112,7 +113,8 @@ function ReaderContent() {
   const filteredBooks = (testament: 'old' | 'new' | 'deuterocanon') => BIBLE_BOOKS.filter(b => 
     b.testament === testament && 
     (b.en.toLowerCase().includes(searchQuery.toLowerCase()) || 
-     b.hi.toLowerCase().includes(searchQuery.toLowerCase()))
+     b.hi.toLowerCase().includes(searchQuery.toLowerCase()) ||
+     b.usfm.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   return (
