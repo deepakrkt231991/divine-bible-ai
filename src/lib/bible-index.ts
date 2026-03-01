@@ -25,7 +25,7 @@ export const BIBLE_BOOKS: BibleBook[] = [
   { id: "1CH", usfm: "1CH", en: "1 Chronicles", hi: "१ इतिहास", chapters: 29, testament: "old", bollsId: 13 },
   { id: "2CH", usfm: "2CH", en: "2 Chronicles", hi: "२ इतिहास", chapters: 36, testament: "old", bollsId: 14 },
   { id: "EZR", usfm: "EZR", en: "Ezra", hi: "एज्रा", chapters: 10, testament: "old", bollsId: 15 },
-  { id: "NEH", usfm: "NEH", en: "Nehemiah", hi: "नहेमायाह", chapters: 13, testament: "old", bollsId: 16 },
+  { id: "NEH", usfm: "NEH", en: "Nehemiah", hi: "नहेमायाah", chapters: 13, testament: "old", bollsId: 16 },
   { id: "EST", usfm: "EST", en: "Esther", hi: "एस्तेर", chapters: 10, testament: "old", bollsId: 17 },
   { id: "JOB", usfm: "JOB", en: "Job", hi: "अय्यूब", chapters: 42, testament: "old", bollsId: 18 },
   { id: "PSA", usfm: "PSA", en: "Psalms", hi: "भजनसंग्रह", chapters: 150, testament: "old", bollsId: 19 },

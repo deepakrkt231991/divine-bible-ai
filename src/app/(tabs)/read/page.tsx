@@ -13,7 +13,7 @@ import {
   ArrowRight,
   BookOpen,
   Settings2,
-  Sparkles
+  AlertCircle
 } from 'lucide-react';
 import { BIBLE_BOOKS } from '@/lib/bible-index';
 import { cn } from '@/lib/utils';
@@ -22,7 +22,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from '@/hooks/use-toast';
 
-const API_KEY = "IUbCPlFtzubFZp2RXPeUglroSB2EGGfCx52N67Xtw8AknzH6";
+const YOUVERSION_API_KEY = "IUbCPlFtzubFZp2RXPeUglroSB2EGGfCx52N67Xtw8AknzH6";
 const BIBLE_ID_HIN = "27931f79a0224647-01"; // Hindi IRV
 const BIBLE_ID_ENG = "de4e12af7f29f59f-01"; // English KJV
 
@@ -32,6 +32,7 @@ function ReaderContent() {
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
 
+  // URL State
   const bookId = searchParams.get('book') || 'MAT';
   const chapterNum = parseInt(searchParams.get('chapter') || '1');
   const version = searchParams.get('version') || 'hin_irv';
@@ -53,24 +54,76 @@ function ReaderContent() {
       const bookData = BIBLE_BOOKS.find(b => b.id === bid) || BIBLE_BOOKS.find(b => b.id === 'MAT')!;
       const bibleId = ver === 'hin_irv' ? BIBLE_ID_HIN : BIBLE_ID_ENG;
       
-      // Fixed: Removed the dot between book and chapter as per YouVersion Scripture API standards
-      const url = `https://api.scripture.api.bible/v1/bibles/${bibleId}/chapters/${bookData.usfm}${cid}?content-type=html&include-notes=false&include-titles=true&include-chapter-numbers=true&include-verse-numbers=true`;
+      // ✅ ATTEMPT 1: YouVersion API (Standard Cloud Source)
+      // Fixed: No dot between book and chapter (Standard USFM MAT1 format)
+      const youversionUrl = `https://api.scripture.api.bible/v1/bibles/${bibleId}/chapters/${bookData.usfm}${cid}?content-type=html&include-notes=false&include-titles=true&include-chapter-numbers=true&include-verse-numbers=true`;
 
-      const res = await fetch(url, {
-        headers: { "api-key": API_KEY }
+      const yvRes = await fetch(youversionUrl, {
+        headers: { "api-key": YOUVERSION_API_KEY, "Accept": "application/json" }
       });
 
-      const data = await res.json();
-      
-      if (data.data && data.data.content) {
-        setContent(data.data.content);
-      } else {
-        setContent(`<p class='text-center py-20 text-zinc-500 italic'>${bid} ${cid} ka vachan load nahi ho paya. USFM code check karein.</p>`);
+      if (yvRes.ok) {
+        const yvData = await yvRes.json();
+        if (yvData.data && yvData.data.content) {
+          setContent(yvData.data.content);
+          if (scrollRef.current) scrollRef.current.scrollTop = 0;
+          setLoading(false);
+          return;
+        }
       }
+
+      // ✅ ATTEMPT 2: Local JSON Fallback (Public Folder)
+      const fileName = ver === 'hin_irv' ? 'hin_irv.json' : 'kjv.json';
+      const localRes = await fetch(`/bible/${fileName}`);
       
-      if (scrollRef.current) scrollRef.current.scrollTop = 0;
+      if (localRes.ok) {
+        const localData = await localRes.json();
+        let foundVerses: string[] = [];
+
+        // Check if Array (Scrollmapper) or Object (Flat)
+        if (Array.isArray(localData)) {
+          const found = localData.find(item => 
+            item.book?.toLowerCase() === bookData.en.toLowerCase() && 
+            item.chapter_nr?.toString() === cid.toString()
+          );
+          if (found && found.chapter) {
+            foundVerses = Object.values(found.chapter).map((v: any) => v.verse || v);
+          }
+        } else {
+          foundVerses = localData[bookData.en.toLowerCase()]?.[cid.toString()] || [];
+        }
+
+        if (foundVerses.length > 0) {
+          const html = foundVerses.map((v, i) => `<p><span class="v">${i+1}</span> ${v}</p>`).join("");
+          setContent(`<h3>${bookData.hi} ${cid}</h3>${html}`);
+          if (scrollRef.current) scrollRef.current.scrollTop = 0;
+          setLoading(false);
+          return;
+        }
+      }
+
+      // ✅ ATTEMPT 3: Bolls.life Public API (Secondary Cloud Fallback)
+      const bollsCode = ver === 'hin_irv' ? 'HINIRV' : 'KJV';
+      const bollsRes = await fetch(`https://bolls.life/get-text/${bollsCode}/${bookData.bollsId}/${cid}/`);
+      
+      if (bollsRes.ok) {
+        const bollsData = await bollsRes.json();
+        if (Array.isArray(bollsData) && bollsData.length > 0) {
+          const html = bollsData.map((v: any) => `<p><span class="v">${v.verse}</span> ${v.text}</p>`).join("");
+          setContent(`<h3>${bookData.hi} ${cid}</h3>${html}`);
+          if (scrollRef.current) scrollRef.current.scrollTop = 0;
+          setLoading(false);
+          return;
+        }
+      }
+
+      setContent(`<div class="flex flex-col items-center py-20 text-zinc-500 text-center gap-4">
+        <AlertCircle className="w-12 h-12 opacity-20" />
+        <p class="italic">${bookData.hi} ${cid} ka vachan load nahi ho paya.<br/>Internet ya USFM code check karein.</p>
+      </div>`);
+      
     } catch (e) {
-      console.error("Reader API Error:", e);
+      console.error("Reader Error:", e);
       setContent("<p class='text-center py-20 text-red-500 italic'>Server error! Internet connect karein.</p>");
     } finally {
       setLoading(false);
@@ -195,7 +248,7 @@ function ReaderContent() {
         {loading || isPending ? (
           <div className="flex flex-col items-center justify-center h-full space-y-8 opacity-40 py-40">
             <Loader2 className="w-14 h-14 text-emerald-500 animate-spin" />
-            <p className="text-[10px] font-black uppercase tracking-[0.5em] text-emerald-500 animate-pulse">Fetching Cloud Scripture...</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.5em] text-emerald-500 animate-pulse">Syncing Sacred Cloud...</p>
           </div>
         ) : (
           <div className="space-y-10 animate-in fade-in duration-700">
