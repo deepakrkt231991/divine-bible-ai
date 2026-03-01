@@ -27,10 +27,10 @@ function ReaderContent() {
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
 
-  // URL state sync
-  const bookId = searchParams.get('book') || 'genesis';
+  // URL state sync - Default to Matthew 1
+  const bookId = searchParams.get('book') || 'matthew';
   const chapterNum = parseInt(searchParams.get('chapter') || '1');
-  const version = searchParams.get('version') || 'orthodox';
+  const version = searchParams.get('version') || 'hin_irv';
   
   const [verses, setVerses] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,7 +60,7 @@ function ReaderContent() {
           // Handle Array Format (Scrollmapper)
           if (Array.isArray(data)) {
             const bookObj = data.find(item => 
-              item.book?.toLowerCase() === bid.toLowerCase() && 
+              (item.book?.toLowerCase() === bid.toLowerCase() || item.book_nr?.toString() === bid) && 
               item.chapter_nr?.toString() === chapterKey
             );
             if (bookObj && bookObj.chapter) {
@@ -79,17 +79,15 @@ function ReaderContent() {
         console.warn("Local file missing or error, trying API fallback...");
       }
 
-      // 2. FALLBACK TO BOLLS API
+      // 2. FALLBACK TO BOLLS API (Real-time reliable backup)
       if (foundVerses.length === 0) {
-        const bookData = BIBLE_BOOKS.find(b => b.id === bid) || BIBLE_BOOKS[0];
-        const bollsVer = ver === 'hin_irv' ? 'IRV_HIN' : 'KJV';
+        const bookData = BIBLE_BOOKS.find(b => b.id === bid) || BIBLE_BOOKS.find(b => b.id === 'matthew')!;
+        const bollsVer = ver === 'hin_irv' ? 'IRV_HIN' : ver === 'orthodox' ? 'IRV_HIN' : 'KJV';
         const apiRes = await fetch(`https://bolls.life/get-chapter/${bollsVer}/${bookData.bollsId}/${cid}/`);
         
         if (apiRes.ok) {
           const apiData = await apiRes.json();
           foundVerses = apiData.map((v: any) => v.text);
-        } else {
-          throw new Error("API Fallback failed");
         }
       }
 
@@ -102,7 +100,7 @@ function ReaderContent() {
       if (scrollRef.current) scrollRef.current.scrollTop = 0;
     } catch (e) {
       console.error("Reader Load Error:", e);
-      setVerses(["Scripture load nahi ho saki. /public/bible/ check karein ya internet connect karein."]);
+      setVerses(["Scripture load nahi ho saki. Internet connect karein."]);
     } finally {
       setLoading(false);
     }
@@ -203,27 +201,23 @@ function ReaderContent() {
               </TabsList>
 
               <ScrollArea className="flex-1 px-6 py-4">
-                <TabsContent value="old" className="m-0">
-                  <div className="grid grid-cols-1 gap-1.5">
-                    {filteredBooks('old').map(b => (
-                      <BookItem key={b.id} b={b} currentChapter={chapterNum} isHindi={isHindi} onExpand={setExpandedBook} expandedBook={expandedBook} onSelect={handleUpdateNavigation} />
-                    ))}
-                  </div>
-                </TabsContent>
-                <TabsContent value="deuterocanon" className="m-0">
-                  <div className="grid grid-cols-1 gap-1.5">
-                    {filteredBooks('deuterocanon').map(b => (
-                      <BookItem key={b.id} b={b} currentChapter={chapterNum} isHindi={isHindi} onExpand={setExpandedBook} expandedBook={expandedBook} onSelect={handleUpdateNavigation} />
-                    ))}
-                  </div>
-                </TabsContent>
-                <TabsContent value="new" className="m-0">
-                  <div className="grid grid-cols-1 gap-1.5">
-                    {filteredBooks('new').map(b => (
-                      <BookItem key={b.id} b={b} currentChapter={chapterNum} isHindi={isHindi} onExpand={setExpandedBook} expandedBook={expandedBook} onSelect={handleUpdateNavigation} />
-                    ))}
-                  </div>
-                </TabsContent>
+                {['old', 'deuterocanon', 'new'].map((testament) => (
+                  <TabsContent key={testament} value={testament} className="m-0">
+                    <div className="grid grid-cols-1 gap-1.5">
+                      {filteredBooks(testament as any).map(b => (
+                        <BookItem 
+                          key={b.id} 
+                          b={b} 
+                          currentChapter={chapterNum} 
+                          isHindi={isHindi} 
+                          onExpand={setExpandedBook} 
+                          expandedBook={expandedBook} 
+                          onSelect={handleUpdateNavigation} 
+                        />
+                      ))}
+                    </div>
+                  </TabsContent>
+                ))}
               </ScrollArea>
             </Tabs>
           </DialogContent>
