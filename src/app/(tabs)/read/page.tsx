@@ -13,7 +13,10 @@ import {
   Pause,
   ArrowRight,
   BookOpen,
-  AlertCircle
+  AlertCircle,
+  Settings2,
+  Minus,
+  Plus
 } from 'lucide-react';
 import { BIBLE_BOOKS } from '@/lib/bible-index';
 import { cn } from '@/lib/utils';
@@ -32,7 +35,7 @@ function ReaderContent() {
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
 
-  // URL State
+  // URL State handling
   const bookParam = searchParams.get('book') || 'MAT';
   const chapterNum = parseInt(searchParams.get('chapter') || '1');
   const version = searchParams.get('version') || 'hin_irv';
@@ -51,7 +54,7 @@ function ReaderContent() {
   const loadBibleContent = useCallback(async (bid: string, cid: number, ver: string) => {
     setLoading(true);
     try {
-      // ✅ SMART LOOKUP: Handle Hindi, English, ID, or USFM (e.g. Nirgaman, exodus, EXO)
+      // 1. Find correct book data from our index
       const bookData = BIBLE_BOOKS.find(b => 
         b.id.toUpperCase() === bid.toUpperCase() || 
         b.en.toLowerCase() === bid.toLowerCase() ||
@@ -61,31 +64,36 @@ function ReaderContent() {
 
       const bibleId = ver === 'hin_irv' ? BIBLE_ID_HIN : BIBLE_ID_ENG;
       
-      // ✅ ATTEMPT 1: YouVersion API (Correct No-Dot Format: EXO7)
-      const youversionUrl = `https://api.scripture.api.bible/v1/bibles/${bibleId}/chapters/${bookData.usfm}${cid}?content-type=html&include-notes=false&include-titles=true&include-chapter-numbers=true&include-verse-numbers=true`;
+      // LAYER 1: TRY YOUVERSION API (Best for Formatting)
+      try {
+        const youversionUrl = `https://api.scripture.api.bible/v1/bibles/${bibleId}/chapters/${bookData.usfm}${cid}?content-type=html&include-notes=false&include-titles=true&include-chapter-numbers=true&include-verse-numbers=true`;
+        const yvRes = await fetch(youversionUrl, {
+          headers: { "api-key": YOUVERSION_API_KEY, "Accept": "application/json" }
+        });
 
-      const yvRes = await fetch(youversionUrl, {
-        headers: { "api-key": YOUVERSION_API_KEY, "Accept": "application/json" }
-      });
-
-      if (yvRes.ok) {
-        const yvData = await yvRes.json();
-        if (yvData.data && yvData.data.content) {
-          setContent(yvData.data.content);
-          if (scrollRef.current) scrollRef.current.scrollTop = 0;
-          setLoading(false);
-          return;
+        if (yvRes.ok) {
+          const yvData = await yvRes.json();
+          if (yvData.data && yvData.data.content) {
+            setContent(yvData.data.content);
+            if (scrollRef.current) scrollRef.current.scrollTop = 0;
+            setLoading(false);
+            return;
+          }
         }
+      } catch (e) {
+        console.warn("YouVersion failed, trying fallback...");
       }
 
-      // ✅ ATTEMPT 2: Bolls.life Public API (Fallback)
+      // LAYER 2: FALLBACK TO BOLLS.LIFE API (Highly Reliable for Matthew 2 / Exodus 7)
       const bollsCode = ver === 'hin_irv' ? 'HINIRV' : 'KJV';
       const bollsRes = await fetch(`https://bolls.life/get-text/${bollsCode}/${bookData.bollsId}/${cid}/`);
       
       if (bollsRes.ok) {
         const bollsData = await bollsRes.json();
         if (Array.isArray(bollsData) && bollsData.length > 0) {
-          const html = bollsData.map((v: any) => `<p><span class="v">${v.verse}</span> ${v.text}</p>`).join("");
+          const html = bollsData.map((v: any) => 
+            `<p><span class="v">${v.verse}</span> ${v.text}</p>`
+          ).join("");
           setContent(`<h3>${isHindi ? bookData.hi : bookData.en} ${cid}</h3>${html}`);
           if (scrollRef.current) scrollRef.current.scrollTop = 0;
           setLoading(false);
@@ -93,14 +101,15 @@ function ReaderContent() {
         }
       }
 
+      // LAYER 3: ERROR STATE
       setContent(`<div class="flex flex-col items-center py-20 text-zinc-500 text-center gap-4">
         <AlertCircle class="w-12 h-12 opacity-20" />
-        <p class="italic">${isHindi ? bookData.hi : bookData.en} ${cid} ka vachan load nahi ho paya.<br/>USFM code ya internet check karein.</p>
+        <p class="italic">${isHindi ? bookData.hi : bookData.en} ${cid} ka vachan load nahi ho paya.<br/>Kripya internet check karein.</p>
       </div>`);
       
     } catch (e) {
       console.error("Reader Error:", e);
-      setContent("<p class='text-center py-20 text-red-500 italic'>Server error! Internet connect karein.</p>");
+      setContent("<p class='text-center py-20 text-red-500 italic'>Server connection error! Internet connect karein.</p>");
     } finally {
       setLoading(false);
     }
