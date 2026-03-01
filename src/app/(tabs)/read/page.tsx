@@ -33,7 +33,7 @@ function ReaderContent() {
   // URL State handling
   const bookParam = searchParams.get('book') || 'MAT';
   const chapterNum = parseInt(searchParams.get('chapter') || '1');
-  const version = searchParams.get('version') || 'HI_IRV'; // Default to Hindi IRV
+  const version = searchParams.get('version') || 'HINIRV'; // Default to Hindi IRV
   
   const [verses, setVerses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,6 +45,14 @@ function ReaderContent() {
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Find book data from our index
+  const currentBookData = BIBLE_BOOKS.find(b => 
+    b.id.toUpperCase() === bookParam.toUpperCase() || 
+    b.usfm.toUpperCase() === bookParam.toUpperCase() ||
+    b.en.toLowerCase() === bookParam.toLowerCase() ||
+    b.hi === bookParam
+  ) || BIBLE_BOOKS.find(b => b.id === 'MAT')!;
+
   const loadBibleContent = useCallback(async (bid: string, cid: number, ver: string) => {
     setLoading(true);
     try {
@@ -55,24 +63,36 @@ function ReaderContent() {
         b.hi === bid
       ) || BIBLE_BOOKS.find(b => b.id === 'MAT')!;
 
-      // PRIMARY ENGINE: Bolls.life (HI_IRV)
-      // HI_IRV is standard for Hindi Indian Revised Version on Bolls
-      const bollsCode = ver === 'kjv' ? 'KJV' : 'HI_IRV';
-      const bollsRes = await fetch(`https://bolls.life/get-chapter/${bollsCode}/${bookData.bollsId}/${cid}/`);
+      // PRIMARY ENGINE: Bolls.life API
+      // Note: HINIRV is the correct code for Hindi IRV on Bolls.life
+      const bollsCode = ver.toUpperCase() === 'KJV' ? 'KJV' : 'HINIRV';
+      const url = `https://bolls.life/get-chapter/${bollsCode}/${bookData.bollsId}/${cid}/`;
       
-      if (bollsRes.ok) {
-        const bollsData = await bollsRes.json();
-        if (Array.isArray(bollsData) && bollsData.length > 0) {
-          setVerses(bollsData);
+      const res = await fetch(url);
+      
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          setVerses(data);
           if (scrollRef.current) scrollRef.current.scrollTop = 0;
           setLoading(false);
           return;
         }
       }
 
-      // ERROR STATE
+      // FALLBACK: If Hindi fails, try English KJV for the same book
+      if (bollsCode === 'HINIRV') {
+        const fallbackRes = await fetch(`https://bolls.life/get-chapter/KJV/${bookData.bollsId}/${cid}/`);
+        if (fallbackRes.ok) {
+          const fallbackData = await fallbackRes.json();
+          setVerses(fallbackData);
+          setLoading(false);
+          return;
+        }
+      }
+
       setVerses([]);
-      toast({ title: "Content not found", description: "Vachan load nahi ho paye. Internet check karein.", variant: "destructive" });
+      toast({ title: "Vachan nahi mile", description: "Is chapter ke liye data available nahi hai.", variant: "destructive" });
       
     } catch (e) {
       console.error("Reader Error:", e);
@@ -106,20 +126,13 @@ function ReaderContent() {
     const text = verses.map(v => v.text.replace(/<(?:.|\n)*?>/gm, '')).join(" ");
     if (!text) return;
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = version === 'HI_IRV' ? 'hi-IN' : 'en-US';
+    utterance.lang = version.toUpperCase() === 'HINIRV' ? 'hi-IN' : 'en-US';
     utterance.onend = () => setIsPlaying(false);
     window.speechSynthesis.speak(utterance);
     setIsPlaying(true);
   };
 
-  const currentBookData = BIBLE_BOOKS.find(b => 
-    b.id.toUpperCase() === bookParam.toUpperCase() || 
-    b.usfm.toUpperCase() === bookParam.toUpperCase() ||
-    b.en.toLowerCase() === bookParam.toLowerCase() ||
-    b.hi === bookParam
-  ) || BIBLE_BOOKS[0];
-  
-  const isHindi = version === 'HI_IRV';
+  const isHindi = version.toUpperCase() === 'HINIRV';
   const localizedBookName = isHindi ? currentBookData.hi : currentBookData.en;
 
   const filteredBooks = (testament: 'old' | 'new' | 'deuterocanon') => BIBLE_BOOKS.filter(b => 
@@ -131,6 +144,7 @@ function ReaderContent() {
 
   return (
     <div className="flex flex-col h-screen bg-[#09090b] text-zinc-100 overflow-hidden relative">
+      {/* Header */}
       <header className="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-[#09090b]/95 backdrop-blur-xl sticky top-0 z-[60]">
         <Dialog open={selectorOpen} onOpenChange={setSelectorOpen}>
           <DialogTrigger asChild>
@@ -166,9 +180,9 @@ function ReaderContent() {
 
             <Tabs defaultValue={currentBookData.testament} className="flex-1 flex flex-col overflow-hidden">
               <TabsList className="bg-zinc-900/50 p-1 mx-6 mt-4 rounded-2xl border border-white/5 h-12">
-                <TabsTrigger value="old" className="flex-1 rounded-xl text-[9px] font-black uppercase tracking-widest">OT</TabsTrigger>
-                <TabsTrigger value="deuterocanon" className="flex-1 rounded-xl text-[9px] font-black uppercase tracking-widest">Apocrypha</TabsTrigger>
-                <TabsTrigger value="new" className="flex-1 rounded-xl text-[9px] font-black uppercase tracking-widest">NT</TabsTrigger>
+                <TabsTrigger value="old" className="flex-1 rounded-xl text-[9px] font-black uppercase tracking-widest">Purana</TabsTrigger>
+                <TabsTrigger value="deuterocanon" className="flex-1 rounded-xl text-[9px] font-black uppercase tracking-widest">81-Book</TabsTrigger>
+                <TabsTrigger value="new" className="flex-1 rounded-xl text-[9px] font-black uppercase tracking-widest">Naya</TabsTrigger>
               </TabsList>
 
               <ScrollArea className="flex-1 px-6 py-4">
@@ -196,7 +210,7 @@ function ReaderContent() {
         
         <button 
           type="button"
-          onClick={() => handleUpdateNavigation(bookParam, chapterNum, version === 'kjv' ? 'HI_IRV' : 'kjv')}
+          onClick={() => handleUpdateNavigation(bookParam, chapterNum, version.toUpperCase() === 'KJV' ? 'HINIRV' : 'KJV')}
           className="size-11 flex items-center justify-center rounded-2xl bg-zinc-900/50 border border-white/5 text-emerald-500 hover:bg-emerald-500/10 transition-all outline-none"
         >
           <Languages className="w-5 h-5" />
@@ -207,7 +221,7 @@ function ReaderContent() {
         {loading || isPending ? (
           <div className="flex flex-col items-center justify-center h-full space-y-8 opacity-40 py-40">
             <Loader2 className="w-14 h-14 text-emerald-500 animate-spin" />
-            <p className="text-[10px] font-black uppercase tracking-[0.5em] text-emerald-500 animate-pulse">Consulting Cloud...</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.5em] text-emerald-500 animate-pulse">Vachan load ho rahe hain...</p>
           </div>
         ) : (
           <div className="space-y-10 animate-in fade-in duration-700">
@@ -216,7 +230,7 @@ function ReaderContent() {
               {verses.length > 0 ? (
                 verses.map((v: any) => (
                   <div key={v.verse} className="flex gap-4 mb-6 items-start">
-                    <span className="text-emerald-500 font-black text-xs mt-1.5 min-w-[20px] opacity-60">
+                    <span className="text-emerald-500 font-black text-sm mt-1.5 min-w-[20px] opacity-60">
                       {v.verse}
                     </span>
                     <p className="text-xl leading-relaxed text-zinc-100 font-serif italic m-0">
@@ -254,6 +268,7 @@ function ReaderContent() {
         )}
       </main>
 
+      {/* Control Bar */}
       <div className="fixed bottom-24 left-1/2 -translate-x-1/2 w-[92%] max-w-md z-[70]">
         <div className="bg-zinc-950/90 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-2 flex items-center justify-between shadow-2xl">
           <button type="button" onClick={() => handleUpdateNavigation(currentBookData.id, Math.max(1, chapterNum - 1))} className="size-12 rounded-full hover:bg-white/5 flex items-center justify-center text-zinc-500 transition-colors"><ChevronLeft className="w-6 h-6" /></button>
