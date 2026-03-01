@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef, Suspense, useTransition } from 'react';
@@ -42,7 +43,7 @@ function ReaderContent() {
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [fontSize, setFontSize] = useState(1.2);
-  const [expandedBook, setExpandedBook] = useState<string | null>(bookParam.toUpperCase());
+  const [expandedBook, setExpandedBook] = useState<string | null>(null);
 
   const isHindi = version === 'hin_irv';
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -50,16 +51,17 @@ function ReaderContent() {
   const loadBibleContent = useCallback(async (bid: string, cid: number, ver: string) => {
     setLoading(true);
     try {
-      // Find book data case-insensitively by ID, English Name, or USFM
+      // ✅ SMART LOOKUP: Handle Hindi, English, ID, or USFM (e.g. Nirgaman, exodus, EXO)
       const bookData = BIBLE_BOOKS.find(b => 
         b.id.toUpperCase() === bid.toUpperCase() || 
         b.en.toLowerCase() === bid.toLowerCase() ||
-        b.usfm.toUpperCase() === bid.toUpperCase()
+        b.usfm.toUpperCase() === bid.toUpperCase() ||
+        b.hi === bid
       ) || BIBLE_BOOKS.find(b => b.id === 'MAT')!;
 
       const bibleId = ver === 'hin_irv' ? BIBLE_ID_HIN : BIBLE_ID_ENG;
       
-      // ✅ ATTEMPT 1: YouVersion API (No DOT format: EXO7)
+      // ✅ ATTEMPT 1: YouVersion API (Correct No-Dot Format: EXO7)
       const youversionUrl = `https://api.scripture.api.bible/v1/bibles/${bibleId}/chapters/${bookData.usfm}${cid}?content-type=html&include-notes=false&include-titles=true&include-chapter-numbers=true&include-verse-numbers=true`;
 
       const yvRes = await fetch(youversionUrl, {
@@ -76,39 +78,7 @@ function ReaderContent() {
         }
       }
 
-      // ✅ ATTEMPT 2: Local JSON Fallback (Public Folder)
-      const fileName = ver === 'hin_irv' ? 'hin_irv.json' : 'kjv.json';
-      const localRes = await fetch(`/bible/${fileName}`);
-      
-      if (localRes.ok) {
-        const localData = await localRes.json();
-        let foundVerses: string[] = [];
-
-        // Support both Array (Scrollmapper) and Object formats
-        if (Array.isArray(localData)) {
-          const found = localData.find(item => 
-            (item.book?.toLowerCase() === bookData.en.toLowerCase() || item.book?.toUpperCase() === bookData.usfm) && 
-            item.chapter_nr?.toString() === cid.toString()
-          );
-          if (found && found.chapter) {
-            foundVerses = Object.values(found.chapter).map((v: any) => v.verse || v);
-          }
-        } else {
-          // Object format lookup: data[exodus][7]
-          const bookKey = bookData.en.toLowerCase();
-          foundVerses = localData[bookKey]?.[cid.toString()] || [];
-        }
-
-        if (foundVerses.length > 0) {
-          const html = foundVerses.map((v, i) => `<p><span class="v">${i+1}</span> ${v}</p>`).join("");
-          setContent(`<h3>${isHindi ? bookData.hi : bookData.en} ${cid}</h3>${html}`);
-          if (scrollRef.current) scrollRef.current.scrollTop = 0;
-          setLoading(false);
-          return;
-        }
-      }
-
-      // ✅ ATTEMPT 3: Bolls.life Public API
+      // ✅ ATTEMPT 2: Bolls.life Public API (Fallback)
       const bollsCode = ver === 'hin_irv' ? 'HINIRV' : 'KJV';
       const bollsRes = await fetch(`https://bolls.life/get-text/${bollsCode}/${bookData.bollsId}/${cid}/`);
       
@@ -125,7 +95,7 @@ function ReaderContent() {
 
       setContent(`<div class="flex flex-col items-center py-20 text-zinc-500 text-center gap-4">
         <AlertCircle class="w-12 h-12 opacity-20" />
-        <p class="italic">${isHindi ? bookData.hi : bookData.en} ${cid} ka vachan load nahi ho paya.<br/>Internet ya JSON file check karein.</p>
+        <p class="italic">${isHindi ? bookData.hi : bookData.en} ${cid} ka vachan load nahi ho paya.<br/>USFM code ya internet check karein.</p>
       </div>`);
       
     } catch (e) {
@@ -168,7 +138,8 @@ function ReaderContent() {
 
   const currentBookData = BIBLE_BOOKS.find(b => 
     b.id.toUpperCase() === bookParam.toUpperCase() || 
-    b.en.toLowerCase() === bookParam.toLowerCase()
+    b.en.toLowerCase() === bookParam.toLowerCase() ||
+    b.hi === bookParam
   ) || BIBLE_BOOKS[0];
   
   const localizedBookName = isHindi ? currentBookData.hi : currentBookData.en;
