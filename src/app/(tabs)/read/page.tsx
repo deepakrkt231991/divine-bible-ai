@@ -14,8 +14,8 @@ import {
   ArrowRight,
   BookOpen,
   AlertCircle,
-  Settings2,
-  Check
+  Share2,
+  Bookmark
 } from 'lucide-react';
 import { BIBLE_BOOKS } from '@/lib/bible-index';
 import { cn } from '@/lib/utils';
@@ -23,48 +23,53 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from '@/hooks/use-toast';
+import { useFirebase } from '@/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 function ReaderContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
+  const { firestore, user } = useFirebase();
   const [isPending, startTransition] = useTransition();
 
   // URL State handling
   const bookParam = searchParams.get('book') || 'MAT';
   const chapterNum = parseInt(searchParams.get('chapter') || '1');
-  const version = searchParams.get('version') || 'HINIRV'; // Default to Hindi IRV
+  const version = searchParams.get('version') || 'HINIRV';
   
   const [verses, setVerses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [fontSize, setFontSize] = useState(1.2);
   const [expandedBook, setExpandedBook] = useState<string | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Find book data from our index
+  // Find book data
   const currentBookData = BIBLE_BOOKS.find(b => 
     b.id.toUpperCase() === bookParam.toUpperCase() || 
     b.usfm.toUpperCase() === bookParam.toUpperCase() ||
     b.en.toLowerCase() === bookParam.toLowerCase() ||
-    b.hi === bookParam
+    b.hi === bookParam ||
+    b.bollsId.toString() === bookParam
   ) || BIBLE_BOOKS.find(b => b.id === 'MAT')!;
 
   const loadBibleContent = useCallback(async (bid: string, cid: number, ver: string) => {
     setLoading(true);
+    setVerses([]); // Clear previous to show loading state properly
     try {
       const bookData = BIBLE_BOOKS.find(b => 
         b.id.toUpperCase() === bid.toUpperCase() || 
         b.usfm.toUpperCase() === bid.toUpperCase() ||
         b.en.toLowerCase() === bid.toLowerCase() ||
-        b.hi === bid
+        b.hi === bid ||
+        b.bollsId.toString() === bid
       ) || BIBLE_BOOKS.find(b => b.id === 'MAT')!;
 
       // PRIMARY ENGINE: Bolls.life API
-      // Note: HINIRV is the correct code for Hindi IRV on Bolls.life
+      // Standard Codes: HINIRV (Hindi), KJV (English)
       const bollsCode = ver.toUpperCase() === 'KJV' ? 'KJV' : 'HINIRV';
       const url = `https://bolls.life/get-chapter/${bollsCode}/${bookData.bollsId}/${cid}/`;
       
@@ -72,6 +77,7 @@ function ReaderContent() {
       
       if (res.ok) {
         const data = await res.json();
+        // Bolls get-chapter returns an array of verse objects [{verse: 1, text: "..."}, ...]
         if (Array.isArray(data) && data.length > 0) {
           setVerses(data);
           if (scrollRef.current) scrollRef.current.scrollTop = 0;
@@ -80,25 +86,18 @@ function ReaderContent() {
         }
       }
 
-      // FALLBACK: If Hindi fails, try English KJV for the same book
-      if (bollsCode === 'HINIRV') {
-        const fallbackRes = await fetch(`https://bolls.life/get-chapter/KJV/${bookData.bollsId}/${cid}/`);
-        if (fallbackRes.ok) {
-          const fallbackData = await fallbackRes.json();
-          setVerses(fallbackData);
-          setLoading(false);
-          return;
-        }
-      }
-
-      setVerses([]);
-      toast({ title: "Vachan nahi mile", description: "Is chapter ke liye data available nahi hai.", variant: "destructive" });
+      // FALLBACK: If API fails, try a secondary mapping or show error
+      throw new Error("No data found");
       
     } catch (e) {
       console.error("Reader Error:", e);
       setVerses([]);
-    } finally {
       setLoading(false);
+      toast({ 
+        title: "Vachan nahi mile", 
+        description: "Internet check karein ya dusra chapter chunein.", 
+        variant: "destructive" 
+      });
     }
   }, [toast]);
 
@@ -115,6 +114,24 @@ function ReaderContent() {
       params.set('version', newVersion || version);
       router.push(`?${params.toString()}`, { scroll: false });
     });
+  };
+
+  const handleBookmark = async (v: any) => {
+    if (!user || !firestore) {
+      toast({ title: "Sign In", description: "Vachan bookmark karne ke liye login karein." });
+      return;
+    }
+    const cleanText = v.text.replace(/<(?:.|\n)*?>/gm, '');
+    await addDoc(collection(firestore, 'users', user.uid, 'bookmarks'), {
+      userId: user.uid,
+      bookName: currentBookData.hi,
+      chapter: chapterNum,
+      verseNumber: v.verse,
+      verseText: cleanText,
+      translation: version,
+      createdAt: serverTimestamp()
+    });
+    toast({ title: "Bookmarked!", description: "Vachan aapke profile mein save ho gaya hai." });
   };
 
   const toggleAudio = () => {
@@ -225,14 +242,21 @@ function ReaderContent() {
           </div>
         ) : (
           <div className="space-y-10 animate-in fade-in duration-700">
-            <div className="bible-content prose prose-invert prose-emerald max-w-none"
-                 style={{ fontSize: `${fontSize}rem` }}>
+            <div className="bible-content prose prose-invert prose-emerald max-w-none">
               {verses.length > 0 ? (
                 verses.map((v: any) => (
-                  <div key={v.verse} className="flex gap-4 mb-6 items-start">
-                    <span className="text-emerald-500 font-black text-sm mt-1.5 min-w-[20px] opacity-60">
-                      {v.verse}
-                    </span>
+                  <div key={v.verse} className="flex gap-4 mb-8 items-start group relative">
+                    <div className="flex flex-col items-center gap-2 mt-1.5">
+                      <span className="text-emerald-500 font-black text-sm min-w-[24px] text-center bg-emerald-500/5 rounded-lg py-1">
+                        {v.verse}
+                      </span>
+                      <button 
+                        onClick={() => handleBookmark(v)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-zinc-600 hover:text-emerald-500"
+                      >
+                        <Bookmark className="w-3 h-3" />
+                      </button>
+                    </div>
                     <p className="text-xl leading-relaxed text-zinc-100 font-serif italic m-0">
                       {v.text.replace(/<(?:.|\n)*?>/gm, '')}
                     </p>
@@ -241,7 +265,7 @@ function ReaderContent() {
               ) : (
                 <div className="flex flex-col items-center py-20 text-zinc-500 text-center gap-4">
                   <AlertCircle className="w-12 h-12 opacity-20" />
-                  <p className="italic">{localizedBookName} {chapterNum} load nahi ho paya.<br/>Internet check karein.</p>
+                  <p className="italic">Vachan load nahi ho paye.<br/>Chapter {chapterNum} check karein.</p>
                 </div>
               )}
             </div>
@@ -261,7 +285,7 @@ function ReaderContent() {
                 <div className="size-16 rounded-[1.5rem] bg-emerald-500/10 flex items-center justify-center group-hover:scale-110 transition-all border border-emerald-500/20 shadow-xl">
                   <ArrowRight className="w-8 h-8 text-emerald-500" />
                 </div>
-                <span className="text-[11px] font-black uppercase tracking-[0.4em] text-zinc-600 group-hover:text-emerald-500">Read Next Chapter</span>
+                <span className="text-[11px] font-black uppercase tracking-[0.4em] text-zinc-600 group-hover:text-emerald-500">Agla Adhyay Padhein</span>
               </button>
             </div>
           </div>
@@ -273,7 +297,7 @@ function ReaderContent() {
         <div className="bg-zinc-950/90 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-2 flex items-center justify-between shadow-2xl">
           <button type="button" onClick={() => handleUpdateNavigation(currentBookData.id, Math.max(1, chapterNum - 1))} className="size-12 rounded-full hover:bg-white/5 flex items-center justify-center text-zinc-500 transition-colors"><ChevronLeft className="w-6 h-6" /></button>
           <button type="button" onClick={toggleAudio} className="flex-1 mx-4 flex items-center justify-center gap-4 bg-emerald-500 text-black py-4 rounded-[1.75rem] shadow-xl group hover:bg-emerald-400 transition-all">
-            {isPlaying ? <><Pause className="w-5 h-5 fill-black animate-pulse" /><span className="text-[11px] font-black uppercase tracking-[0.2em]">Stop Audio</span></> : <><Volume2 className="w-5 h-5 group-hover:scale-110 transition-transform" /><span className="text-[11px] font-black uppercase tracking-[0.2em]">Listen</span></>}
+            {isPlaying ? <><Pause className="w-5 h-5 fill-black animate-pulse" /><span className="text-[11px] font-black uppercase tracking-[0.2em]">Stop Audio</span></> : <><Volume2 className="w-5 h-5 group-hover:scale-110 transition-transform" /><span className="text-[11px] font-black uppercase tracking-[0.2em]">Suniye</span></>}
           </button>
           <button type="button" onClick={() => { if (chapterNum < currentBookData.chapters) handleUpdateNavigation(currentBookData.id, chapterNum + 1); }} className="size-12 rounded-full hover:bg-white/5 flex items-center justify-center text-zinc-500 transition-colors"><ChevronRight className="w-6 h-6" /></button>
         </div>
