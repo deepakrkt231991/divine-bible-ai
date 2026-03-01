@@ -15,8 +15,7 @@ import {
   BookOpen,
   AlertCircle,
   Settings2,
-  Minus,
-  Plus
+  Check
 } from 'lucide-react';
 import { BIBLE_BOOKS } from '@/lib/bible-index';
 import { cn } from '@/lib/utils';
@@ -54,11 +53,10 @@ function ReaderContent() {
   const loadBibleContent = useCallback(async (bid: string, cid: number, ver: string) => {
     setLoading(true);
     try {
-      // 1. Find correct book data from our index
       const bookData = BIBLE_BOOKS.find(b => 
         b.id.toUpperCase() === bid.toUpperCase() || 
-        b.en.toLowerCase() === bid.toLowerCase() ||
         b.usfm.toUpperCase() === bid.toUpperCase() ||
+        b.en.toLowerCase() === bid.toLowerCase() ||
         b.hi === bid
       ) || BIBLE_BOOKS.find(b => b.id === 'MAT')!;
 
@@ -66,25 +64,32 @@ function ReaderContent() {
       
       // LAYER 1: TRY YOUVERSION API (Best for Formatting)
       try {
-        const youversionUrl = `https://api.scripture.api.bible/v1/bibles/${bibleId}/chapters/${bookData.usfm}${cid}?content-type=html&include-notes=false&include-titles=true&include-chapter-numbers=true&include-verse-numbers=true`;
-        const yvRes = await fetch(youversionUrl, {
+        const url = `https://api.scripture.api.bible/v1/bibles/${bibleId}/chapters/${bookData.usfm}${cid}?content-type=html&include-notes=false&include-titles=true&include-chapter-numbers=true&include-verse-numbers=true`;
+        const res = await fetch(url, {
           headers: { "api-key": YOUVERSION_API_KEY, "Accept": "application/json" }
         });
 
-        if (yvRes.ok) {
-          const yvData = await yvRes.json();
-          if (yvData.data && yvData.data.content) {
-            setContent(yvData.data.content);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.data && data.data.content) {
+            // Check if verse numbers are present in HTML, if not, we'll need to process
+            let html = data.data.content;
+            if (!html.includes('class="v"') && !html.includes('class="verse"')) {
+               // If no verse markers, might need manual numbering or fallback
+               console.warn("YouVersion content lacks verse markers, trying fallback...");
+               throw new Error("No verse markers");
+            }
+            setContent(html);
             if (scrollRef.current) scrollRef.current.scrollTop = 0;
             setLoading(false);
             return;
           }
         }
       } catch (e) {
-        console.warn("YouVersion failed, trying fallback...");
+        console.warn("YouVersion failed or incomplete, using Bolls.life fallback...");
       }
 
-      // LAYER 2: FALLBACK TO BOLLS.LIFE API (Highly Reliable for Matthew 2 / Exodus 7)
+      // LAYER 2: FALLBACK TO BOLLS.LIFE API (Reliable for Matthew 2 / Exodus 7)
       const bollsCode = ver === 'hin_irv' ? 'HINIRV' : 'KJV';
       const bollsRes = await fetch(`https://bolls.life/get-text/${bollsCode}/${bookData.bollsId}/${cid}/`);
       
@@ -94,7 +99,7 @@ function ReaderContent() {
           const html = bollsData.map((v: any) => 
             `<p><span class="v">${v.verse}</span> ${v.text}</p>`
           ).join("");
-          setContent(`<h3>${isHindi ? bookData.hi : bookData.en} ${cid}</h3>${html}`);
+          setContent(`<h3 class="fallback-title">${isHindi ? bookData.hi : bookData.en} ${cid}</h3>${html}`);
           if (scrollRef.current) scrollRef.current.scrollTop = 0;
           setLoading(false);
           return;
@@ -104,12 +109,12 @@ function ReaderContent() {
       // LAYER 3: ERROR STATE
       setContent(`<div class="flex flex-col items-center py-20 text-zinc-500 text-center gap-4">
         <AlertCircle class="w-12 h-12 opacity-20" />
-        <p class="italic">${isHindi ? bookData.hi : bookData.en} ${cid} ka vachan load nahi ho paya.<br/>Kripya internet check karein.</p>
+        <p class="italic">${isHindi ? bookData.hi : bookData.en} ${cid} load nahi ho paya.<br/>Internet check karein ya USFM code dekhein.</p>
       </div>`);
       
     } catch (e) {
       console.error("Reader Error:", e);
-      setContent("<p class='text-center py-20 text-red-500 italic'>Server connection error! Internet connect karein.</p>");
+      setContent("<p class='text-center py-20 text-red-500 italic'>Connection error! Please refresh.</p>");
     } finally {
       setLoading(false);
     }
@@ -147,6 +152,7 @@ function ReaderContent() {
 
   const currentBookData = BIBLE_BOOKS.find(b => 
     b.id.toUpperCase() === bookParam.toUpperCase() || 
+    b.usfm.toUpperCase() === bookParam.toUpperCase() ||
     b.en.toLowerCase() === bookParam.toLowerCase() ||
     b.hi === bookParam
   ) || BIBLE_BOOKS[0];
@@ -238,7 +244,7 @@ function ReaderContent() {
         {loading || isPending ? (
           <div className="flex flex-col items-center justify-center h-full space-y-8 opacity-40 py-40">
             <Loader2 className="w-14 h-14 text-emerald-500 animate-spin" />
-            <p className="text-[10px] font-black uppercase tracking-[0.5em] text-emerald-500 animate-pulse">Syncing Sacred Cloud...</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.5em] text-emerald-500 animate-pulse">Consulting Cloud...</p>
           </div>
         ) : (
           <div className="space-y-10 animate-in fade-in duration-700">
@@ -251,7 +257,7 @@ function ReaderContent() {
               <button 
                 type="button"
                 onClick={() => {
-                  if (chapterNum < currentBookData.chapters) handleUpdateNavigation(bookParam, chapterNum + 1);
+                  if (chapterNum < currentBookData.chapters) handleUpdateNavigation(currentBookData.id, chapterNum + 1);
                   else {
                     const idx = BIBLE_BOOKS.findIndex(b => b.id === currentBookData.id);
                     if (idx < BIBLE_BOOKS.length - 1) handleUpdateNavigation(BIBLE_BOOKS[idx + 1].id, 1);
@@ -271,18 +277,19 @@ function ReaderContent() {
 
       <div className="fixed bottom-24 left-1/2 -translate-x-1/2 w-[92%] max-w-md z-[70]">
         <div className="bg-zinc-950/90 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-2 flex items-center justify-between shadow-2xl">
-          <button type="button" onClick={() => handleUpdateNavigation(bookParam, Math.max(1, chapterNum - 1))} className="size-12 rounded-full hover:bg-white/5 flex items-center justify-center text-zinc-500 transition-colors"><ChevronLeft className="w-6 h-6" /></button>
+          <button type="button" onClick={() => handleUpdateNavigation(currentBookData.id, Math.max(1, chapterNum - 1))} className="size-12 rounded-full hover:bg-white/5 flex items-center justify-center text-zinc-500 transition-colors"><ChevronLeft className="w-6 h-6" /></button>
           <button type="button" onClick={toggleAudio} className="flex-1 mx-4 flex items-center justify-center gap-4 bg-emerald-500 text-black py-4 rounded-[1.75rem] shadow-xl group hover:bg-emerald-400 transition-all">
             {isPlaying ? <><Pause className="w-5 h-5 fill-black animate-pulse" /><span className="text-[11px] font-black uppercase tracking-[0.2em]">Stop Audio</span></> : <><Volume2 className="w-5 h-5 group-hover:scale-110 transition-transform" /><span className="text-[11px] font-black uppercase tracking-[0.2em]">Listen</span></>}
           </button>
-          <button type="button" onClick={() => { if (chapterNum < currentBookData.chapters) handleUpdateNavigation(bookParam, chapterNum + 1); }} className="size-12 rounded-full hover:bg-white/5 flex items-center justify-center text-zinc-500 transition-colors"><ChevronRight className="w-6 h-6" /></button>
+          <button type="button" onClick={() => { if (chapterNum < currentBookData.chapters) handleUpdateNavigation(currentBookData.id, chapterNum + 1); }} className="size-12 rounded-full hover:bg-white/5 flex items-center justify-center text-zinc-500 transition-colors"><ChevronRight className="w-6 h-6" /></button>
         </div>
       </div>
 
       <style jsx global>{`
-        .bible-content .v { font-weight: 900; color: #10b981; margin-right: 10px; font-size: 0.75em; opacity: 0.6; }
+        .bible-content .v { font-weight: 900; color: #10b981; margin-right: 10px; font-size: 0.75em; opacity: 0.6; display: inline-block; width: 20px; }
         .bible-content p { margin-bottom: 1.5rem; line-height: 1.8; font-family: var(--font-serif); font-style: italic; color: #e4e4e7; }
         .bible-content h3 { font-size: 1.5rem; color: #10b981; font-family: var(--font-serif); font-weight: bold; margin-bottom: 1rem; margin-top: 2rem; border-left: 4px solid #10b981; padding-left: 1rem; }
+        .bible-content .fallback-title { text-align: center; border: none; padding: 0; }
         .bible-content .s1 { font-weight: bold; color: #10b981; margin-bottom: 1rem; display: block; text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.9rem; }
       `}</style>
     </div>

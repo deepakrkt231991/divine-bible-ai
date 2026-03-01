@@ -25,7 +25,7 @@ export const BIBLE_BOOKS: BibleBook[] = [
   { id: "1CH", usfm: "1CH", en: "1 Chronicles", hi: "१ इतिहास", chapters: 29, testament: "old", bollsId: 13 },
   { id: "2CH", usfm: "2CH", en: "2 Chronicles", hi: "२ इतिहास", chapters: 36, testament: "old", bollsId: 14 },
   { id: "EZR", usfm: "EZR", en: "Ezra", hi: "एज्रा", chapters: 10, testament: "old", bollsId: 15 },
-  { id: "NEH", usfm: "NEH", en: "Nehemiah", hi: "नहेमायाah", chapters: 13, testament: "old", bollsId: 16 },
+  { id: "NEH", usfm: "NEH", en: "Nehemiah", hi: "नहेमायाह", chapters: 13, testament: "old", bollsId: 16 },
   { id: "EST", usfm: "EST", en: "Esther", hi: "एस्तेर", chapters: 10, testament: "old", bollsId: 17 },
   { id: "JOB", usfm: "JOB", en: "Job", hi: "अय्यूब", chapters: 42, testament: "old", bollsId: 18 },
   { id: "PSA", usfm: "PSA", en: "Psalms", hi: "भजनसंग्रह", chapters: 150, testament: "old", bollsId: 19 },
@@ -93,6 +93,6 @@ export const BIBLE_BOOKS: BibleBook[] = [
   { id: "1JN", usfm: "1JN", en: "1 John", hi: "१ यूहन्ना", chapters: 5, testament: "new", bollsId: 62 },
   { id: "2JN", usfm: "2JN", en: "2 John", hi: "२ यूहन्ना", chapters: 1, testament: "new", bollsId: 63 },
   { id: "3JN", usfm: "3JN", en: "3 John", hi: "३ यूहन्ना", chapters: 1, testament: "new", bollsId: 64 },
-  { id: "JUD", usfm: "JUD", en: "Jude", hi: "यहूदा", chapters: 1, testament: "new", bollsId: 65 },
+  { id: "JUD", usfm: "JUD", en: "Judude", hi: "यहूदा", chapters: 1, testament: "new", bollsId: 65 },
   { id: "REV", usfm: "REV", en: "Revelation", hi: "प्रकाशितवाक्य", chapters: 22, testament: "new", bollsId: 66 }
 ];
