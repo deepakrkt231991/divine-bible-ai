@@ -12,7 +12,6 @@ import {
   Pause,
   ArrowRight,
   BookOpen,
-  Settings2,
   AlertCircle
 } from 'lucide-react';
 import { BIBLE_BOOKS } from '@/lib/bible-index';
@@ -33,7 +32,7 @@ function ReaderContent() {
   const [isPending, startTransition] = useTransition();
 
   // URL State
-  const bookId = searchParams.get('book') || 'MAT';
+  const bookParam = searchParams.get('book') || 'MAT';
   const chapterNum = parseInt(searchParams.get('chapter') || '1');
   const version = searchParams.get('version') || 'hin_irv';
   
@@ -43,7 +42,7 @@ function ReaderContent() {
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [fontSize, setFontSize] = useState(1.2);
-  const [expandedBook, setExpandedBook] = useState<string | null>(bookId);
+  const [expandedBook, setExpandedBook] = useState<string | null>(bookParam.toUpperCase());
 
   const isHindi = version === 'hin_irv';
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -51,11 +50,16 @@ function ReaderContent() {
   const loadBibleContent = useCallback(async (bid: string, cid: number, ver: string) => {
     setLoading(true);
     try {
-      const bookData = BIBLE_BOOKS.find(b => b.id === bid) || BIBLE_BOOKS.find(b => b.id === 'MAT')!;
+      // Find book data case-insensitively by ID, English Name, or USFM
+      const bookData = BIBLE_BOOKS.find(b => 
+        b.id.toUpperCase() === bid.toUpperCase() || 
+        b.en.toLowerCase() === bid.toLowerCase() ||
+        b.usfm.toUpperCase() === bid.toUpperCase()
+      ) || BIBLE_BOOKS.find(b => b.id === 'MAT')!;
+
       const bibleId = ver === 'hin_irv' ? BIBLE_ID_HIN : BIBLE_ID_ENG;
       
-      // ✅ ATTEMPT 1: YouVersion API (Standard Cloud Source)
-      // Fixed: No dot between book and chapter (Standard USFM MAT1 format)
+      // ✅ ATTEMPT 1: YouVersion API (No DOT format: EXO7)
       const youversionUrl = `https://api.scripture.api.bible/v1/bibles/${bibleId}/chapters/${bookData.usfm}${cid}?content-type=html&include-notes=false&include-titles=true&include-chapter-numbers=true&include-verse-numbers=true`;
 
       const yvRes = await fetch(youversionUrl, {
@@ -80,29 +84,31 @@ function ReaderContent() {
         const localData = await localRes.json();
         let foundVerses: string[] = [];
 
-        // Check if Array (Scrollmapper) or Object (Flat)
+        // Support both Array (Scrollmapper) and Object formats
         if (Array.isArray(localData)) {
           const found = localData.find(item => 
-            item.book?.toLowerCase() === bookData.en.toLowerCase() && 
+            (item.book?.toLowerCase() === bookData.en.toLowerCase() || item.book?.toUpperCase() === bookData.usfm) && 
             item.chapter_nr?.toString() === cid.toString()
           );
           if (found && found.chapter) {
             foundVerses = Object.values(found.chapter).map((v: any) => v.verse || v);
           }
         } else {
-          foundVerses = localData[bookData.en.toLowerCase()]?.[cid.toString()] || [];
+          // Object format lookup: data[exodus][7]
+          const bookKey = bookData.en.toLowerCase();
+          foundVerses = localData[bookKey]?.[cid.toString()] || [];
         }
 
         if (foundVerses.length > 0) {
           const html = foundVerses.map((v, i) => `<p><span class="v">${i+1}</span> ${v}</p>`).join("");
-          setContent(`<h3>${bookData.hi} ${cid}</h3>${html}`);
+          setContent(`<h3>${isHindi ? bookData.hi : bookData.en} ${cid}</h3>${html}`);
           if (scrollRef.current) scrollRef.current.scrollTop = 0;
           setLoading(false);
           return;
         }
       }
 
-      // ✅ ATTEMPT 3: Bolls.life Public API (Secondary Cloud Fallback)
+      // ✅ ATTEMPT 3: Bolls.life Public API
       const bollsCode = ver === 'hin_irv' ? 'HINIRV' : 'KJV';
       const bollsRes = await fetch(`https://bolls.life/get-text/${bollsCode}/${bookData.bollsId}/${cid}/`);
       
@@ -110,7 +116,7 @@ function ReaderContent() {
         const bollsData = await bollsRes.json();
         if (Array.isArray(bollsData) && bollsData.length > 0) {
           const html = bollsData.map((v: any) => `<p><span class="v">${v.verse}</span> ${v.text}</p>`).join("");
-          setContent(`<h3>${bookData.hi} ${cid}</h3>${html}`);
+          setContent(`<h3>${isHindi ? bookData.hi : bookData.en} ${cid}</h3>${html}`);
           if (scrollRef.current) scrollRef.current.scrollTop = 0;
           setLoading(false);
           return;
@@ -118,8 +124,8 @@ function ReaderContent() {
       }
 
       setContent(`<div class="flex flex-col items-center py-20 text-zinc-500 text-center gap-4">
-        <AlertCircle className="w-12 h-12 opacity-20" />
-        <p class="italic">${bookData.hi} ${cid} ka vachan load nahi ho paya.<br/>Internet ya USFM code check karein.</p>
+        <AlertCircle class="w-12 h-12 opacity-20" />
+        <p class="italic">${isHindi ? bookData.hi : bookData.en} ${cid} ka vachan load nahi ho paya.<br/>Internet ya JSON file check karein.</p>
       </div>`);
       
     } catch (e) {
@@ -128,11 +134,11 @@ function ReaderContent() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isHindi]);
 
   useEffect(() => {
-    loadBibleContent(bookId, chapterNum, version);
-  }, [bookId, chapterNum, version, loadBibleContent]);
+    loadBibleContent(bookParam, chapterNum, version);
+  }, [bookParam, chapterNum, version, loadBibleContent]);
 
   const handleUpdateNavigation = (newBook: string, newChapter: number, newVersion?: string) => {
     setSelectorOpen(false);
@@ -160,7 +166,11 @@ function ReaderContent() {
     setIsPlaying(true);
   };
 
-  const currentBookData = BIBLE_BOOKS.find(b => b.id === bookId) || BIBLE_BOOKS[0];
+  const currentBookData = BIBLE_BOOKS.find(b => 
+    b.id.toUpperCase() === bookParam.toUpperCase() || 
+    b.en.toLowerCase() === bookParam.toLowerCase()
+  ) || BIBLE_BOOKS[0];
+  
   const localizedBookName = isHindi ? currentBookData.hi : currentBookData.en;
 
   const filteredBooks = (testament: 'old' | 'new' | 'deuterocanon') => BIBLE_BOOKS.filter(b => 
@@ -237,7 +247,7 @@ function ReaderContent() {
         
         <button 
           type="button"
-          onClick={() => handleUpdateNavigation(bookId, chapterNum, version === 'kjv' ? 'hin_irv' : 'kjv')}
+          onClick={() => handleUpdateNavigation(bookParam, chapterNum, version === 'kjv' ? 'hin_irv' : 'kjv')}
           className="size-11 flex items-center justify-center rounded-2xl bg-zinc-900/50 border border-white/5 text-emerald-500 hover:bg-emerald-500/10 transition-all outline-none"
         >
           <Languages className="w-5 h-5" />
@@ -261,9 +271,9 @@ function ReaderContent() {
               <button 
                 type="button"
                 onClick={() => {
-                  if (chapterNum < currentBookData.chapters) handleUpdateNavigation(bookId, chapterNum + 1);
+                  if (chapterNum < currentBookData.chapters) handleUpdateNavigation(bookParam, chapterNum + 1);
                   else {
-                    const idx = BIBLE_BOOKS.findIndex(b => b.id === bookId);
+                    const idx = BIBLE_BOOKS.findIndex(b => b.id === currentBookData.id);
                     if (idx < BIBLE_BOOKS.length - 1) handleUpdateNavigation(BIBLE_BOOKS[idx + 1].id, 1);
                   }
                 }}
@@ -281,11 +291,11 @@ function ReaderContent() {
 
       <div className="fixed bottom-24 left-1/2 -translate-x-1/2 w-[92%] max-w-md z-[70]">
         <div className="bg-zinc-950/90 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-2 flex items-center justify-between shadow-2xl">
-          <button type="button" onClick={() => handleUpdateNavigation(bookId, Math.max(1, chapterNum - 1))} className="size-12 rounded-full hover:bg-white/5 flex items-center justify-center text-zinc-500 transition-colors"><ChevronLeft className="w-6 h-6" /></button>
+          <button type="button" onClick={() => handleUpdateNavigation(bookParam, Math.max(1, chapterNum - 1))} className="size-12 rounded-full hover:bg-white/5 flex items-center justify-center text-zinc-500 transition-colors"><ChevronLeft className="w-6 h-6" /></button>
           <button type="button" onClick={toggleAudio} className="flex-1 mx-4 flex items-center justify-center gap-4 bg-emerald-500 text-black py-4 rounded-[1.75rem] shadow-xl group hover:bg-emerald-400 transition-all">
             {isPlaying ? <><Pause className="w-5 h-5 fill-black animate-pulse" /><span className="text-[11px] font-black uppercase tracking-[0.2em]">Stop Audio</span></> : <><Volume2 className="w-5 h-5 group-hover:scale-110 transition-transform" /><span className="text-[11px] font-black uppercase tracking-[0.2em]">Listen</span></>}
           </button>
-          <button type="button" onClick={() => { if (chapterNum < currentBookData.chapters) handleUpdateNavigation(bookId, chapterNum + 1); }} className="size-12 rounded-full hover:bg-white/5 flex items-center justify-center text-zinc-500 transition-colors"><ChevronRight className="w-6 h-6" /></button>
+          <button type="button" onClick={() => { if (chapterNum < currentBookData.chapters) handleUpdateNavigation(bookParam, chapterNum + 1); }} className="size-12 rounded-full hover:bg-white/5 flex items-center justify-center text-zinc-500 transition-colors"><ChevronRight className="w-6 h-6" /></button>
         </div>
       </div>
 
