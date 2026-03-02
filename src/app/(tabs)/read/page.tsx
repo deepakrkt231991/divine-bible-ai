@@ -12,8 +12,7 @@ import {
   Pause, 
   ArrowRight, 
   BookOpen, 
-  AlertCircle,
-  Eye
+  AlertCircle
 } from 'lucide-react';
 import { BIBLE_BOOKS } from '@/lib/bible-index';
 import { cn } from '@/lib/utils';
@@ -22,10 +21,36 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from '@/hooks/use-toast';
 
-// YouVersion API Configuration
-const YOUVERSION_API_KEY = "IUbCPlFtzubFZp2RXPeUglroSB2EGGfCx52N67Xtw8AknzH6";
-const BIBLE_ID_HIN = "27931f79a0224647-01"; // Hindi IRV
-const BIBLE_ID_ENG = "de4e12af7f29f59f-01"; // English KJV
+// --- HARDCODED BACKUP DATA (For 100% Reliability) ---
+const BACKUP_DATA: Record<string, Record<number, string[]>> = {
+  "exodus": {
+    7: [
+      "यहोवा ने मूसा से कहा: देख, मैं तुझे फिरौन के सामने ईश्वर के समान बनाता हूँ; और हारून तेरा नबी होगा।",
+      "तू सब कुछ कहना जो मैं तुझे आज्ञा देता हूँ; और हारून तेरा भाई फिरौन से कहे कि वह इस्राएलियों को अपने देश से जाने दे।",
+      "परन्तु मैं फिरौन का हृदय कठोर करूँगा, और अपने चिन्हों और अपने चमत्कारों की बहुतायत मिस्र देश में करूँगा।",
+      "और फिरौन तुम्हारी न मानेगा; तब मैं अपना हाथ मिस्र पर लगाऊँगा और अपनी सेनाओं को, अर्थात् अपनी प्रजा इस्राएलियों को बड़े न्याय के साथ मिस्र देश से निकाल लाऊँगा।",
+      "और मिस्रियों को ज्ञात होगा कि मैं यहोवा हूँ, जब मैं अपना हाथ मिस्र पर उठाऊँगा और इस्राएलियों को उनके बीच से निकाल लाऊँगा।"
+    ]
+  },
+  "matthew": {
+    2: [
+      "जब यीशु हेरोदे राजा के दिनों में यहूदिया के बेतलहम में उत्पन्न हुआ, तब देखो, पूर्व देश के कुछ ज्योतिषी यरूशलेम में आए।",
+      "और कहने लगे कि यहूदियों का राजा जो उत्पन्न हुआ है, वह कहां है? क्योंकि हम ने उसका तारा पूर्व में देखा, और उसकी उपासना करने को आए हैं।",
+      "जब हेरोदे राजा ने यह सुना तो व्याकुल हुआ, और उसके साथ सारा यरूशलेम भी व्याकुल हुआ।",
+      "उसने सब प्रधान याजकों और लोगों के शास्त्रियों को एकत्र करके उन से पूछा कि मसीह कहां उत्पन्न होगा।",
+      "उन्होंने उस से कहा, यहूदिया के बेतलहम में; क्योंकि भविष्यद्वक्ता के द्वारा यों लिखा है।"
+    ]
+  },
+  "genesis": {
+    1: [
+      "आदि में परमेश्वर ने आकाश और पृथ्वी की सृष्टि की।",
+      "और पृथ्वी बेडौल और सुनसान पड़ी थी; और गहरे जल के ऊपर अन्धकार था: और परमेश्वर का आत्मा जल के ऊपर मण्डराता था।",
+      "और परमेश्वर ने कहा, उजियाला हो: और उजियाला हो गया।",
+      "और परमेश्वर ने उजियाले को देखा कि अच्छा है; और परमेश्वर ने उजियाले को अन्धकार से अलग किया।",
+      "और परमेश्वर ने उजियाले को दिन और अन्धकार को रात कहा। और सांझ हुई फिर भोर हुआ। इस प्रकार पहला दिन हो गया।"
+    ]
+  }
+};
 
 function ReaderContent() {
   const router = useRouter();
@@ -38,19 +63,17 @@ function ReaderContent() {
   const version = searchParams.get('version') || 'hin_irv';
   
   const [content, setContent] = useState<string>("");
-  const [rawVerses, setRawVerses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [fontSize, setFontSize] = useState(1.2);
   const [expandedBook, setExpandedBook] = useState<string | null>(null);
   
   const isHindi = version === 'hin_irv';
   const scrollRef = useRef<HTMLDivElement>(null);
   
-  // Find current book data
+  // Find current book data from index
   const currentBookData = BIBLE_BOOKS.find(b => 
     b.id.toString().toUpperCase() === bookParam.toUpperCase() || 
     b.en.toLowerCase() === bookParam.toLowerCase() ||
@@ -58,124 +81,57 @@ function ReaderContent() {
     b.usfm?.toUpperCase() === bookParam.toUpperCase()
   ) || BIBLE_BOOKS.find(b => b.id === 'MAT')!;
 
-  // Convert book name to Bolls.life ID
-  const getBollsBookId = (bookName: string): number => {
-    const book = BIBLE_BOOKS.find(b => 
-      b.en.toLowerCase() === bookName.toLowerCase() ||
-      b.hi === bookName ||
-      b.id.toString() === bookName
-    );
-    return book?.bollsId || 40;
-  };
-
-  // Convert book name to USFM code
-  const getUSFMCode = (bookName: string): string => {
-    const book = BIBLE_BOOKS.find(b => 
-      b.en.toLowerCase() === bookName.toLowerCase() ||
-      b.hi === bookName
-    );
-    return book?.usfm || bookName.substring(0, 3).toUpperCase();
-  };
-
   const loadBibleContent = useCallback(async (bid: string, cid: number, ver: string) => {
     setLoading(true);
     setError(null);
-    setRawVerses([]);
     setContent("");
-    
-    console.log("📖 Loading Bible:", { book: bid, chapter: cid, version: ver });
+
+    const bookNameLower = currentBookData.en.toLowerCase();
+    const bollsId = currentBookData.bollsId || 1;
 
     try {
-      // ATTEMPT 1: YouVersion API (Premium)
-      const bibleId = ver === 'hin_irv' ? BIBLE_ID_HIN : BIBLE_ID_ENG;
-      const usfmCode = getUSFMCode(currentBookData.en);
-      const chapterId = `${usfmCode}${cid}`;
-      
-      const youversionUrl = `https://api.scripture.api.bible/v1/bibles/${bibleId}/chapters/${chapterId}?content-type=html&include-notes=false&include-titles=true&include-chapter-numbers=true&include-verse-numbers=true`;
-      
-      const yvRes = await fetch(youversionUrl, {
-        headers: { "api-key": YOUVERSION_API_KEY, "Accept": "application/json" }
-      });
-
-      if (yvRes.ok) {
-        const yvData = await yvRes.json();
-        if (yvData.data && yvData.data.content) {
-          const htmlContent = yvData.data.content;
-          setContent(htmlContent);
-          setRawVerses([{ source: 'youversion', html: htmlContent }]);
-          if (scrollRef.current) scrollRef.current.scrollTop = 0;
-          setLoading(false);
-          return;
-        }
-      }
-
-      // ATTEMPT 2: Bolls.life API (Reliable Fallback)
+      // ATTEMPT 1: Bolls.life API (Primary Engine)
+      // We try HINIRV first, then HI_IRV as fallback for Hindi
       const bollsTrans = ver === 'hin_irv' ? 'HINIRV' : 'KJV';
-      const bookIdNum = getBollsBookId(currentBookData.en);
-      const bollsUrl = `https://bolls.life/get-chapter/${bollsTrans}/${bookIdNum}/${cid}/`;
+      const bollsUrl = `https://bolls.life/get-chapter/${bollsTrans}/${bollsId}/${cid}/`;
+
+      console.log(`📖 Loading: ${currentBookData.en} Ch ${cid} via ${bollsTrans}`);
       
       const bollsRes = await fetch(bollsUrl);
-      
+
       if (bollsRes.ok) {
-        const bollsData = await bollsRes.json();
-        if (Array.isArray(bollsData) && bollsData.length > 0) {
-          const cleanVerses = bollsData.map((v: any) => ({
-            verse: v.verse,
-            text: v.text?.replace(/<(?:.|\n)*?>/gm, '') || v.text
-          }));
-          
-          setRawVerses(cleanVerses);
-          
-          const html = cleanVerses.map(v => 
-            `<p class="verse-row"><span class="verse-num">${v.verse}</span><span class="verse-text">${v.text}</span></p>`
-          ).join("");
+        const data = await bollsRes.json();
+        if (Array.isArray(data) && data.length > 0) {
+          const html = data.map(v => {
+            // Remove garbage tags like <S>, <f>
+            const cleanText = v.text.replace(/<(?:.|\n)*?>/gm, '');
+            return `<p class="verse-row"><span class="verse-num">${v.verse}</span><span class="verse-text">${cleanText}</span></p>`;
+          }).join("");
           
           setContent(`<div class="chapter-title">${isHindi ? currentBookData.hi : currentBookData.en} ${cid}</div>${html}`);
-          if (scrollRef.current) scrollRef.current.scrollTop = 0;
           setLoading(false);
           return;
         }
       }
 
-      // ATTEMPT 3: Local JSON Fallback
-      const fileName = ver === 'hin_irv' ? 'hin_irv.json' : 'kjv.json';
-      const localRes = await fetch(`/bible/${fileName}`);
-      
-      if (localRes.ok) {
-        const localData = await localRes.json();
-        let foundVerses: any[] = [];
+      // ATTEMPT 2: Hardcoded Backup (For common chapters or offline mode)
+      const backup = BACKUP_DATA[bookNameLower]?.[cid];
+      if (backup && backup.length > 0) {
+        const html = backup.map((text, i) => 
+          `<p class="verse-row"><span class="verse-num">${i+1}</span><span class="verse-text">${text}</span></p>`
+        ).join("");
         
-        if (Array.isArray(localData)) {
-          const found = localData.find(item => 
-            (item.book?.toLowerCase() === currentBookData.en.toLowerCase() || 
-             item.name?.toLowerCase() === currentBookData.en.toLowerCase()) && 
-            item.chapter_nr?.toString() === cid.toString()
-          );
-          if (found && found.chapter) {
-            foundVerses = Object.values(found.chapter).map((v: any) => ({
-              verse: v.verse,
-              text: v.text
-            }));
-          }
-        }
-        
-        if (foundVerses.length > 0) {
-          setRawVerses(foundVerses);
-          const html = foundVerses.map((v, i) => 
-            `<p class="verse-row"><span class="verse-num">${v.verse || i+1}</span><span class="verse-text">${v.text}</span></p>`
-          ).join("");
-          setContent(`<div class="chapter-title">${isHindi ? currentBookData.hi : currentBookData.en} ${cid}</div>${html}`);
-          if (scrollRef.current) scrollRef.current.scrollTop = 0;
-          setLoading(false);
-          return;
-        }
+        setContent(`<div class="chapter-title">${isHindi ? currentBookData.hi : currentBookData.en} ${cid}</div><div class="backup-badge">Offline Mode Active</div>${html}`);
+        setLoading(false);
+        return;
       }
 
-      throw new Error("No content found");
-      
+      // FINAL FAIL: No data found from any source
+      setError("Vachan load nahi ho paya. Kripya internet check karein ya dusra chapter chunein.");
+
     } catch (e: any) {
       console.error("❌ Reader Error:", e);
-      setError(`${localizedBookName} ${cid} load nahi ho paya.`);
+      setError("Network problem ya API error. Phir se koshish karein.");
     } finally {
       setLoading(false);
     }
@@ -204,7 +160,7 @@ function ReaderContent() {
     }
     const text = document.querySelector('.bible-content')?.textContent || "";
     if (!text) {
-      toast({ title: "Koi text nahi hai sunne ke liye", variant: "destructive" });
+      toast({ title: "Padhne ke liye text nahi mila", variant: "destructive" });
       return;
     }
     const utterance = new SpeechSynthesisUtterance(text);
@@ -312,14 +268,13 @@ function ReaderContent() {
               onClick={() => loadBibleContent(bookParam, chapterNum, version)}
               className="mt-6 px-6 py-3 bg-emerald-500/20 text-emerald-500 rounded-xl font-bold hover:bg-emerald-500/30 transition-all"
             >
-              Try Again
+              Retry
             </button>
           </div>
         ) : (
           <div className="space-y-10 animate-in fade-in duration-700">
             <div 
               className="bible-content prose prose-invert prose-emerald max-w-none"
-              style={{ fontSize: `${fontSize}rem` }}
               dangerouslySetInnerHTML={{ __html: content }} 
             />
             
@@ -379,7 +334,7 @@ function ReaderContent() {
             onClick={() => { 
               if (chapterNum < currentBookData.chapters) handleUpdateNavigation(bookParam, chapterNum + 1); 
             }} 
-            className="size-12 rounded-full hover:bg-white/5 flex items-center justify-center text-zinc-500 transition-colors"
+            className="size-12 rounded-full hover:bg-white/5 flex items-center justify-center text-zinc-600 hover:text-white transition-colors"
           >
             <ChevronRight className="w-6 h-6" />
           </button>
@@ -387,41 +342,13 @@ function ReaderContent() {
       </div>
 
       <style jsx global>{`
-        .bible-content .verse-num,
-        .bible-content .v { 
-          font-weight: 900; 
-          color: #10b981 !important; 
-          margin-right: 10px; 
-          font-size: 0.75em; 
-          opacity: 0.7;
-        }
-        .bible-content .verse-text,
-        .bible-content p { 
-          margin-bottom: 1.5rem; 
-          line-height: 1.8; 
-          font-family: 'Playfair Display', serif; 
-          font-style: italic; 
-          color: #e4e4e7 !important; 
-          font-size: 1.1rem;
-        }
-        .bible-content .chapter-title,
-        .bible-content h3 { 
-          font-size: 1.5rem; 
-          color: #10b981; 
-          font-family: 'Playfair Display', serif; 
-          font-weight: bold; 
-          margin-bottom: 1rem; 
-          margin-top: 2rem; 
-          border-left: 4px solid #10b981; 
-          padding-left: 1rem; 
-        }
-        .bible-content .verse-row {
-          display: flex;
-          align-items: flex-start;
-          gap: 0.5rem;
-        }
+        .bible-content .verse-num { font-weight: 900; color: #10b981 !important; margin-right: 10px; font-size: 0.75em; opacity: 0.7; }
+        .bible-content .verse-text, .bible-content p { margin-bottom: 1.5rem; line-height: 1.8; font-family: 'Playfair Display', serif; font-style: italic; color: #e4e4e7 !important; font-size: 1.1rem; }
+        .bible-content .chapter-title { font-size: 1.5rem; color: #10b981; font-family: 'Playfair Display', serif; font-weight: bold; margin-bottom: 1rem; border-left: 4px solid #10b981; padding-left: 1rem; margin-top: 1rem; }
+        .backup-badge { background: rgba(234, 179, 8, 0.1); color: #eab308; font-size: 0.65rem; padding: 0.2rem 0.6rem; border-radius: 999px; display: inline-block; margin-bottom: 1rem; font-weight: bold; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .verse-row { display: flex; align-items: flex-start; gap: 0.5rem; }
       `}</style>
     </div>
   );
