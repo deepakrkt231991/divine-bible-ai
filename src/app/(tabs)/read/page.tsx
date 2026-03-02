@@ -21,7 +21,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from '@/hooks/use-toast';
 
-// --- HARDCODED BACKUP DATA (For 100% Reliability) ---
+// --- HARDCODED BACKUP DATA (For offline or emergency) ---
 const BACKUP_DATA: Record<string, Record<number, string[]>> = {
   "exodus": {
     7: [
@@ -91,7 +91,6 @@ function ReaderContent() {
 
     try {
       // ATTEMPT 1: Bolls.life API (Primary Engine)
-      // We try HINIRV first, then HI_IRV as fallback for Hindi
       const bollsTrans = ver === 'hin_irv' ? 'HINIRV' : 'KJV';
       const bollsUrl = `https://bolls.life/get-chapter/${bollsTrans}/${bollsId}/${cid}/`;
 
@@ -127,11 +126,11 @@ function ReaderContent() {
       }
 
       // FINAL FAIL: No data found from any source
-      setError("Vachan load nahi ho paya. Kripya internet check karein ya dusra chapter chunein.");
+      setError("Vachan load nahi ho paya. Chapter dusra chunein ya internet check karein.");
 
     } catch (e: any) {
       console.error("❌ Reader Error:", e);
-      setError("Network problem ya API error. Phir se koshish karein.");
+      setError("Network problem. Phir se koshish karein.");
     } finally {
       setLoading(false);
     }
@@ -262,7 +261,7 @@ function ReaderContent() {
         ) : error ? (
           <div className="flex flex-col items-center justify-center h-full py-20 text-center">
             <AlertCircle className="w-16 h-16 text-red-500/30 mb-6" />
-            <h3 className="text-xl font-bold text-red-500 mb-2">Error!</h3>
+            <h3 className="text-xl font-bold text-red-500 mb-2">Oops!</h3>
             <p className="text-zinc-400 max-w-md">{error}</p>
             <button 
               onClick={() => loadBibleContent(bookParam, chapterNum, version)}
@@ -300,31 +299,31 @@ function ReaderContent() {
         )}
       </main>
 
-      {/* COMPACT AUDIO BAR */}
+      {/* COMPACT AUDIO BAR - STICKED NEAR BOTTOM NAV */}
       <div className="fixed bottom-20 left-1/2 -translate-x-1/2 w-[92%] max-w-md z-[70]">
-        <div className="bg-zinc-950/90 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-2 flex items-center justify-between shadow-2xl">
+        <div className="bg-zinc-950/90 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-1.5 flex items-center justify-between shadow-2xl">
           <button 
             type="button" 
             onClick={() => handleUpdateNavigation(bookParam, Math.max(1, chapterNum - 1))} 
-            className="size-12 rounded-full hover:bg-white/5 flex items-center justify-center text-zinc-500 transition-colors"
+            className="size-10 rounded-full hover:bg-white/5 flex items-center justify-center text-zinc-500 transition-colors"
           >
-            <ChevronLeft className="w-6 h-6" />
+            <ChevronLeft className="w-5 h-5" />
           </button>
           
           <button 
             type="button" 
             onClick={toggleAudio} 
-            className="flex-1 mx-4 flex items-center justify-center gap-4 bg-emerald-500 text-black py-4 rounded-[1.75rem] shadow-xl group hover:bg-emerald-400 transition-all"
+            className="flex-1 mx-3 flex items-center justify-center gap-3 bg-emerald-500 text-black py-3 rounded-full shadow-xl group hover:bg-emerald-400 transition-all"
           >
             {isPlaying ? (
               <>
-                <Pause className="w-5 h-5 fill-black animate-pulse" />
-                <span className="text-[11px] font-black uppercase tracking-[0.2em]">Stop Audio</span>
+                <Pause className="w-4 h-4 fill-black animate-pulse" />
+                <span className="text-[10px] font-black uppercase tracking-[0.2em]">Stop</span>
               </>
             ) : (
               <>
-                <Volume2 className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                <span className="text-[11px] font-black uppercase tracking-[0.2em]">Suniye</span>
+                <Volume2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                <span className="text-[10px] font-black uppercase tracking-[0.2em]">Suniye</span>
               </>
             )}
           </button>
@@ -334,9 +333,9 @@ function ReaderContent() {
             onClick={() => { 
               if (chapterNum < currentBookData.chapters) handleUpdateNavigation(bookParam, chapterNum + 1); 
             }} 
-            className="size-12 rounded-full hover:bg-white/5 flex items-center justify-center text-zinc-600 hover:text-white transition-colors"
+            className="size-10 rounded-full hover:bg-white/5 flex items-center justify-center text-zinc-600 hover:text-white transition-colors"
           >
-            <ChevronRight className="w-6 h-6" />
+            <ChevronRight className="w-5 h-5" />
           </button>
         </div>
       </div>
