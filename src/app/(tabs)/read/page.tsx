@@ -67,11 +67,11 @@ function ReaderContent() {
     setLoading(true);
     setErrorState(null);
     
-    // 1. Check Local Static Data first (for Exodus 7 / Matthew 2 optimization)
+    // 1. Check Local Static Data first (Fast fallback for specific chapters)
     const localData = (window as any).BIBLE_DATA;
     const normalizedBook = bid.toLowerCase();
-    const staticBookKey = normalizedBook === 'exo' || normalizedBook === 'exodus' ? 'exodus' : 
-                         normalizedBook === 'mat' || normalizedBook === 'matthew' ? 'matthew' : normalizedBook;
+    const staticBookKey = normalizedBook === 'exo' || normalizedBook === 'exodus' || normalizedBook === 'nirgaman' ? 'exodus' : 
+                         normalizedBook === 'mat' || normalizedBook === 'matthew' || normalizedBook === 'matti' ? 'matthew' : normalizedBook;
 
     if (localData && localData[staticBookKey] && localData[staticBookKey][cid]) {
       const fallbackVerses = localData[staticBookKey][cid].map((text: string, i: number) => ({
@@ -83,21 +83,16 @@ function ReaderContent() {
       return;
     }
 
-    // 2. Fetch from Bolls API (Robust Fallback)
+    // 2. Fetch from Bolls API (Primary Source)
     try {
       const bollsId = BOOK_LOOKUP[normalizedBook] || currentBookData.bollsId;
-      // Try HINIRV first
-      let url = `https://bolls.life/get-chapter/${ver}/${bollsId}/${cid}/`;
-      let res = await fetch(url);
+      // Using HINIRV as default Hindi IRV code for Bolls.life
+      const url = `https://bolls.life/get-chapter/${ver}/${bollsId}/${cid}/`;
+      const res = await fetch(url);
       
-      if (!res.ok && ver === 'HINIRV') {
-        // Fallback to HI_IRV code if HINIRV fails
-        url = `https://bolls.life/get-chapter/HI_IRV/${bollsId}/${cid}/`;
-        res = await fetch(url);
-      }
-
       if (res.ok) {
         const data = await res.json();
+        // Bolls usually returns an array of {verse, text}
         if (Array.isArray(data) && data.length > 0) {
           setVerses(data);
           setLoading(false);
@@ -106,29 +101,33 @@ function ReaderContent() {
         }
       }
 
-      // 3. Last resort: English KJV
-      const fallbackUrl = `https://bolls.life/get-chapter/KJV/${bollsId}/${cid}/`;
-      const fallbackRes = await fetch(fallbackUrl);
-      if (fallbackRes.ok) {
-        const data = await fallbackRes.json();
-        setVerses(data);
-      } else {
-        throw new Error("Vachan nahi mil paye");
+      // 3. Fallback: If Hindi fails, try English KJV
+      if (ver !== 'KJV') {
+        const fallbackUrl = `https://bolls.life/get-chapter/KJV/${bollsId}/${cid}/`;
+        const fallbackRes = await fetch(fallbackUrl);
+        if (fallbackRes.ok) {
+          const data = await fallbackRes.json();
+          setVerses(data);
+          setLoading(false);
+          return;
+        }
       }
 
-      setLoading(false);
+      throw new Error("Words load nahi ho paye");
     } catch (e) {
       console.error("Reader Error:", e);
-      setErrorState("Vachan load nahi ho paye. Connection check karein.");
+      setErrorState("Vachan load nahi ho paye. Ek baar internet check karein.");
       setLoading(false);
     }
   }, [currentBookData.bollsId]);
 
   useEffect(() => {
+    // Dynamic import simulation for local data script
     if (!(window as any).BIBLE_DATA) {
       const script = document.createElement("script");
       script.src = "/bible-data.js";
       script.onload = () => loadBibleContent(bookParam, chapterNum, versionParam);
+      script.onerror = () => loadBibleContent(bookParam, chapterNum, versionParam);
       document.body.appendChild(script);
     } else {
       loadBibleContent(bookParam, chapterNum, versionParam);
@@ -219,7 +218,7 @@ function ReaderContent() {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Dhoondhein..." 
+                  placeholder="Book dhoondhein..." 
                   className="w-full bg-zinc-900/50 border border-white/5 rounded-2xl pl-12 pr-4 py-3 text-sm text-white outline-none focus:ring-1 focus:ring-emerald-500/30"
                 />
               </div>
@@ -268,7 +267,7 @@ function ReaderContent() {
         {loading || isPending ? (
           <div className="flex flex-col items-center justify-center h-full py-40 opacity-40">
             <Loader2 className="w-12 h-12 text-emerald-500 animate-spin mb-4" />
-            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500 animate-pulse">Loading Vachan...</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500 animate-pulse">Loading Words...</p>
           </div>
         ) : errorState ? (
           <div className="flex flex-col items-center py-20 text-zinc-500 text-center gap-6">
@@ -320,33 +319,33 @@ function ReaderContent() {
 
       {/* Sleek Minimal Control Bar - Sticked near bottom panel */}
       <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[70] transition-all">
-        <div className="bg-zinc-950/95 backdrop-blur-3xl border border-white/10 rounded-full p-1.5 flex items-center gap-2 shadow-[0_10px_40px_rgba(0,0,0,0.8)]">
+        <div className="bg-zinc-950/95 backdrop-blur-3xl border border-white/10 rounded-full p-1 flex items-center gap-1.5 shadow-[0_10px_40px_rgba(0,0,0,0.8)]">
           <button 
             type="button" 
             onClick={() => handleUpdateNavigation(currentBookData.id, Math.max(1, chapterNum - 1))} 
-            className="size-9 rounded-full bg-zinc-900 border border-white/5 flex items-center justify-center text-zinc-500 hover:text-white transition-all active:scale-90"
+            className="size-8 rounded-full bg-zinc-900 border border-white/5 flex items-center justify-center text-zinc-500 hover:text-white transition-all active:scale-90"
           >
-            <ChevronLeft className="w-5 h-5" />
+            <ChevronLeft className="w-4 h-4" />
           </button>
           
           <button 
             type="button" 
             onClick={toggleAudio} 
-            className="flex items-center gap-2 bg-emerald-500 text-black px-5 py-2.5 rounded-full shadow-lg active:scale-95 transition-all group hover:bg-emerald-400"
+            className="flex items-center gap-2 bg-emerald-500 text-black px-4 py-2 rounded-full shadow-lg active:scale-95 transition-all group hover:bg-emerald-400"
           >
             {isPlaying ? (
-              <><Pause className="w-4 h-4 fill-black animate-pulse" /><span className="text-[10px] font-black uppercase tracking-widest">Stop</span></>
+              <><Pause className="w-3.5 h-3.5 fill-black animate-pulse" /><span className="text-[9px] font-black uppercase tracking-widest">Stop</span></>
             ) : (
-              <><Volume2 className="w-4 h-4 group-hover:scale-110 transition-transform" /><span className="text-[10px] font-black uppercase tracking-widest">Suniye</span></>
+              <><Volume2 className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" /><span className="text-[9px] font-black uppercase tracking-widest">Suniye</span></>
             )}
           </button>
 
           <button 
             type="button" 
             onClick={() => { if (chapterNum < currentBookData.chapters) handleUpdateNavigation(currentBookData.id, chapterNum + 1); }} 
-            className="size-9 rounded-full bg-zinc-900 border border-white/5 flex items-center justify-center text-zinc-500 hover:text-white transition-all active:scale-90"
+            className="size-8 rounded-full bg-zinc-900 border border-white/5 flex items-center justify-center text-zinc-500 hover:text-white transition-all active:scale-90"
           >
-            <ChevronRight className="w-5 h-5" />
+            <ChevronRight className="w-4 h-4" />
           </button>
         </div>
       </div>
