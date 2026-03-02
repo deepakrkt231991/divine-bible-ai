@@ -26,15 +26,13 @@ import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
-const BOOK_TO_ID: Record<string, number> = {
-  "utpatti": 1, "genesis": 1, "उत्पत्ति": 1, "gen": 1,
-  "nirgaman": 2, "exodus": 2, "निर्गमन": 2, "exo": 2,
-  "matti": 40, "matthew": 40, "मत्ती": 40, "mat": 40,
-  "markus": 41, "mark": 41, "मरकुस": 41, "mrk": 41,
-  "lukas": 42, "luke": 42, "लूका": 42, "luk": 42,
-  "yuhanna": 43, "john": 43, "यूहन्ना": 43, "jhn": 43,
-  "tobit": 67, "तोबित": 67, "tob": 67,
-  "judith": 68, "यहूदीत": 68, "jdt": 68
+// Mapping for various book names to Bolls IDs
+const BOOK_LOOKUP: Record<string, number> = {
+  "utpatti": 1, "genesis": 1, "उत्पत्ति": 1, "gen": 1, "exo": 2, "exodus": 2, "nirgaman": 2, "निर्गमन": 2,
+  "lev": 3, "leviticus": 3, "num": 4, "numbers": 4, "deu": 5, "deuteronomy": 5,
+  "mat": 40, "matthew": 40, "matti": 40, "मत्ती": 40, "mrk": 41, "mark": 41, "markus": 41, "मरकुस": 41,
+  "luk": 42, "luke": 42, "lukas": 42, "लूका": 42, "jhn": 43, "john": 43, "yuhanna": 43, "यूहन्ना": 43,
+  "tob": 67, "tobit": 67, "तोबित": 67, "jdt": 68, "judith": 68, "यहूदीत": 68
 };
 
 function ReaderContent() {
@@ -62,19 +60,21 @@ function ReaderContent() {
     b.id.toLowerCase() === bookParam || 
     b.usfm.toLowerCase() === bookParam ||
     b.en.toLowerCase() === bookParam ||
-    b.hi === searchParams.get('book') ||
-    b.bollsId.toString() === bookParam
+    b.hi === searchParams.get('book')
   ) || BIBLE_BOOKS.find(b => b.id === 'MAT')!;
 
   const loadBibleContent = useCallback(async (bid: string, cid: number, ver: string) => {
     setLoading(true);
     setErrorState(null);
     
-    // 1. FALLBACK TO LOCAL DATA FIRST (For speed and reliability on specific chapters)
+    // 1. Check Local Static Data first (for Exodus 7 / Matthew 2 optimization)
     const localData = (window as any).BIBLE_DATA;
     const normalizedBook = bid.toLowerCase();
-    if (localData && localData[normalizedBook] && localData[normalizedBook][cid]) {
-      const fallbackVerses = localData[normalizedBook][cid].map((text: string, i: number) => ({
+    const staticBookKey = normalizedBook === 'exo' || normalizedBook === 'exodus' ? 'exodus' : 
+                         normalizedBook === 'mat' || normalizedBook === 'matthew' ? 'matthew' : normalizedBook;
+
+    if (localData && localData[staticBookKey] && localData[staticBookKey][cid]) {
+      const fallbackVerses = localData[staticBookKey][cid].map((text: string, i: number) => ({
         verse: i + 1,
         text: text
       }));
@@ -83,13 +83,19 @@ function ReaderContent() {
       return;
     }
 
+    // 2. Fetch from Bolls API (Robust Fallback)
     try {
-      const bookId = BOOK_TO_ID[normalizedBook] || currentBookData.bollsId;
+      const bollsId = BOOK_LOOKUP[normalizedBook] || currentBookData.bollsId;
+      // Try HINIRV first
+      let url = `https://bolls.life/get-chapter/${ver}/${bollsId}/${cid}/`;
+      let res = await fetch(url);
       
-      // Try HINIRV (Correct code for Bolls Hindi IRV)
-      const url = `https://bolls.life/get-chapter/${ver}/${bookId}/${cid}/`;
-      const res = await fetch(url);
-      
+      if (!res.ok && ver === 'HINIRV') {
+        // Fallback to HI_IRV code if HINIRV fails
+        url = `https://bolls.life/get-chapter/HI_IRV/${bollsId}/${cid}/`;
+        res = await fetch(url);
+      }
+
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {
@@ -100,28 +106,25 @@ function ReaderContent() {
         }
       }
 
-      // If specified version fails, try KJV as last resort
-      const fallbackUrl = `https://bolls.life/get-chapter/KJV/${bookId}/${cid}/`;
+      // 3. Last resort: English KJV
+      const fallbackUrl = `https://bolls.life/get-chapter/KJV/${bollsId}/${cid}/`;
       const fallbackRes = await fetch(fallbackUrl);
       if (fallbackRes.ok) {
         const data = await fallbackRes.json();
         setVerses(data);
       } else {
-        throw new Error("Content not available");
+        throw new Error("Vachan nahi mil paye");
       }
 
-      if (scrollRef.current) scrollRef.current.scrollTop = 0;
       setLoading(false);
-      
     } catch (e) {
       console.error("Reader Error:", e);
-      setErrorState("Vachan load nahi ho paye. Internet ya Book ID check karein.");
+      setErrorState("Vachan load nahi ho paye. Connection check karein.");
       setLoading(false);
     }
   }, [currentBookData.bollsId]);
 
   useEffect(() => {
-    // Load script for bible-data.js if not already present
     if (!(window as any).BIBLE_DATA) {
       const script = document.createElement("script");
       script.src = "/bible-data.js";
@@ -145,7 +148,7 @@ function ReaderContent() {
 
   const handleBookmark = async (v: any) => {
     if (!user || !firestore) {
-      toast({ title: "Sign In", description: "Vachan bookmark karne ke liye login karein." });
+      toast({ title: "Sign In", description: "Bookmark karne ke liye login karein." });
       return;
     }
     const cleanText = v.text.replace(/<(?:.|\n)*?>/gm, '');
@@ -158,7 +161,7 @@ function ReaderContent() {
       translation: versionParam,
       createdAt: serverTimestamp()
     });
-    toast({ title: "Bookmarked!", description: "Vachan save ho gaya hai." });
+    toast({ title: "Vachan Saved!" });
   };
 
   const toggleAudio = () => {
@@ -188,7 +191,7 @@ function ReaderContent() {
 
   return (
     <div className="flex flex-col h-screen bg-[#09090b] text-zinc-100 overflow-hidden relative">
-      {/* Header */}
+      {/* Top Header */}
       <header className="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-[#09090b]/95 backdrop-blur-xl sticky top-0 z-[60]">
         <Dialog open={selectorOpen} onOpenChange={setSelectorOpen}>
           <DialogTrigger asChild>
@@ -200,7 +203,7 @@ function ReaderContent() {
                 <Search className="w-4 h-4 text-zinc-600" />
               </div>
               <span className="text-[9px] uppercase text-zinc-600 tracking-[0.3em] font-black mt-1.5">
-                {isHindi ? 'Hindi HINIRV' : 'English KJV'}
+                {isHindi ? 'HINIRV' : 'English KJV'}
               </span>
             </button>
           </DialogTrigger>
@@ -208,7 +211,7 @@ function ReaderContent() {
             <DialogHeader className="p-6 border-b border-white/5 bg-zinc-900/20">
               <DialogTitle className="text-emerald-500 font-serif italic text-2xl flex items-center gap-3">
                 <BookOpen className="w-6 h-6" />
-                {isHindi ? "Pavitra Shastra" : "Select Scripture"}
+                Select Book
               </DialogTitle>
               <div className="relative mt-4">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
@@ -224,9 +227,9 @@ function ReaderContent() {
 
             <Tabs defaultValue={currentBookData.testament} className="flex-1 flex flex-col overflow-hidden">
               <TabsList className="bg-zinc-900/50 p-1 mx-6 mt-4 rounded-2xl border border-white/5 h-12">
-                <TabsTrigger value="old" className="flex-1 rounded-xl text-[9px] font-black uppercase tracking-widest">Purana</TabsTrigger>
+                <TabsTrigger value="old" className="flex-1 rounded-xl text-[9px] font-black uppercase tracking-widest">OT</TabsTrigger>
                 <TabsTrigger value="deuterocanon" className="flex-1 rounded-xl text-[9px] font-black uppercase tracking-widest">81-Book</TabsTrigger>
-                <TabsTrigger value="new" className="flex-1 rounded-xl text-[9px] font-black uppercase tracking-widest">Naya</TabsTrigger>
+                <TabsTrigger value="new" className="flex-1 rounded-xl text-[9px] font-black uppercase tracking-widest">NT</TabsTrigger>
               </TabsList>
 
               <ScrollArea className="flex-1 px-6 py-4">
@@ -261,53 +264,36 @@ function ReaderContent() {
         </button>
       </header>
 
-      <main ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-8 pb-56 hide-scrollbar">
+      <main ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-8 pb-64 hide-scrollbar">
         {loading || isPending ? (
-          <div className="flex flex-col items-center justify-center h-full space-y-8 opacity-40 py-40">
-            <Loader2 className="w-14 h-14 text-emerald-500 animate-spin" />
-            <p className="text-[10px] font-black uppercase tracking-[0.5em] text-emerald-500 animate-pulse">Vachan load ho rahe hain...</p>
+          <div className="flex flex-col items-center justify-center h-full py-40 opacity-40">
+            <Loader2 className="w-12 h-12 text-emerald-500 animate-spin mb-4" />
+            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500 animate-pulse">Loading Vachan...</p>
           </div>
         ) : errorState ? (
           <div className="flex flex-col items-center py-20 text-zinc-500 text-center gap-6">
-            <AlertCircle className="w-16 h-16 text-emerald-500/20" />
-            <div className="space-y-2">
-              <p className="font-serif italic text-lg">{errorState}</p>
-              <button 
-                onClick={() => loadBibleContent(bookParam, chapterNum, versionParam)}
-                className="text-emerald-500 text-[10px] font-black uppercase tracking-widest border border-emerald-500/30 px-6 py-2 rounded-full mt-4"
-              >
-                Retry
-              </button>
-            </div>
+            <AlertCircle className="w-16 h-16 opacity-20" />
+            <p className="font-serif italic text-lg">{errorState}</p>
+            <button onClick={() => loadBibleContent(bookParam, chapterNum, versionParam)} className="text-emerald-500 text-xs font-black uppercase border border-emerald-500/20 px-6 py-2 rounded-full">Retry</button>
           </div>
         ) : (
           <div className="space-y-10 animate-in fade-in duration-700">
             <div className="bible-content prose prose-invert prose-emerald max-w-none">
-              {verses.length > 0 ? (
-                verses.map((v: any) => (
-                  <div key={v.verse} className="flex gap-4 mb-8 items-start group relative">
-                    <div className="flex flex-col items-center gap-2 mt-1.5">
-                      <span className="text-emerald-500 font-black text-sm min-w-[24px] text-center bg-emerald-500/5 rounded-lg py-1">
-                        {v.verse}
-                      </span>
-                      <button 
-                        onClick={() => handleBookmark(v)}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity text-zinc-600 hover:text-emerald-500"
-                      >
-                        <Bookmark className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                    <p className="text-xl leading-relaxed text-zinc-100 font-serif italic m-0">
-                      {v.text.replace(/<(?:.|\n)*?>/gm, '')}
-                    </p>
+              {verses.map((v: any) => (
+                <div key={v.verse} className="flex gap-4 mb-8 items-start group relative">
+                  <div className="flex flex-col items-center gap-2 mt-1.5">
+                    <span className="text-emerald-500 font-black text-sm min-w-[24px] text-center bg-emerald-500/5 rounded-lg py-1">
+                      {v.verse}
+                    </span>
+                    <button onClick={() => handleBookmark(v)} className="opacity-0 group-hover:opacity-100 transition-opacity text-zinc-600 hover:text-emerald-500">
+                      <Bookmark className="w-3.5 h-3.5" />
+                    </button>
                   </div>
-                ))
-              ) : (
-                <div className="flex flex-col items-center py-20 text-zinc-500 text-center gap-4">
-                  <AlertCircle className="w-12 h-12 opacity-20" />
-                  <p className="italic">Is adhyay ka content nahi mil paya.</p>
+                  <p className="text-xl leading-relaxed text-zinc-100 font-serif italic m-0">
+                    {v.text.replace(/<(?:.|\n)*?>/gm, '')}
+                  </p>
                 </div>
-              )}
+              ))}
             </div>
             
             <div className="pt-20 pb-16 text-center">
@@ -320,26 +306,48 @@ function ReaderContent() {
                     if (idx < BIBLE_BOOKS.length - 1) handleUpdateNavigation(BIBLE_BOOKS[idx + 1].id, 1);
                   }
                 }}
-                className="w-full py-14 border-2 border-dashed border-white/10 rounded-[3rem] flex flex-col items-center justify-center gap-6 group hover:border-emerald-500/30 transition-all"
+                className="w-full py-12 border-2 border-dashed border-white/10 rounded-[2.5rem] flex flex-col items-center justify-center gap-4 group hover:border-emerald-500/30 transition-all"
               >
-                <div className="size-16 rounded-[1.5rem] bg-emerald-500/10 flex items-center justify-center group-hover:scale-110 transition-all border border-emerald-500/20 shadow-xl">
-                  <ArrowRight className="w-8 h-8 text-emerald-500" />
+                <div className="size-12 rounded-xl bg-emerald-500/10 flex items-center justify-center group-hover:scale-110 transition-all border border-emerald-500/20 shadow-xl text-emerald-500">
+                  <ArrowRight className="w-6 h-6" />
                 </div>
-                <span className="text-[11px] font-black uppercase tracking-[0.4em] text-zinc-600 group-hover:text-emerald-500">Agla Adhyay Padhein</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-600 group-hover:text-emerald-500">Next Chapter</span>
               </button>
             </div>
           </div>
         )}
       </main>
 
-      {/* Control Bar */}
-      <div className="fixed bottom-24 left-1/2 -translate-x-1/2 w-[92%] max-w-md z-[70]">
-        <div className="bg-zinc-950/90 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-2 flex items-center justify-between shadow-2xl">
-          <button type="button" onClick={() => handleUpdateNavigation(currentBookData.id, Math.max(1, chapterNum - 1))} className="size-12 rounded-full hover:bg-white/5 flex items-center justify-center text-zinc-500 transition-colors"><ChevronLeft className="w-6 h-6" /></button>
-          <button type="button" onClick={toggleAudio} className="flex-1 mx-4 flex items-center justify-center gap-4 bg-emerald-500 text-black py-4 rounded-[1.75rem] shadow-xl group hover:bg-emerald-400 transition-all">
-            {isPlaying ? <><Pause className="w-5 h-5 fill-black animate-pulse" /><span className="text-[11px] font-black uppercase tracking-[0.2em]">Stop</span></> : <><Volume2 className="w-5 h-5 group-hover:scale-110 transition-transform" /><span className="text-[11px] font-black uppercase tracking-[0.2em]">Suniye</span></>}
+      {/* Sleek Minimal Control Bar - Sticked near bottom panel */}
+      <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[70] transition-all">
+        <div className="bg-zinc-950/95 backdrop-blur-3xl border border-white/10 rounded-full p-1.5 flex items-center gap-2 shadow-[0_10px_40px_rgba(0,0,0,0.8)]">
+          <button 
+            type="button" 
+            onClick={() => handleUpdateNavigation(currentBookData.id, Math.max(1, chapterNum - 1))} 
+            className="size-9 rounded-full bg-zinc-900 border border-white/5 flex items-center justify-center text-zinc-500 hover:text-white transition-all active:scale-90"
+          >
+            <ChevronLeft className="w-5 h-5" />
           </button>
-          <button type="button" onClick={() => { if (chapterNum < currentBookData.chapters) handleUpdateNavigation(currentBookData.id, chapterNum + 1); }} className="size-12 rounded-full hover:bg-white/5 flex items-center justify-center text-zinc-500 transition-colors"><ChevronRight className="w-6 h-6" /></button>
+          
+          <button 
+            type="button" 
+            onClick={toggleAudio} 
+            className="flex items-center gap-2 bg-emerald-500 text-black px-5 py-2.5 rounded-full shadow-lg active:scale-95 transition-all group hover:bg-emerald-400"
+          >
+            {isPlaying ? (
+              <><Pause className="w-4 h-4 fill-black animate-pulse" /><span className="text-[10px] font-black uppercase tracking-widest">Stop</span></>
+            ) : (
+              <><Volume2 className="w-4 h-4 group-hover:scale-110 transition-transform" /><span className="text-[10px] font-black uppercase tracking-widest">Suniye</span></>
+            )}
+          </button>
+
+          <button 
+            type="button" 
+            onClick={() => { if (chapterNum < currentBookData.chapters) handleUpdateNavigation(currentBookData.id, chapterNum + 1); }} 
+            className="size-9 rounded-full bg-zinc-900 border border-white/5 flex items-center justify-center text-zinc-500 hover:text-white transition-all active:scale-90"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
         </div>
       </div>
     </div>
@@ -349,22 +357,22 @@ function ReaderContent() {
 function BookItem({ b, expandedBook, currentChapter, isHindi, onExpand, onSelect }: any) {
   const isExpanded = expandedBook === b.id;
   return (
-    <div className="space-y-1.5 animate-in slide-in-from-top-2 duration-300">
+    <div className="space-y-1.5">
       <button 
         type="button"
         onClick={() => onExpand(isExpanded ? null : b.id)}
-        className={cn("w-full flex items-center justify-between p-4 rounded-2xl transition-all border outline-none", isExpanded ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-500 shadow-xl" : "bg-zinc-900/40 border-white/5 hover:border-emerald-500/20 text-zinc-400")}
+        className={cn("w-full flex items-center justify-between p-4 rounded-2xl transition-all border outline-none", isExpanded ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-500" : "bg-zinc-900/40 border-white/5 text-zinc-400")}
       >
         <div className="flex flex-col items-start text-left">
           <span className="font-bold text-sm tracking-wide">{isHindi ? b.hi : b.en}</span>
-          <span className="text-[9px] uppercase font-black opacity-30 tracking-widest mt-1">{b.chapters} Adhyay</span>
+          <span className="text-[9px] uppercase font-black opacity-30 tracking-widest mt-1">{b.chapters} Chapters</span>
         </div>
-        <div className={cn("size-2 rounded-full transition-all duration-500", isExpanded ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" : "bg-white/10")} />
+        <div className={cn("size-2 rounded-full", isExpanded ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" : "bg-white/10")} />
       </button>
       {isExpanded && (
-        <div className="grid grid-cols-5 gap-2 p-4 bg-zinc-900/60 rounded-[2rem] border border-white/5 shadow-inner mt-2 animate-in zoom-in-95 duration-300">
+        <div className="grid grid-cols-5 gap-2 p-4 bg-zinc-900/60 rounded-[2rem] border border-white/5 mt-2 animate-in zoom-in-95 duration-300">
           {Array.from({ length: b.chapters }, (_, i) => i + 1).map(ch => (
-            <button key={ch} type="button" onClick={() => onSelect(b.id, ch)} className={cn("size-10 rounded-xl flex items-center justify-center text-[10px] font-black transition-all active:scale-90 outline-none", currentChapter === ch ? "bg-emerald-500 text-black shadow-xl" : "bg-zinc-950 text-zinc-600 hover:text-emerald-500 border border-white/5")}>{ch}</button>
+            <button key={ch} type="button" onClick={() => onSelect(b.id, ch)} className={cn("size-10 rounded-xl flex items-center justify-center text-[10px] font-black transition-all active:scale-90 outline-none", currentChapter === ch ? "bg-emerald-500 text-black" : "bg-zinc-950 text-zinc-600 border border-white/5")}>{ch}</button>
           ))}
         </div>
       )}
