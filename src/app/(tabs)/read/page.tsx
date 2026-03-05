@@ -122,11 +122,12 @@ function ReaderContent() {
         return;
       }
 
-      throw new Error("No data found for this chapter.");
+      // 3. NO CONTENT FOUND (Don't throw, set error state)
+      setError(`${isHindi ? currentBookData.hi : currentBookData.en} ${cid} load nahi ho paya.`);
 
     } catch (e: any) {
       console.error("❌ Reader Error:", e);
-      setError(`${isHindi ? currentBookData.hi : currentBookData.en} ${cid} load nahi ho paya.`);
+      setError("Server se connection nahi ho paya.");
     } finally {
       setLoading(false);
     }
