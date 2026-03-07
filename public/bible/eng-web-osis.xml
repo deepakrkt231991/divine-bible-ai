@@ -1,15 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <bible>
   <book name="Genesis" id="GEN">
-    <chapter number="1">
-      <verse number="1">In the beginning, God created the heavens and the earth.</verse>
-      <verse number="2">The earth was formless and empty. Darkness was on the surface of the deep and God's Spirit was hovering over the surface of the waters.</verse>
+    <chapter>
+      <verse verse="1">In the beginning, God created the heavens and the earth.</verse>
+      <verse verse="2">The earth was formless and empty. Darkness was on the surface of the deep and God's Spirit was hovering over the surface of the waters.</verse>
+      <verse verse="3">God said, "Let there be light," and there was light.</verse>
+    </chapter>
+  </book>
+  <book name="Exodus" id="EXO">
+    <chapter></chapter><chapter></chapter><chapter></chapter><chapter></chapter><chapter></chapter><chapter></chapter>
+    <chapter>
+      <verse verse="1">Yahweh said to Moses, "Behold, I have made you as God to Pharaoh; and Aaron your brother shall be your prophet."</verse>
+      <verse verse="2">"You shall speak all that I command you; and Aaron your brother shall speak to Pharaoh, that he let the children of Israel go out of his land."</verse>
+      <verse verse="3">"I will harden Pharaoh's heart, and multiply my signs and my wonders in the land of Egypt."</verse>
     </chapter>
   </book>
   <book name="Matthew" id="MAT">
-    <chapter number="2">
-      <verse number="1">Now when Jesus was born in Bethlehem of Judea in the days of King Herod, behold, wise men from the east came to Jerusalem,</verse>
-      <verse number="2">saying, "Where is he who is born King of the Jews? For we saw his star in the east, and have come to worship him."</verse>
+    <chapter></chapter>
+    <chapter>
+      <verse verse="1">Now when Jesus was born in Bethlehem of Judea in the days of King Herod, behold, wise men from the east came to Jerusalem,</verse>
+      <verse verse="2">saying, "Where is he who is born King of the Jews? For we saw his star in the east, and have come to worship him."</verse>
+      <verse verse="3">When King Herod heard this, he was troubled, and all Jerusalem with him.</verse>
     </chapter>
   </book>
 </bible>
