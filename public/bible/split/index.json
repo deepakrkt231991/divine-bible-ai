@@ -1,0 +1,326 @@
+{
+  "language": "hin-hindi",
+  "totalBooks": 80,
+  "books": [
+    {
+      "code": "gen",
+      "chapters": 50
+    },
+    {
+      "code": "exo",
+      "chapters": 40
+    },
+    {
+      "code": "lev",
+      "chapters": 27
+    },
+    {
+      "code": "num",
+      "chapters": 36
+    },
+    {
+      "code": "deu",
+      "chapters": 34
+    },
+    {
+      "code": "jos",
+      "chapters": 24
+    },
+    {
+      "code": "jdg",
+      "chapters": 21
+    },
+    {
+      "code": "rut",
+      "chapters": 4
+    },
+    {
+      "code": "1sa",
+      "chapters": 31
+    },
+    {
+      "code": "2sa",
+      "chapters": 24
+    },
+    {
+      "code": "1ki",
+      "chapters": 22
+    },
+    {
+      "code": "2ki",
+      "chapters": 25
+    },
+    {
+      "code": "1ch",
+      "chapters": 29
+    },
+    {
+      "code": "2ch",
+      "chapters": 36
+    },
+    {
+      "code": "ezr",
+      "chapters": 10
+    },
+    {
+      "code": "neh",
+      "chapters": 13
+    },
+    {
+      "code": "est",
+      "chapters": 10
+    },
+    {
+      "code": "job",
+      "chapters": 42
+    },
+    {
+      "code": "psa",
+      "chapters": 150
+    },
+    {
+      "code": "pro",
+      "chapters": 31
+    },
+    {
+      "code": "ecc",
+      "chapters": 12
+    },
+    {
+      "code": "sng",
+      "chapters": 8
+    },
+    {
+      "code": "isa",
+      "chapters": 66
+    },
+    {
+      "code": "jer",
+      "chapters": 52
+    },
+    {
+      "code": "lam",
+      "chapters": 5
+    },
+    {
+      "code": "ezk",
+      "chapters": 48
+    },
+    {
+      "code": "dan",
+      "chapters": 12
+    },
+    {
+      "code": "hos",
+      "chapters": 14
+    },
+    {
+      "code": "jol",
+      "chapters": 3
+    },
+    {
+      "code": "amo",
+      "chapters": 9
+    },
+    {
+      "code": "oba",
+      "chapters": 1
+    },
+    {
+      "code": "jon",
+      "chapters": 4
+    },
+    {
+      "code": "mic",
+      "chapters": 7
+    },
+    {
+      "code": "nah",
+      "chapters": 3
+    },
+    {
+      "code": "hab",
+      "chapters": 3
+    },
+    {
+      "code": "zep",
+      "chapters": 3
+    },
+    {
+      "code": "hag",
+      "chapters": 2
+    },
+    {
+      "code": "zec",
+      "chapters": 14
+    },
+    {
+      "code": "mal",
+      "chapters": 4
+    },
+    {
+      "code": "mat",
+      "chapters": 28
+    },
+    {
+      "code": "mrk",
+      "chapters": 16
+    },
+    {
+      "code": "luk",
+      "chapters": 24
+    },
+    {
+      "code": "jhn",
+      "chapters": 21
+    },
+    {
+      "code": "act",
+      "chapters": 28
+    },
+    {
+      "code": "rom",
+      "chapters": 16
+    },
+    {
+      "code": "1co",
+      "chapters": 16
+    },
+    {
+      "code": "2co",
+      "chapters": 13
+    },
+    {
+      "code": "gal",
+      "chapters": 6
+    },
+    {
+      "code": "eph",
+      "chapters": 6
+    },
+    {
+      "code": "php",
+      "chapters": 4
+    },
+    {
+      "code": "col",
+      "chapters": 4
+    },
+    {
+      "code": "1th",
+      "chapters": 5
+    },
+    {
+      "code": "2th",
+      "chapters": 3
+    },
+    {
+      "code": "1ti",
+      "chapters": 6
+    },
+    {
+      "code": "2ti",
+      "chapters": 4
+    },
+    {
+      "code": "tit",
+      "chapters": 3
+    },
+    {
+      "code": "phm",
+      "chapters": 1
+    },
+    {
+      "code": "heb",
+      "chapters": 13
+    },
+    {
+      "code": "jas",
+      "chapters": 5
+    },
+    {
+      "code": "1pe",
+      "chapters": 5
+    },
+    {
+      "code": "2pe",
+      "chapters": 3
+    },
+    {
+      "code": "1jn",
+      "chapters": 5
+    },
+    {
+      "code": "2jn",
+      "chapters": 1
+    },
+    {
+      "code": "3jn",
+      "chapters": 1
+    },
+    {
+      "code": "jud",
+      "chapters": 1
+    },
+    {
+      "code": "rev",
+      "chapters": 22
+    },
+    {
+      "code": "tob",
+      "chapters": 14
+    },
+    {
+      "code": "jdt",
+      "chapters": 16
+    },
+    {
+      "code": "wis",
+      "chapters": 19
+    },
+    {
+      "code": "sir",
+      "chapters": 51
+    },
+    {
+      "code": "bar",
+      "chapters": 5
+    },
+    {
+      "code": "1ma",
+      "chapters": 16
+    },
+    {
+      "code": "2ma",
+      "chapters": 15
+    },
+    {
+      "code": "man",
+      "chapters": 1
+    },
+    {
+      "code": "1es",
+      "chapters": 9
+    },
+    {
+      "code": "2es",
+      "chapters": 16
+    },
+    {
+      "code": "esg",
+      "chapters": 7
+    },
+    {
+      "code": "s3y",
+      "chapters": 1
+    },
+    {
+      "code": "sus",
+      "chapters": 1
+    },
+    {
+      "code": "bel",
+      "chapters": 1
+    }
+  ]
+}
