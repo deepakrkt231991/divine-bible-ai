@@ -1,7 +1,6 @@
 // src/lib/bible-loader.ts
-// ✅ Complete Bible Loader - 80 Books, All Chapters, Offline Ready
-// ✅ Debug-friendly with console logs
-// ✅ NO duplicate exports
+// ✅ Clean Bible Loader - NO duplicate exports
+// ✅ 80 Books, All Chapters, Offline Ready
 
 import { useState, useEffect } from 'react';
 
@@ -25,9 +24,8 @@ export interface SplitChapter {
   verses: Verse[];
 }
 
-// ============ BOOK ALIASES (internal - not exported) ============
+// ============ BOOK ALIASES (internal - NO export) ============
 const ALIASES: Record<string, string> = {
-  // Deuterocanon / Apocrypha
   'tobit': 'tob', 'judith': 'jdt', 'wisdom': 'wis', 'wisdom-of-solomon': 'wis',
   'sirach': 'sir', 'ecclesiasticus': 'sir', 'baruch': 'bar',
   '1-maccabees': '1ma', '2-maccabees': '2ma', '3-maccabees': '3ma', '4-maccabees': '4ma',
@@ -36,8 +34,6 @@ const ALIASES: Record<string, string> = {
   'esther-greek': 'esg', 'additions-to-esther': 'esg',
   'letter-of-jeremiah': 'lje', 'song-of-three-jews': 's3y', 'azariah': 's3y',
   'susanna': 'sus', 'bel-dragon': 'bel', 'bel-and-the-dragon': 'bel',
-  
-  // Protestant Books (full names → 3-letter codes)
   'genesis': 'gen', 'exodus': 'exo', 'leviticus': 'lev', 'numbers': 'num',
   'deuteronomy': 'deu', 'joshua': 'jos', 'judges': 'jdg', 'ruth': 'rut',
   '1-samuel': '1sa', '2-samuel': '2sa', '1-kings': '1ki', '2-kings': '2ki',
@@ -57,13 +53,13 @@ const ALIASES: Record<string, string> = {
   '2-john': '2jn', '3-john': '3jn', 'jude': 'jud', 'revelation': 'rev',
 };
 
-// Internal helper: resolve user input to file code
+// Internal helper: resolve user input to file code (NO export)
 function getCode(input: string): string {
   return ALIASES[input.toLowerCase().trim()] || input.toLowerCase().trim();
 }
 
-// ============ 🎯 MAIN LOADER: Load Single Chapter ============
-export async function loadChapter(
+// ============ 🎯 MAIN LOADER: Load Single Chapter (NO export keyword) ============
+async function loadChapter(
   book: string,
   chapter: number,
   lang: string = 'hin-hindi'
@@ -71,48 +67,41 @@ export async function loadChapter(
   const code = getCode(book);
   const chapterStr = String(chapter);
   
-  // === TRY 1: Split chapter file (~11 KB) - FASTEST ===
+  // Try split chapter file first (~11 KB)
   try {
     const url = `/bible/split/${code}-${chapter}.json`;
     const res = await fetch(url);
-    
     if (res.ok) {
       const data: SplitChapter = await res.json();
       return data.verses || null;
     }
   } catch (e) {
-    console.log(`⚠️ Split chapter fetch error: ${code}-${chapter}`, e);
+    console.log(`⚠️ Split chapter error: ${code}-${chapter}`, e);
   }
   
-  // === TRY 2: Split book file (~200-500 KB) ===
+  // Try split book file (~200-500 KB)
   try {
     const url = `/bible/split/${code}.json`;
     const res = await fetch(url);
-    
     if (res.ok) {
       const bookData: BibleBook = await res.json();
       const verses = bookData[chapterStr] || bookData[chapter];
       if (verses) return verses;
     }
   } catch (e) {
-    console.log(`⚠️ Split book fetch error: ${code}`, e);
+    console.log(`⚠️ Split book error: ${code}`, e);
   }
   
-  // === TRY 3: Combined 80-books file (~11 MB) - FALLBACK ===
+  // Fallback to combined file (~11 MB)
   try {
     const url = `/bible/${lang}-osis-80books.json`;
     const res = await fetch(url);
-    
     if (!res.ok) return null;
-    
     const bible: BibleData = await res.json();
     const bookData = bible[code];
-    
     if (!bookData) return null;
-    
     const verses = bookData[chapterStr] || bookData[chapter];
     return verses || null;
-    
   } catch (e) {
     console.error(`❌ Combined file error:`, e);
     return null;
@@ -121,22 +110,16 @@ export async function loadChapter(
   return null;
 }
 
-// ============ 📚 Load Entire Book ============
-export async function loadBook(
+// ============ 📚 Load Entire Book (NO export keyword) ============
+async function loadBook(
   book: string,
   lang: string = 'hin-hindi'
 ): Promise<BibleBook | null> {
   const code = getCode(book);
-  
-  // Try split book first
   try {
     const res = await fetch(`/bible/split/${code}.json`);
-    if (res.ok) {
-      return await res.json();
-    }
+    if (res.ok) return await res.json();
   } catch {}
-  
-  // Fallback to combined
   try {
     const res = await fetch(`/bible/${lang}-osis-80books.json`);
     if (!res.ok) return null;
@@ -147,8 +130,8 @@ export async function loadBook(
   }
 }
 
-// ============ 🤖 Gemini Optimized Loader ============
-export async function loadForGemini(
+// ============ 🤖 Gemini Optimized Loader (NO export keyword) ============
+async function loadForGemini(
   book: string,
   chapter: number,
   options: {
@@ -157,37 +140,18 @@ export async function loadForGemini(
     lang?: string;
   } = {}
 ): Promise<string> {
-  const {
-    includeVerseNumbers = true,
-    format = 'plain',
-    lang = 'hin-hindi'
-  } = options;
-
+  const { includeVerseNumbers = true, format = 'plain', lang = 'hin-hindi' } = options;
   const verses = await loadChapter(book, chapter, lang);
-  
-  if (!verses) {
-    return `Error: Could not load ${book} chapter ${chapter}`;
-  }
-  
-  // Format output
-  if (format === 'json') {
-    return JSON.stringify(verses, null, 2);
-  }
-  
+  if (!verses) return `Error: Could not load ${book} chapter ${chapter}`;
+  if (format === 'json') return JSON.stringify(verses, null, 2);
   if (format === 'markdown') {
-    return verses
-      .map(v => includeVerseNumbers ? `**${v.verse}** ${v.text}` : v.text)
-      .join('\n\n');
+    return verses.map(v => includeVerseNumbers ? `**${v.verse}** ${v.text}` : v.text).join('\n\n');
   }
-  
-  // Plain text (default)
-  return verses
-    .map(v => includeVerseNumbers ? `${v.verse}. ${v.text}` : v.text)
-    .join('\n');
+  return verses.map(v => includeVerseNumbers ? `${v.verse}. ${v.text}` : v.text).join('\n');
 }
 
-// ============ ⚛️ React Hook for Components ============
-export function useChapter(
+// ============ ⚛️ React Hook (NO export keyword) ============
+function useChapter(
   book: string | null,
   chapter: number | null,
   lang: string = 'hin-hindi'
@@ -197,23 +161,18 @@ export function useChapter(
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Reset if no book/chapter
     if (!book || chapter === null) {
       setVerses(null);
       setLoading(false);
       setError(null);
       return;
     }
-
     let mounted = true;
-    
     const fetchData = async () => {
       try {
         setLoading(true);
         setError(null);
-        
         const result = await loadChapter(book, chapter, lang);
-        
         if (mounted) {
           if (result && result.length > 0) {
             setVerses(result);
@@ -232,18 +191,14 @@ export function useChapter(
         }
       }
     };
-    
     fetchData();
-    
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, [book, chapter, lang]);
 
   return { verses, loading, error };
 }
 
-// ============ ✅ EXPORTS (Clean - only once at end) ============
+// ============ ✅ EXPORTS (ONLY HERE - at end, clean) ============
 export {
   ALIASES,
   getCode,
