@@ -1,8 +1,8 @@
 // src/lib/gemini-client.ts
-import { GoogleGenerativeAI } from "@google/generative-ai";
+// ✅ Clean version - NO duplicate exports
 
 const API_KEY = process.env.GEMINI_API_KEY || "";
-const MODEL = "gemini-1.5-flash"; // ✅ VALID MODEL (NOT gemini-3!)
+const MODEL = "gemini-1.5-flash";
 const cache = new Map<string,{r:string;t:number}>();
 const TTL = 5*60*1000;
 const reqs:number[] = [];
@@ -15,10 +15,16 @@ function set(p:string,r:string){cache.set(cKey(p),{r,t:Date.now()});}
 
 let model:any = null;
 
+// ✅ SINGLE export (no duplicate!)
 export function initGemini(){
   if(!API_KEY){console.warn("⚠️ No GEMINI_API_KEY");return false;}
   try{
-    model = new GoogleGenerativeAI(API_KEY).getGenerativeModel({model:MODEL,generationConfig:{temperature:0.3,topK:40,topP:0.95,maxOutputTokens:2048}});
+    // Dynamic import to avoid build errors if package missing
+    const {GoogleGenerativeAI} = require("@google/generative-ai");
+    model = new GoogleGenerativeAI(API_KEY).getGenerativeModel({
+      model:MODEL,
+      generationConfig:{temperature:0.3,topK:40,topP:0.95,maxOutputTokens:2048}
+    });
     console.log("✅ Gemini:",MODEL);return true;
   }catch(e){console.error("❌ Gemini init:",e);return false;}
 }
@@ -40,7 +46,7 @@ export async function askGemini(prompt:string,opt:{useCache?:boolean;maxRetries?
       err=e;
       if(e.message?.includes("429")){await sleep(2e3*i*2);continue;}
       if(e.message?.includes("400"))return"❌ Invalid request.";
-      if(e.message?.includes("401"))return"🔑 Invalid API key. Check Vercel env vars.";
+      if(e.message?.includes("401"))return"🔑 Invalid API key.";
       if(e.message?.includes("403"))return"⚠️ API access denied.";
       if(i<maxRetries){await sleep(2e3*i);continue;}
     }
@@ -62,4 +68,5 @@ export async function askGeminiAboutBible(book:string,ch:number,q:string,opt:{la
 
 export function clearCache(){cache.clear();}
 export function isReady(){return !!model&&!!API_KEY;}
-export{MODEL as VALID_MODEL_NAME,initGemini};
+export{MODEL as VALID_MODEL_NAME};
+// ✅ NOTE: initGemini already exported above - NOT exported again here!

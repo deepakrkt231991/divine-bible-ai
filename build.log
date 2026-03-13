@@ -1,0 +1,74 @@
+
+> divine-bible-ai@0.1.0 build
+> NODE_ENV=production next build
+
+   ▲ Next.js 15.1.11
+   - Environments: .env.local, .env
+
+   Creating an optimized production build ...
+ ⚠ Compiled with warnings
+
+./node_modules/@opentelemetry/instrumentation/build/esm/platform/node/instrumentation.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@opentelemetry/instrumentation/build/esm/platform/node/instrumentation.js
+./node_modules/@opentelemetry/instrumentation/build/esm/platform/node/index.js
+./node_modules/@opentelemetry/instrumentation/build/esm/platform/index.js
+./node_modules/@opentelemetry/instrumentation/build/esm/index.js
+./node_modules/@opentelemetry/sdk-node/build/src/sdk.js
+./node_modules/@opentelemetry/sdk-node/build/src/index.js
+./node_modules/@genkit-ai/core/lib/tracing/node-telemetry-provider.js
+./node_modules/@genkit-ai/core/lib/node.js
+./node_modules/genkit/lib/common.js
+./node_modules/genkit/lib/index.mjs
+./src/ai/flows/daily-verse-agent.ts
+./src/app/api/daily-cron/route.ts
+
+ ✓ Compiled successfully
+   Skipping validation of types
+   Skipping linting
+   Collecting page data ...
+   Generating static pages (0/20) ...
+Automatic initialization failed. Falling back to firebase config object. Error [FirebaseError]: Firebase: Need to provide options, when not being deployed to hosting via source. (app/no-options).
+    at K (.next/server/chunks/880.js:5:59628)
+    at D (.next/server/chunks/202.js:2:3735)
+    at <unknown> (.next/server/chunks/202.js:2:2603)
+    at x (.next/server/chunks/202.js:2:2598) {
+  code: 'app/no-options',
+  customData: {}
+}
+   Generating static pages (5/20) 
+   Generating static pages (10/20) 
+   Generating static pages (15/20) 
+ ✓ Generating static pages (20/20)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                              Size     First Load JS
+┌ ○ /                                    1.2 kB          106 kB
+├ ○ /_not-found                          982 B           106 kB
+├ ○ /admin                               174 B           109 kB
+├ ○ /admin/daily-agent                   4.8 kB          256 kB
+├ ○ /ai                                  3.1 kB          117 kB
+├ ƒ /api/daily-cron                      146 B           105 kB
+├ ƒ /api/gemini                          146 B           105 kB
+├ ƒ /api/youversion                      146 B           105 kB
+├ ○ /audio                               146 B           105 kB
+├ ○ /community                           4.18 kB         262 kB
+├ ○ /home                                8.4 kB          266 kB
+├ ○ /more                                5.38 kB         123 kB
+├ ○ /plans                               3.31 kB         261 kB
+├ ○ /profile                             5.45 kB         269 kB
+├ ○ /quiz                                4.39 kB         258 kB
+├ ○ /read                                21.4 kB         141 kB
+└ ○ /register                            5.1 kB          263 kB
++ First Load JS shared by all            105 kB
+  ├ chunks/4bd1b696-e2fdaafc550a87f9.js  53 kB
+  ├ chunks/517-86f392c3804c69dc.js       50 kB
+  └ other shared chunks (total)          1.91 kB
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

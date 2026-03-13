@@ -1,7 +1,8 @@
+// src/components/ai/AiChat.tsx
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
-import { Sparkles, Send, Loader2, ArrowLeft, UserCircle } from 'lucide-react';
+import { Sparkles, Send, Loader2, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { aiScriptureQuestion } from '@/ai/flows/ai-scripture-question';
@@ -11,6 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
+// ============ TYPES ============
 type Message = {
   role: 'user' | 'assistant';
   content: string;
@@ -19,6 +21,18 @@ type Message = {
 
 type AiMode = 'question' | 'reflection';
 
+interface QuestionResponse {
+  answer?: string;
+  [key: string]: any;
+}
+
+interface ReflectionResponse {
+  reflectionTitle?: string;
+  reflectionContent?: string;
+  [key: string]: any;
+}
+
+// ============ COMPONENT ============
 export default function AiChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -28,6 +42,7 @@ export default function AiChat() {
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
+  // Auto-scroll to bottom
   useEffect(() => {
     if (scrollAreaRef.current) {
       const viewport = scrollAreaRef.current.querySelector('div');
@@ -48,22 +63,37 @@ export default function AiChat() {
     setIsLoading(true);
 
     try {
-        let response;
-        if (mode === 'question') {
-            response = await aiScriptureQuestion({ passage, question: input });
-            if (response.answer) {
-                setMessages((prev) => [...prev, { role: 'assistant', content: response.answer, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
-            }
-        } else {
-            response = await aiScriptureReflection({ versePassage: passage, userContext: input });
-             if (response.reflectionContent) {
-                setMessages((prev) => [...prev, { role: 'assistant', content: `**${response.reflectionTitle}**\n\n${response.reflectionContent}`, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
-            }
+      // ✅ FIXED: Proper type annotation
+      let response: QuestionResponse | ReflectionResponse | undefined;
+      
+      if (mode === 'question') {
+        response = await aiScriptureQuestion({ passage, question: input }) as QuestionResponse;
+        if (response.answer) {
+          setMessages((prev) => [...prev, { 
+            role: 'assistant', 
+            content: response.answer, 
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
+          }]);
         }
+      } else {
+        response = await aiScriptureReflection({ versePassage: passage, userContext: input }) as ReflectionResponse;
+        if (response.reflectionContent) {
+          setMessages((prev) => [...prev, { 
+            role: 'assistant', 
+            content: `**${response.reflectionTitle || 'Reflection'}**\n\n${response.reflectionContent}`, 
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
+          }]);
+        }
+      }
     } catch (error) {
-        toast({ title: 'AI Error', description: 'Failed to get a response.', variant: 'destructive'});
+      console.error('AI Error:', error);
+      toast({ 
+        title: 'AI Error', 
+        description: 'Failed to get a response. Please try again.', 
+        variant: 'destructive'
+      });
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   };
 
