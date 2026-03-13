@@ -1,8 +1,9 @@
-import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
+// src/lib/gemini-client.ts
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
-const VALID_MODEL = "gemini-1.5-flash";
-const cache = new Map<string, {r:string;t:number}>();
+const API_KEY = process.env.GEMINI_API_KEY || "";
+const MODEL = "gemini-1.5-flash"; // ✅ VALID MODEL (NOT gemini-3!)
+const cache = new Map<string,{r:string;t:number}>();
 const TTL = 5*60*1000;
 const reqs:number[] = [];
 
@@ -12,13 +13,13 @@ function cKey(p:string){return p.slice(0,200);}
 function get(p:string){const c=cache.get(cKey(p));if(c&&Date.now()-c.t<TTL)return c.r;if(c)cache.delete(cKey(p));return null;}
 function set(p:string,r:string){cache.set(cKey(p),{r,t:Date.now()});}
 
-let model:GenerativeModel|null=null;
+let model:any = null;
 
 export function initGemini(){
-  if(!GEMINI_API_KEY){console.warn("⚠️ No GEMINI_API_KEY");return false;}
+  if(!API_KEY){console.warn("⚠️ No GEMINI_API_KEY");return false;}
   try{
-    model=new GoogleGenerativeAI(GEMINI_API_KEY).getGenerativeModel({model:VALID_MODEL,generationConfig:{temperature:0.3,topK:40,topP:0.95,maxOutputTokens:2048}});
-    console.log("✅ Gemini:",VALID_MODEL);return true;
+    model = new GoogleGenerativeAI(API_KEY).getGenerativeModel({model:MODEL,generationConfig:{temperature:0.3,topK:40,topP:0.95,maxOutputTokens:2048}});
+    console.log("✅ Gemini:",MODEL);return true;
   }catch(e){console.error("❌ Gemini init:",e);return false;}
 }
 
@@ -31,15 +32,15 @@ export async function askGemini(prompt:string,opt:{useCache?:boolean;maxRetries?
   for(let i=1;i<=maxRetries;i++){
     try{
       reqs.push(Date.now());
-      const res=await model!.generateContent(prompt);
-      const text=(await res.response).text();
+      const res = await model.generateContent(prompt);
+      const text = (await res.response).text();
       if(useCache)set(prompt,text);
       return text;
     }catch(e:any){
       err=e;
       if(e.message?.includes("429")){await sleep(2e3*i*2);continue;}
       if(e.message?.includes("400"))return"❌ Invalid request.";
-      if(e.message?.includes("401"))return"🔑 Invalid API key.";
+      if(e.message?.includes("401"))return"🔑 Invalid API key. Check Vercel env vars.";
       if(e.message?.includes("403"))return"⚠️ API access denied.";
       if(i<maxRetries){await sleep(2e3*i);continue;}
     }
@@ -60,5 +61,5 @@ export async function askGeminiAboutBible(book:string,ch:number,q:string,opt:{la
 }
 
 export function clearCache(){cache.clear();}
-export function isReady(){return !!model&&!!GEMINI_API_KEY;}
-export{VALID_MODEL as VALID_MODEL_NAME,initGemini};
+export function isReady(){return !!model&&!!API_KEY;}
+export{MODEL as VALID_MODEL_NAME,initGemini};
