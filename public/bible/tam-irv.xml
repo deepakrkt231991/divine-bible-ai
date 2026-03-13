@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osis xmlns="http://www.bibletechnologies.net/osis/2.1">
+  <osisText osisIDWork="TAMIRV" osisLang="ta">
+    <header><work osisWork="TAMIRV"><title>Tamil IRV</title></work></header>
+    <div type="book" osisID="Gen" name="ஆதியாகமம்">
+      <chapter osisID="Gen.1">
+        <verse osisID="Gen.1.1">ஆதியிலே தேவன் வானத்தையும் பூமியையும் சிருஷ்டித்தார்.</verse>
+      </chapter>
+    </div>
+  </osisText>
+</osis>

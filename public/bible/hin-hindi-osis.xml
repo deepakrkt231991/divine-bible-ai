@@ -1,19 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<bible>
-  <book id="GEN" name="Genesis">
-    <chapter number="1">
-      <verse number="1">आदि में परमेश्वर ने आकाश और पृथ्वी की सृष्टि की।</verse>
-      <verse number="2">और पृथ्वी बेडौल और सुनसान पड़ी थी; और गहरे जल के ऊपर अन्धकार था।</verse>
-    </chapter>
-  </book>
-  <book id="EXO" name="Exodus">
-    <chapter number="7">
-      <verse number="1">यहोवा ने मूसा से कहा: देख, मैं तुझे फिरौन के सामने ईश्वर के समान बनाता हूँ।</verse>
-    </chapter>
-  </book>
-  <book id="MAT" name="Matthew">
-    <chapter number="2">
-      <verse number="1">जब यीशु हेरोदे राजा के दिनों में यहूदिया के बेतलहम में उत्पन्न हुआ।</verse>
-    </chapter>
-  </book>
-</bible>
+<osis xmlns="http://www.bibletechnologies.net/osis/2.1">
+  <osisText osisIDWork="HINIRV" osisLang="hi">
+    <header><work osisWork="HINIRV"><title>Hindi IRV Bible</title></work></header>
+    <div type="book" osisID="Gen" name="Genesis">
+      <chapter osisID="Gen.1">
+        <verse osisID="Gen.1.1">आदि में परमेश्वर ने आकाश और पृथ्वी की सृष्टि की।</verse>
+        <verse osisID="Gen.1.2">और पृथ्वी बेडौल और सुनसान पड़ी थी; और गहरे जल के ऊपर अन्धकार था: और परमेश्वर का आत्मा जल के ऊपर मण्डराता था।</verse>
+      </chapter>
+    </div>
+    <div type="book" osisID="Exod" name="Exodus">
+      <chapter osisID="Exod.7">
+        <verse osisID="Exod.7.1">यहोवा ने मूसा से कहा: देख, मैं तुझे फिरौन के सामने ईश्वर के समान बनाता हूँ; और हारून तेरा नबी होगा।</verse>
+        <verse osisID="Exod.7.2">तू सब कुछ कहना जो मैं तुझे आज्ञा देता हूँ; और हारून तेरा भाई फिरौन से कहे कि वह इस्राएलियों को अपने देश से जाने दे।</verse>
+      </chapter>
+    </div>
+    <div type="book" osisID="Matt" name="Matthew">
+      <chapter osisID="Matt.2">
+        <verse osisID="Matt.2.1">जब यीशु हेरोदे राजा के दिनों में यहूदिया के बेतलहम में उत्पन्न हुआ, तब देखो, पूर्व देश के कुछ ज्योतिषी यरूशलेम में आए।</verse>
+        <verse osisID="Matt.2.2">और कहने लगे कि यहूदियों का राजा जो उत्पन्न हुआ है, वह कहां है? क्योंकि हम ने उसका तारा पूर्व में देखा, और उसकी उपासना करने को आए हैं।</verse>
+      </chapter>
+    </div>
+  </osisText>
+</osis>
