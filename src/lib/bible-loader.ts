@@ -24,10 +24,10 @@ const BOOK_CODES: Record<string, string> = {
   '2timothy': '2ti', 'titus': 'tit', 'philemon': 'phm', 'hebrews': 'heb',
   'james': 'jas', '1peter': '1pe', '2peter': '2pe', '1john': '1jn',
   '2john': '2jn', '3john': '3jn', 'jude': 'jud', 'revelation': 'rev',
-  // Apocrypha books
   'tobit': 'tob', 'judith': 'jdt', 'wisdom': 'wis', 'sirach': 'sir',
   'baruch': 'bar', '1maccabees': '1ma', '2maccabees': '2ma', '1esdras': '1es',
-  '2esdras': '2es', 'susanna': 'sus', 'bel': 'bel', 'manasseh': 'man'
+  '2esdras': '2es', 'prayerofmanasseh': 'man', 'psalm151': 'psa151',
+  '3maccabees': '3ma', '4maccabees': '4ma', 'susanna': 'sus', 'bel': 'bel'
 };
 
 export async function loadChapter(book: string, chapter: number): Promise<Verse[] | null> {
@@ -35,23 +35,13 @@ export async function loadChapter(book: string, chapter: number): Promise<Verse[
   const code = BOOK_CODES[bookKey] || book.slice(0, 3).toLowerCase();
   
   try {
-    // Try split folder first
     const res = await fetch(`/bible/split/${code}/${chapter}.json`);
     if (res.ok) {
       return await res.json();
     }
-    
-    // Try combined JSON
-    const combinedRes = await fetch('/bible/hin-hindi-osis.json');
-    if (combinedRes.ok) {
-      const data = await combinedRes.json();
-      const verses = data[code]?.[String(chapter)];
-      if (verses) return verses;
-    }
   } catch (e) {
-    console.log('Load error:', e);
+    console.log('Error loading chapter:', e);
   }
-  
   return null;
 }
 
@@ -71,4 +61,9 @@ export function useChapter(book: string | null, chapter: number | null) {
   
   return { verses, loading };
 }
-EOF
+
+export async function loadForGemini(book: string, chapter: number): Promise<string> {
+  const verses = await loadChapter(book, chapter);
+  if (!verses) return `Error: ${book} ${chapter} not found`;
+  return verses.map(v => `${v.verse}. ${v.text}`).join('\n');
+}

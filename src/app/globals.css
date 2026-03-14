@@ -5,26 +5,26 @@
 
 @layer base {
   :root {
-    --background: 240 10% 3.9%;
+    --background: 220 15% 5%; /* #0B0C0D (Dark Blue-ish Grey) */
     --foreground: 0 0% 98%;
-    --card: 240 10% 6.3%;
+    --card: 220 15% 7%;
     --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
+    --popover: 220 15% 5%;
     --popover-foreground: 0 0% 98%;
-    --primary: 161 84% 39%;
-    --primary-foreground: 161 84% 10%;
-    --secondary: 240 3.7% 15.9%;
+    --primary: 221 83% 50%; /* #1A60E5 (Sapphire Blue) */
+    --primary-foreground: 210 40% 98%;
+    --secondary: 220 15% 15%;
     --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 161 84% 39%;
+    --muted: 220 15% 15%;
+    --muted-foreground: 220 10% 65%;
+    --accent: 161 93% 38%; /* #07BF7A (Emerald Green) */
     --accent-foreground: 0 0% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 161 84% 39%;
-    --radius: 1.5rem;
+    --border: 220 15% 15%;
+    --input: 220 15% 15%;
+    --ring: 221 83% 50%;
+    --radius: 1.25rem;
   }
 }
 
@@ -37,8 +37,16 @@
     margin: 0;
     padding: 0;
     overflow: hidden;
-    @apply bg-zinc-950 text-zinc-100 antialiased selection:bg-emerald-500/30 font-sans;
+    @apply bg-[#0B0C0D] text-zinc-100 antialiased selection:bg-primary/30 font-sans;
   }
+}
+
+.font-serif {
+  font-family: var(--font-serif), serif;
+}
+
+.font-sans {
+  font-family: var(--font-sans), sans-serif;
 }
 
 main {
@@ -56,33 +64,18 @@ main {
   scrollbar-width: none;
 }
 
-/* Custom Scrollbar for desktop if needed */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
-}
-.custom-scrollbar::-webkit-scrollbar-track {
-  @apply bg-transparent;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  @apply bg-emerald-500/20 rounded-full;
+.glow-blue {
+  box-shadow: 0 0 20px rgba(26, 96, 229, 0.2);
 }
 
-.glow-primary {
-  box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+.bible-content p {
+  @apply mb-6 leading-relaxed font-serif italic text-lg text-zinc-300;
 }
 
-/* Animations */
-.animate-in {
-  animation: animate-in 0.5s ease-out;
+.bible-content .verse-num {
+  @apply font-black text-accent mr-3 text-sm opacity-70;
 }
 
-@keyframes animate-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.bible-content h3 {
+  @apply text-2xl font-serif font-bold text-primary mb-6 border-l-4 border-primary pl-4;
 }
