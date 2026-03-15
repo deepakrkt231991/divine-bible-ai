@@ -1,0 +1,327 @@
+{
+  "language": "eng-kjv",
+  "totalBooks": 80,
+  "totalFiles": 1340,
+  "books": [
+    {
+      "code": "gen",
+      "chapters": 50
+    },
+    {
+      "code": "exod",
+      "chapters": 40
+    },
+    {
+      "code": "lev",
+      "chapters": 27
+    },
+    {
+      "code": "num",
+      "chapters": 36
+    },
+    {
+      "code": "deut",
+      "chapters": 34
+    },
+    {
+      "code": "josh",
+      "chapters": 24
+    },
+    {
+      "code": "judg",
+      "chapters": 21
+    },
+    {
+      "code": "ruth",
+      "chapters": 4
+    },
+    {
+      "code": "1sam",
+      "chapters": 31
+    },
+    {
+      "code": "2sam",
+      "chapters": 24
+    },
+    {
+      "code": "1kgs",
+      "chapters": 22
+    },
+    {
+      "code": "2kgs",
+      "chapters": 25
+    },
+    {
+      "code": "1chr",
+      "chapters": 29
+    },
+    {
+      "code": "2chr",
+      "chapters": 36
+    },
+    {
+      "code": "ezra",
+      "chapters": 10
+    },
+    {
+      "code": "neh",
+      "chapters": 13
+    },
+    {
+      "code": "esth",
+      "chapters": 10
+    },
+    {
+      "code": "job",
+      "chapters": 42
+    },
+    {
+      "code": "ps",
+      "chapters": 150
+    },
+    {
+      "code": "prov",
+      "chapters": 31
+    },
+    {
+      "code": "eccl",
+      "chapters": 12
+    },
+    {
+      "code": "song",
+      "chapters": 8
+    },
+    {
+      "code": "isa",
+      "chapters": 66
+    },
+    {
+      "code": "jer",
+      "chapters": 52
+    },
+    {
+      "code": "lam",
+      "chapters": 5
+    },
+    {
+      "code": "ezek",
+      "chapters": 48
+    },
+    {
+      "code": "dan",
+      "chapters": 12
+    },
+    {
+      "code": "hos",
+      "chapters": 14
+    },
+    {
+      "code": "joel",
+      "chapters": 3
+    },
+    {
+      "code": "amos",
+      "chapters": 9
+    },
+    {
+      "code": "obad",
+      "chapters": 1
+    },
+    {
+      "code": "jonah",
+      "chapters": 4
+    },
+    {
+      "code": "mic",
+      "chapters": 7
+    },
+    {
+      "code": "nah",
+      "chapters": 3
+    },
+    {
+      "code": "hab",
+      "chapters": 3
+    },
+    {
+      "code": "zeph",
+      "chapters": 3
+    },
+    {
+      "code": "hag",
+      "chapters": 2
+    },
+    {
+      "code": "zech",
+      "chapters": 14
+    },
+    {
+      "code": "mal",
+      "chapters": 4
+    },
+    {
+      "code": "tob",
+      "chapters": 14
+    },
+    {
+      "code": "jdt",
+      "chapters": 16
+    },
+    {
+      "code": "esthgr",
+      "chapters": 7
+    },
+    {
+      "code": "wis",
+      "chapters": 19
+    },
+    {
+      "code": "sir",
+      "chapters": 51
+    },
+    {
+      "code": "bar",
+      "chapters": 5
+    },
+    {
+      "code": "epjer",
+      "chapters": 1
+    },
+    {
+      "code": "prazar",
+      "chapters": 1
+    },
+    {
+      "code": "sus",
+      "chapters": 1
+    },
+    {
+      "code": "bel",
+      "chapters": 1
+    },
+    {
+      "code": "1macc",
+      "chapters": 16
+    },
+    {
+      "code": "2macc",
+      "chapters": 15
+    },
+    {
+      "code": "1esd",
+      "chapters": 9
+    },
+    {
+      "code": "prman",
+      "chapters": 1
+    },
+    {
+      "code": "2esd",
+      "chapters": 16
+    },
+    {
+      "code": "matt",
+      "chapters": 28
+    },
+    {
+      "code": "mark",
+      "chapters": 16
+    },
+    {
+      "code": "luke",
+      "chapters": 24
+    },
+    {
+      "code": "john",
+      "chapters": 21
+    },
+    {
+      "code": "acts",
+      "chapters": 28
+    },
+    {
+      "code": "rom",
+      "chapters": 16
+    },
+    {
+      "code": "1cor",
+      "chapters": 16
+    },
+    {
+      "code": "2cor",
+      "chapters": 13
+    },
+    {
+      "code": "gal",
+      "chapters": 6
+    },
+    {
+      "code": "eph",
+      "chapters": 6
+    },
+    {
+      "code": "phil",
+      "chapters": 4
+    },
+    {
+      "code": "col",
+      "chapters": 4
+    },
+    {
+      "code": "1thess",
+      "chapters": 5
+    },
+    {
+      "code": "2thess",
+      "chapters": 3
+    },
+    {
+      "code": "1tim",
+      "chapters": 6
+    },
+    {
+      "code": "2tim",
+      "chapters": 4
+    },
+    {
+      "code": "titus",
+      "chapters": 3
+    },
+    {
+      "code": "phlm",
+      "chapters": 1
+    },
+    {
+      "code": "heb",
+      "chapters": 13
+    },
+    {
+      "code": "jas",
+      "chapters": 5
+    },
+    {
+      "code": "1pet",
+      "chapters": 5
+    },
+    {
+      "code": "2pet",
+      "chapters": 3
+    },
+    {
+      "code": "1john",
+      "chapters": 5
+    },
+    {
+      "code": "2john",
+      "chapters": 1
+    },
+    {
+      "code": "3john",
+      "chapters": 1
+    },
+    {
+      "code": "jude",
+      "chapters": 1
+    }
+  ]
+}
