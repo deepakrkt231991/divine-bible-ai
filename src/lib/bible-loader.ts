@@ -1,6 +1,6 @@
 // src/lib/bible-loader.ts
-// ✅ Complete Bible Loader - NO duplicate exports
-// ✅ Works with split JSON files + multi-language support
+// ✅ Complete Bible Loader - Multi-language support
+// ✅ Works with split JSON files + proper language fallback
 
 import { useState, useEffect } from 'react';
 
@@ -22,6 +22,7 @@ export interface SplitChapter {
   book: string;
   chapter: number;
   verses: Verse[];
+  language?: string;
 }
 
 // ============ BOOK ALIASES: User Input → Actual File Code ============
@@ -64,7 +65,7 @@ function getCode(input: string): string {
   return ALIASES[code] || code;
 }
 
-// ============ 🎯 MAIN LOADER: Load Single Chapter ============
+// ============ 🎯 MAIN LOADER: Load Single Chapter (Multi-language) ============
 async function loadChapter(
   book: string,
   chapter: number,
@@ -72,40 +73,86 @@ async function loadChapter(
 ): Promise<Verse[] | null> {
   const code = getCode(book);
   const chapterStr = String(chapter);
+  const langPrefix = lang.split('-')[0]; // 'hin' from 'hin-hindi'
   
-  // === TRY 1: Split chapter file (~11 KB) - FASTEST ===
+  // === TRY 1: Language-specific split file (e.g., hin-gen-1.json) ===
+  // Only try this if user requested non-English language
+  if (lang !== 'eng-kjv') {
+    try {
+      const url = `/bible/split/${langPrefix}-${code}-${chapter}.json`;
+      const res = await fetch(url);
+      
+      if (res.ok) {
+        const data: SplitChapter = await res.json();
+        // Return verses if they exist and have content
+        if (data.verses && data.verses.length > 0) {
+          return data.verses;
+        }
+      }
+    } catch (e) {
+      // Language file not found, fall through to English
+      console.log(`⚠️ ${lang} file not found: ${langPrefix}-${code}-${chapter}.json, trying English...`);
+    }
+  }
+  
+  // === TRY 2: English split file (fallback) ===
   try {
     const url = `/bible/split/${code}-${chapter}.json`;
     const res = await fetch(url);
     
     if (res.ok) {
       const data: SplitChapter = await res.json();
-      return data.verses || null;
+      if (data.verses && data.verses.length > 0) {
+        return data.verses;
+      }
     }
   } catch (e) {
-    console.log(`⚠️ Split chapter fetch error: ${code}-${chapter}`, e);
+    console.log(`⚠️ English split file error: ${code}-${chapter}`, e);
   }
   
-  // === TRY 2: Combined file (~6.5 MB) - FALLBACK ===
+  // === TRY 3: Language-specific combined file ===
   try {
     const url = `/bible/${lang}-81books.json`;
     const res = await fetch(url);
     
-    if (!res.ok) return null;
-    
-    const bible: BibleData = await res.json();
-    const bookData = bible[code];
-    
-    if (!bookData) return null;
-    
-    const verses = bookData[chapterStr] || bookData[chapter];
-    return verses || null;
-    
+    if (res.ok) {
+      const bible: BibleData = await res.json();
+      const bookData = bible[code];
+      
+      if (bookData) {
+        const verses = bookData[chapterStr] || bookData[chapter];
+        if (verses && verses.length > 0) {
+          return verses;
+        }
+      }
+    }
   } catch (e) {
-    console.error(`❌ Combined file error:`, e);
-    return null;
+    console.error(`❌ Combined file error for ${lang}:`, e);
   }
   
+  // === TRY 4: English combined file (last resort) ===
+  if (lang !== 'eng-kjv') {
+    try {
+      const url = `/bible/eng-kjv-81books.json`;
+      const res = await fetch(url);
+      
+      if (res.ok) {
+        const bible: BibleData = await res.json();
+        const bookData = bible[code];
+        
+        if (bookData) {
+          const verses = bookData[chapterStr] || bookData[chapter];
+          if (verses && verses.length > 0) {
+            return verses;
+          }
+        }
+      }
+    } catch (e) {
+      console.error(`❌ English combined file error:`, e);
+    }
+  }
+  
+  // If nothing found, return null
   return null;
 }
 
@@ -116,14 +163,33 @@ async function loadBook(
 ): Promise<BibleBook | null> {
   const code = getCode(book);
   
+  // Try language-specific combined file first
   try {
     const res = await fetch(`/bible/${lang}-81books.json`);
-    if (!res.ok) return null;
-    const bible: BibleData = await res.json();
-    return bible[code] || null;
-  } catch {
-    return null;
+    if (res.ok) {
+      const bible: BibleData = await res.json();
+      if (bible[code]) {
+        return bible[code];
+      }
+    }
+  } catch (e) {
+    console.log(`⚠️ ${lang} combined file not found, trying English...`);
   }
+  
+  // Fall back to English
+  if (lang !== 'eng-kjv') {
+    try {
+      const res = await fetch(`/bible/eng-kjv-81books.json`);
+      if (res.ok) {
+        const bible: BibleData = await res.json();
+        return bible[code] || null;
+      }
+    } catch (e) {
+      console.error(`❌ English combined file error:`, e);
+    }
+  }
+  
+  return null;
 }
 
 // ============ 🤖 Gemini Optimized Loader ============
@@ -145,7 +211,7 @@ async function loadForGemini(
   const verses = await loadChapter(book, chapter, lang);
   
   if (!verses) {
-    return `Error: Could not load ${book} chapter ${chapter}`;
+    return `Error: Could not load ${book} chapter ${chapter} in ${lang}`;
   }
   
   if (format === 'json') {
@@ -195,14 +261,14 @@ function useChapter(
             setVerses(result);
             setError(null);
           } else {
-            setError(`Chapter not found: ${book} ${chapter}`);
+            setError(`Chapter not found: ${book} ${chapter} in ${lang}`);
             setVerses(null);
           }
           setLoading(false);
         }
-      } catch (err) {
+      } catch (err: any) {
         if (mounted) {
-          setError(err instanceof Error ? err.message : 'Unknown error');
+          setError(err?.message || 'Unknown error loading chapter');
           setVerses(null);
           setLoading(false);
         }
@@ -219,7 +285,7 @@ function useChapter(
   return { verses, loading, error };
 }
 
-// ============ ✅ SINGLE EXPORT BLOCK (at end only) ============
+// ============ ✅ EXPORTS (Single block at end) ============
 export {
   ALIASES,
   getCode,
