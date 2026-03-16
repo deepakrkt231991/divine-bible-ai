@@ -1,6 +1,6 @@
 // src/app/(tabs)/read/page.tsx
 // ✅ Professional Bible Reader - Multi-language, Notes, Highlights
-// ✅ Matches your design exactly + advanced features
+// ✅ Book + Chapter selectors + Language dropdown
 
 'use client';
 
@@ -9,8 +9,8 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useChapter } from '@/lib/bible-loader';
 import { 
   ChevronLeft, ChevronRight, Play, Pause, Settings, Search, 
-  Home, BookOpen, Users, MoreHorizontal, Volume2, Globe,
-  StickyNote, Highlighter, Copy, Share2, X
+  Home, BookOpen, Users, MoreHorizontal, Volume2, Globe, X,
+  StickyNote, Highlighter, Copy, Share2
 } from 'lucide-react';
 
 // ============ TYPES ============
@@ -59,6 +59,7 @@ function ReaderContent() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [showLangSelector, setShowLangSelector] = useState(false);
   const [showBookSelector, setShowBookSelector] = useState(false);
+  const [showChapterSelector, setShowChapterSelector] = useState(false); // ✅ NEW
   const [selectedVerse, setSelectedVerse] = useState<number | null>(null);
   const [showToolbar, setShowToolbar] = useState(false);
   const [toolbarPosition, setToolbarPosition] = useState({ x: 0, y: 0 });
@@ -108,82 +109,84 @@ function ReaderContent() {
     { name: 'Rose', value: 'rose', class: 'highlight-rose' },
   ];
   
+  // ============ CHAPTER COUNTS PER BOOK ============
+  const getChapterCount = (bookCode: string): number => {
+    const counts: Record<string, number> = {
+      'gen': 50, 'exod': 40, 'lev': 27, 'num': 36, 'deut': 34,
+      'josh': 24, 'judg': 21, 'ruth': 4, '1sam': 31, '2sam': 24,
+      '1kgs': 22, '2kgs': 25, '1chr': 29, '2chr': 36, 'ezra': 10,
+      'neh': 13, 'esth': 10, 'job': 42, 'ps': 150, 'prov': 31,
+      'eccl': 12, 'song': 8, 'isa': 66, 'jer': 52, 'lam': 5,
+      'ezek': 48, 'dan': 12, 'hos': 14, 'joel': 3, 'amos': 9,
+      'obad': 1, 'jonah': 4, 'mic': 7, 'nah': 3, 'hab': 3,
+      'zeph': 3, 'hag': 2, 'zech': 14, 'mal': 4,
+      'matt': 28, 'mark': 16, 'luke': 24, 'john': 21,
+      'acts': 28, 'rom': 16, '1cor': 16, '2cor': 13,
+      'gal': 6, 'eph': 6, 'phil': 4, 'col': 4,
+      '1thess': 5, '2thess': 3, '1tim': 6, '2tim': 4,
+      'titus': 3, 'phlm': 1, 'heb': 13, 'jas': 5,
+      '1pet': 5, '2pet': 3, '1john': 5, '2john': 1,
+      '3john': 1, 'jude': 1, 'rev': 22,
+      'tob': 14, 'jdt': 16, 'wis': 19, 'sir': 51,
+      'bar': 5, '1macc': 16, '2macc': 15
+    };
+    return counts[bookCode.toLowerCase()] || 1;
+  };
+  
   // ============ LOAD NOTES FROM STORAGE ============
   useEffect(() => {
     const key = `bible-notes-${langParam}`;
     const saved = localStorage.getItem(key);
     if (saved) {
-      try {
-        setNotes(JSON.parse(saved));
-      } catch (e) {
-        console.error('Failed to load notes:', e);
-      }
+      try { setNotes(JSON.parse(saved)); } catch (e) { console.error('Failed to load notes:', e); }
     }
-    
     const highlightsKey = `bible-highlights-${langParam}`;
     const savedHighlights = localStorage.getItem(highlightsKey);
     if (savedHighlights) {
-      try {
-        setHighlights(JSON.parse(savedHighlights));
-      } catch (e) {
-        console.error('Failed to load highlights:', e);
-      }
+      try { setHighlights(JSON.parse(savedHighlights)); } catch (e) { console.error('Failed to load highlights:', e); }
     }
   }, [langParam]);
   
-  // ============ SAVE NOTES TO STORAGE ============
   const saveNotes = (newNotes: Record<string, Note[]>) => {
-    const key = `bible-notes-${langParam}`;
-    localStorage.setItem(key, JSON.stringify(newNotes));
+    localStorage.setItem(`bible-notes-${langParam}`, JSON.stringify(newNotes));
     setNotes(newNotes);
   };
   
   const saveHighlights = (newHighlights: Record<string, string>) => {
-    const key = `bible-highlights-${langParam}`;
-    localStorage.setItem(key, JSON.stringify(newHighlights));
+    localStorage.setItem(`bible-highlights-${langParam}`, JSON.stringify(newHighlights));
     setHighlights(newHighlights);
   };
   
   // ============ LOAD CHAPTER ============
-  const { verses, loading, error } = useChapter(
-    bookParam.toLowerCase(), 
-    chapterParam, 
-    langParam
-  );
+  const { verses, loading, error } = useChapter(bookParam.toLowerCase(), chapterParam, langParam);
   
   // ============ NAVIGATION HANDLERS ============
-  const handlePrevChapter = () => {
-    if (chapterParam > 1) {
-      router.push(`/read?book=${bookParam}&chapter=${chapterParam - 1}&lang=${langParam}`);
-    }
-  };
-  
-  const handleNextChapter = () => {
-    router.push(`/read?book=${bookParam}&chapter=${chapterParam + 1}&lang=${langParam}`);
-  };
+  const handlePrevChapter = () => { if (chapterParam > 1) router.push(`/read?book=${bookParam}&chapter=${chapterParam - 1}&lang=${langParam}`); };
+  const handleNextChapter = () => { router.push(`/read?book=${bookParam}&chapter=${chapterParam + 1}&lang=${langParam}`); };
   
   const handleBookChange = (newBook: string) => {
     setShowBookSelector(false);
     router.push(`/read?book=${newBook}&chapter=1&lang=${langParam}`);
   };
   
+  const handleChapterSelect = (newChapter: number) => {
+    setShowChapterSelector(false);
+    router.push(`/read?book=${bookParam}&chapter=${newChapter}&lang=${langParam}`);
+  };
+  
   const handleLangChange = (newLang: string) => {
     const lang = LANGUAGES.find(l => l.code === newLang);
-    
     if (!lang?.available) {
       alert(`${lang?.name} Bible coming soon! For now, enjoy the complete English KJV Bible.`);
       return;
     }
-    
     setShowLangSelector(false);
     router.push(`/read?book=${bookParam}&chapter=${chapterParam}&lang=${newLang}`);
   };
   
   const toggleAudio = () => {
-    if (isPlaying) {
-      window.speechSynthesis?.cancel();
-      setIsPlaying(false);
-    } else if (verses?.length) {
+    if (isPlaying) { window.speechSynthesis?.cancel(); setIsPlaying(false); }
+    else if (verses?.length) {
       const text = verses.map((v: any) => `Verse ${v.verse}. ${v.text}`).join('. ');
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = 0.9;
@@ -212,176 +215,116 @@ function ReaderContent() {
     }
   };
   
-  // ============ HIGHLIGHT HANDLER ============
   const handleHighlight = (color: string) => {
     if (selectedVerse === null) return;
-    const key = `${bookParam}-${chapterParam}-${selectedVerse}`;
-    saveHighlights({ ...highlights, [key]: color });
-    setShowToolbar(false);
-    setSelectedVerse(null);
+    saveHighlights({ ...highlights, [`${bookParam}-${chapterParam}-${selectedVerse}`]: color });
+    setShowToolbar(false); setSelectedVerse(null);
   };
   
-  // ============ ADD NOTE HANDLER ============
   const handleAddNote = () => {
     if (selectedVerse === null) return;
     const noteText = prompt('Add your reflection note:');
     if (noteText?.trim()) {
       const key = `${bookParam}-${chapterParam}`;
-      const newNote: Note = {
-        id: Date.now().toString(),
-        verse: selectedVerse,
-        text: noteText.trim(),
-        color: 'emerald',
-        createdAt: new Date().toISOString()
-      };
-      saveNotes({ ...notes, [key]: [...(notes[key] || []), newNote] });
+      saveNotes({ ...notes, [key]: [...(notes[key] || []), {
+        id: Date.now().toString(), verse: selectedVerse, text: noteText.trim(),
+        color: 'emerald', createdAt: new Date().toISOString()
+      }]});
     }
-    setShowToolbar(false);
-    setSelectedVerse(null);
+    setShowToolbar(false); setSelectedVerse(null);
   };
   
-  // ============ COPY VERSE HANDLER ============
   const handleCopyVerse = async () => {
     if (selectedVerse === null || !verses) return;
     const verse = verses.find((v: any) => v.verse === selectedVerse);
     if (verse) {
       const text = `${bookName} ${chapterParam}:${verse.verse} - ${verse.text}`;
-      try {
-        await navigator.clipboard.writeText(text);
-        alert('✅ Verse copied!');
-      } catch {
-        // Fallback for older browsers
+      try { await navigator.clipboard.writeText(text); alert('✅ Verse copied!'); }
+      catch {
         const textarea = document.createElement('textarea');
-        textarea.value = text;
-        textarea.style.position = 'fixed';
-        textarea.style.left = '-9999px';
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
+        textarea.value = text; textarea.style.position = 'fixed'; textarea.style.left = '-9999px';
+        document.body.appendChild(textarea); textarea.select();
+        document.execCommand('copy'); document.body.removeChild(textarea);
         alert('✅ Verse copied!');
       }
     }
-    setShowToolbar(false);
-    setSelectedVerse(null);
+    setShowToolbar(false); setSelectedVerse(null);
   };
   
-  // ============ SHARE VERSE HANDLER ============
   const handleShareVerse = async () => {
     if (selectedVerse === null || !verses) return;
     const verse = verses.find((v: any) => v.verse === selectedVerse);
     if (verse && navigator.share) {
-      try {
-        await navigator.share({
-          title: `${bookName} ${chapterParam}:${verse.verse}`,
-          text: verse.text,
-          url: window.location.href
-        });
-      } catch (e) {
-        console.log('Share cancelled');
-      }
+      try { await navigator.share({ title: `${bookName} ${chapterParam}:${verse.verse}`, text: verse.text, url: window.location.href }); }
+      catch (e) { console.log('Share cancelled'); }
     }
-    setShowToolbar(false);
-    setSelectedVerse(null);
+    setShowToolbar(false); setSelectedVerse(null);
   };
   
-  // ============ GET VERSE HIGHLIGHT CLASS ============
   const getHighlightClass = (verseNum: number): string => {
-    const key = `${bookParam}-${chapterParam}-${verseNum}`;
-    const color = highlights[key];
-    const highlight = HIGHLIGHT_COLORS.find(h => h.value === color);
-    return highlight?.class || '';
+    const color = highlights[`${bookParam}-${chapterParam}-${verseNum}`];
+    return HIGHLIGHT_COLORS.find(h => h.value === color)?.class || '';
   };
   
-  // ============ GET VERSE NOTES ============
-  const getVerseNotes = (verseNum: number): Note[] => {
-    const key = `${bookParam}-${chapterParam}`;
-    return notes[key]?.filter(n => n.verse === verseNum) || [];
-  };
+  const getVerseNotes = (verseNum: number): Note[] => notes[`${bookParam}-${chapterParam}`]?.filter(n => n.verse === verseNum) || [];
   
   // ============ LOADING STATE ============
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
+  if (loading) return <div className="min-h-screen bg-zinc-950 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;
+  
   // ============ ERROR STATE ============
-  if (error || !verses) {
-    return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
-        <div className="text-center max-w-sm">
-          <p className="text-red-400 mb-4 text-lg">{error || 'Chapter not found'}</p>
-          <p className="text-zinc-500 text-sm mb-6">{bookName} {chapterParam} • {langParam}</p>
-          <button 
-            onClick={() => router.push('/')}
-            className="px-6 py-2 bg-primary text-zinc-950 rounded-full font-semibold hover:bg-emerald-400 transition-colors"
-          >
-            Go Home
-          </button>
-        </div>
+  if (error || !verses) return (
+    <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
+      <div className="text-center max-w-sm">
+        <p className="text-red-400 mb-4 text-lg">{error || 'Chapter not found'}</p>
+        <p className="text-zinc-500 text-sm mb-6">{bookName} {chapterParam} • {langParam}</p>
+        <button onClick={() => router.push('/')} className="px-6 py-2 bg-primary text-zinc-950 rounded-full font-semibold hover:bg-emerald-400 transition-colors">Go Home</button>
       </div>
-    );
-  }
-
-  // ============ CURRENT LANGUAGE INFO ============
+    </div>
+  );
+  
   const currentLang = LANGUAGES.find(l => l.code === langParam) || LANGUAGES[0];
+  const totalChapters = getChapterCount(bookParam.toLowerCase());
 
   // ============ MAIN UI ============
   return (
     <div className="min-h-screen bg-zinc-950 text-slate-100 font-sans">
       
-      {/* ============ HEADER ============ */}
+      {/* ============ HEADER: [Book] [Chapter] [Language] ============ */}
       <header className="sticky top-0 z-20 flex items-center bg-zinc-950/95 backdrop-blur-md p-4 border-b border-zinc-800 justify-between">
-        <button onClick={() => setShowBookSelector(true)} className="text-slate-100 hover:text-primary transition-colors p-2" title="Change Book">
-          <BookOpen className="w-6 h-6" />
+        
+        {/* Book Selector */}
+        <button onClick={() => setShowBookSelector(true)} className="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 px-3 py-1.5 rounded-lg transition-colors">
+          <BookOpen className="w-5 h-5 text-primary" />
+          <span className="text-slate-100 font-semibold text-sm">{bookName}</span>
+          <ChevronLeft className="w-4 h-4 text-zinc-400 rotate-180" />
         </button>
         
-        <div className="flex flex-col items-center flex-1 px-4">
-          <button onClick={() => setShowBookSelector(true)} className="text-slate-100 text-lg font-bold leading-tight tracking-tight text-center hover:text-primary transition-colors">
-            {bookName} {chapterParam}
+        {/* Chapter Selector */}
+        <button onClick={() => setShowChapterSelector(true)} className="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 px-3 py-1.5 rounded-lg transition-colors">
+          <span className="text-slate-100 font-semibold text-sm">Ch. {chapterParam}</span>
+          <ChevronLeft className="w-4 h-4 text-zinc-400 rotate-180" />
+        </button>
+        
+        {/* Language Selector (Small) */}
+        <div className="relative">
+          <button onClick={() => setShowLangSelector(!showLangSelector)} className="flex items-center gap-1 text-[10px] text-zinc-400 hover:text-primary transition-colors">
+            <Globe className="w-3 h-3" />
+            {currentLang.flag}
           </button>
-          
-          <div className="flex items-center gap-2 mt-1">
-            <div className="relative">
-              <button onClick={() => setShowLangSelector(!showLangSelector)} className="appearance-none bg-zinc-800 text-slate-100 text-[10px] rounded px-2 py-0.5 pr-6 border border-zinc-700 focus:outline-none focus:border-primary cursor-pointer flex items-center gap-1">
-                <Globe className="w-3 h-3" />
-                {currentLang.flag} {currentLang.name}
-              </button>
-              
-              {showLangSelector && (
-                <div className="absolute top-full left-0 mt-1 w-48 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl z-50 overflow-hidden">
-                  {LANGUAGES.map(lang => (
-                    <button
-                      key={lang.code}
-                      onClick={() => lang.available && handleLangChange(lang.code)}
-                      disabled={!lang.available}
-                      className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 transition-colors ${
-                        lang.code === langParam ? 'bg-zinc-800 text-primary' : 
-                        lang.available ? 'text-slate-300 hover:bg-zinc-800' : 
-                        'text-zinc-600 cursor-not-allowed opacity-50'
-                      }`}
-                    >
-                      <span>{lang.flag}</span>
-                      <span>{lang.name}</span>
-                      <span className="text-xs text-zinc-500 ml-auto">
-                        {lang.version}
-                        {!lang.available && <span className="text-[10px] text-amber-500 ml-1">• Coming Soon 🔜</span>}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
+          {showLangSelector && (
+            <div className="absolute top-full right-0 mt-1 w-32 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl z-50 overflow-hidden">
+              {LANGUAGES.map(lang => (
+                <button key={lang.code} onClick={() => lang.available && handleLangChange(lang.code)} disabled={!lang.available}
+                  className={`w-full px-3 py-2 text-left text-xs flex items-center gap-2 transition-colors ${
+                    lang.code === langParam ? 'bg-zinc-800 text-primary' : lang.available ? 'text-slate-300 hover:bg-zinc-800' : 'text-zinc-600 cursor-not-allowed'
+                  }`}>
+                  <span>{lang.flag}</span><span>{lang.name}</span>
+                  {!lang.available && <span className="text-[8px] text-amber-500 ml-auto">Soon</span>}
+                </button>
+              ))}
             </div>
-            <span className="text-[10px] uppercase tracking-widest text-primary font-semibold">Version</span>
-          </div>
+          )}
         </div>
-        
-        <button className="text-slate-100 hover:text-primary transition-colors p-2">
-          <Search className="w-6 h-6" />
-        </button>
       </header>
 
       {/* ============ MAIN CONTENT ============ */}
@@ -397,33 +340,15 @@ function ReaderContent() {
             {verses.map((verse: any) => {
               const verseNotes = getVerseNotes(verse.verse);
               const highlightClass = getHighlightClass(verse.verse);
-              
               return (
-                <p 
-                  key={verse.verse} 
-                  ref={(el) => { if (el) verseRefs.current[verse.verse] = el; }}
+                <p key={verse.verse} ref={(el) => { if (el) verseRefs.current[verse.verse] = el; }}
                   className={`group cursor-pointer transition-all duration-200 ${highlightClass} ${selectedVerse === verse.verse ? 'ring-2 ring-primary/50 rounded' : ''}`}
                   onTouchStart={(e) => handleVerseLongPress(verse.verse, e)}
                   onMouseUp={() => handleTextSelection(verse.verse)}
-                  onContextMenu={(e) => { e.preventDefault(); handleVerseLongPress(verse.verse, e); }}
-                >
-                  <span className="text-primary font-bold text-sm align-top mr-2 font-display group-hover:text-emerald-400 transition-colors select-none">
-                    {verse.verse}
-                  </span>
+                  onContextMenu={(e) => { e.preventDefault(); handleVerseLongPress(verse.verse, e); }}>
+                  <span className="text-primary font-bold text-sm align-top mr-2 font-display group-hover:text-emerald-400 transition-colors select-none">{verse.verse}</span>
                   <span className="text-slate-200">{verse.text}</span>
-                  
-                  {verseNotes.length > 0 && (
-                    <span 
-                      className="note-indicator text-primary ml-1 cursor-pointer hover:text-emerald-400"
-                      title={`${verseNotes.length} note(s)`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        alert(`Notes for verse ${verse.verse}:\n\n${verseNotes.map(n => n.text).join('\n\n')}`);
-                      }}
-                    >
-                      📌
-                    </span>
-                  )}
+                  {verseNotes.length > 0 && <span className="note-indicator text-primary ml-1 cursor-pointer hover:text-emerald-400" title={`${verseNotes.length} note(s)`} onClick={(e) => { e.stopPropagation(); alert(`Notes for verse ${verse.verse}:\n\n${verseNotes.map(n => n.text).join('\n\n')}`); }}>📌</span>}
                 </p>
               );
             })}
@@ -431,12 +356,10 @@ function ReaderContent() {
           
           <div className="flex items-center justify-between mt-10 pt-6 border-t border-zinc-800">
             <button onClick={handlePrevChapter} disabled={chapterParam <= 1} className="flex items-center gap-2 text-zinc-400 hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
-              <ChevronLeft className="w-5 h-5" />
-              <span className="text-sm">Previous</span>
+              <ChevronLeft className="w-5 h-5" /><span className="text-sm">Previous</span>
             </button>
             <button onClick={handleNextChapter} className="flex items-center gap-2 text-zinc-400 hover:text-primary transition-colors">
-              <span className="text-sm">Next</span>
-              <ChevronRight className="w-5 h-5" />
+              <span className="text-sm">Next</span><ChevronRight className="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -445,44 +368,32 @@ function ReaderContent() {
       {/* ============ FLOATING SELECTION TOOLBAR ============ */}
       {showToolbar && selectedVerse !== null && (
         <div className="fixed z-50 w-72 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200"
-          style={{ left: `${toolbarPosition.x}px`, top: `${toolbarPosition.y}px`, transform: 'translateX(-50%)' }}
-        >
+          style={{ left: `${toolbarPosition.x}px`, top: `${toolbarPosition.y}px`, transform: 'translateX(-50%)' }}>
           <div className="p-3 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/50">
             <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Verse {selectedVerse} Options</span>
-            <button onClick={() => { setShowToolbar(false); setSelectedVerse(null); }} className="text-zinc-500 hover:text-white transition-colors">
-              <X className="w-4 h-4" />
-            </button>
+            <button onClick={() => { setShowToolbar(false); setSelectedVerse(null); }} className="text-zinc-500 hover:text-white transition-colors"><X className="w-4 h-4" /></button>
           </div>
           <div className="p-4 space-y-4">
             <div>
-              <p className="text-[10px] text-zinc-500 uppercase font-bold mb-2 tracking-wider flex items-center gap-1">
-                <Highlighter className="w-3 h-3" /> Highlight Color
-              </p>
+              <p className="text-[10px] text-zinc-500 uppercase font-bold mb-2 tracking-wider flex items-center gap-1"><Highlighter className="w-3 h-3" /> Highlight Color</p>
               <div className="flex gap-3">
                 {HIGHLIGHT_COLORS.map(color => (
-                  <button
-                    key={color.value}
-                    onClick={() => handleHighlight(color.value)}
+                  <button key={color.value} onClick={() => handleHighlight(color.value)}
                     className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${
                       highlights[`${bookParam}-${chapterParam}-${selectedVerse}`] === color.value ? 'border-white ring-2 ring-primary/20' : 'border-transparent'
-                    } ${color.value === 'emerald' ? 'bg-emerald-500' : color.value === 'amber' ? 'bg-amber-400' : color.value === 'blue' ? 'bg-blue-400' : 'bg-rose-400'}`}
-                    title={color.name}
-                  />
+                    } ${color.value === 'emerald' ? 'bg-emerald-500' : color.value === 'amber' ? 'bg-amber-400' : color.value === 'blue' ? 'bg-blue-400' : 'bg-rose-400'}`} title={color.name} />
                 ))}
               </div>
             </div>
             <button onClick={handleAddNote} className="w-full flex items-center gap-3 p-3 rounded-lg bg-zinc-800 hover:bg-zinc-700 transition-colors text-slate-200">
-              <StickyNote className="w-5 h-5 text-primary" />
-              <span className="text-sm font-medium">Add Reflection Note</span>
+              <StickyNote className="w-5 h-5 text-primary" /><span className="text-sm font-medium">Add Reflection Note</span>
             </button>
             <div className="grid grid-cols-2 gap-2">
               <button onClick={handleCopyVerse} className="flex flex-col items-center justify-center p-2 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors">
-                <Copy className="w-5 h-5" />
-                <span className="text-[10px] mt-1">Copy</span>
+                <Copy className="w-5 h-5" /><span className="text-[10px] mt-1">Copy</span>
               </button>
               <button onClick={handleShareVerse} className="flex flex-col items-center justify-center p-2 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors">
-                <Share2 className="w-5 h-5" />
-                <span className="text-[10px] mt-1">Share</span>
+                <Share2 className="w-5 h-5" /><span className="text-[10px] mt-1">Share</span>
               </button>
             </div>
           </div>
@@ -492,9 +403,7 @@ function ReaderContent() {
       {/* ============ AUDIO PLAYER ============ */}
       <div className="fixed bottom-24 left-0 right-0 max-w-md mx-auto px-4 pointer-events-none z-40">
         <div className="bg-zinc-900/90 backdrop-blur-xl border border-zinc-800 rounded-full p-2 flex items-center justify-between shadow-2xl pointer-events-auto">
-          <button onClick={handlePrevChapter} disabled={chapterParam <= 1} className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-zinc-800 transition-colors text-slate-300 disabled:opacity-30">
-            <ChevronLeft className="w-6 h-6" />
-          </button>
+          <button onClick={handlePrevChapter} disabled={chapterParam <= 1} className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-zinc-800 transition-colors text-slate-300 disabled:opacity-30"><ChevronLeft className="w-6 h-6" /></button>
           <div className="flex items-center gap-4">
             <button onClick={toggleAudio} className="flex items-center justify-center w-12 h-12 rounded-full bg-primary text-zinc-950 shadow-lg shadow-primary/20 hover:bg-emerald-400 transition-colors">
               {isPlaying ? <Pause className="w-6 h-6 fill-zinc-950" /> : <Play className="w-6 h-6 fill-zinc-950 ml-0.5" />}
@@ -504,35 +413,18 @@ function ReaderContent() {
               <span className="text-xs text-white font-medium">{currentLang.flag} {currentLang.name} • Ch. {chapterParam}</span>
             </div>
           </div>
-          <button onClick={handleNextChapter} className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-zinc-800 transition-colors text-slate-300">
-            <ChevronRight className="w-6 h-6" />
-          </button>
+          <button onClick={handleNextChapter} className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-zinc-800 transition-colors text-slate-300"><ChevronRight className="w-6 h-6" /></button>
         </div>
       </div>
 
       {/* ============ BOTTOM NAVIGATION ============ */}
       <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-zinc-900/80 backdrop-blur-md border-t border-zinc-800 px-4 pb-6 pt-3 z-30">
         <div className="flex justify-around items-center">
-          <button onClick={() => router.push('/')} className="flex flex-col items-center gap-1 text-zinc-400 hover:text-white transition-colors">
-            <Home className="w-6 h-6" />
-            <p className="text-[10px] font-medium uppercase tracking-wider">Home</p>
-          </button>
-          <button onClick={() => router.push('/read')} className="flex flex-col items-center gap-1 text-primary">
-            <BookOpen className="w-6 h-6" />
-            <p className="text-[10px] font-medium uppercase tracking-wider">Bible</p>
-          </button>
-          <button className="flex flex-col items-center gap-1 text-zinc-400 hover:text-white transition-colors">
-            <Volume2 className="w-6 h-6" />
-            <p className="text-[10px] font-medium uppercase tracking-wider">Chaplain</p>
-          </button>
-          <button className="flex flex-col items-center gap-1 text-zinc-400 hover:text-white transition-colors">
-            <Users className="w-6 h-6" />
-            <p className="text-[10px] font-medium uppercase tracking-wider">Community</p>
-          </button>
-          <button className="flex flex-col items-center gap-1 text-zinc-400 hover:text-white transition-colors">
-            <MoreHorizontal className="w-6 h-6" />
-            <p className="text-[10px] font-medium uppercase tracking-wider">More</p>
-          </button>
+          <button onClick={() => router.push('/')} className="flex flex-col items-center gap-1 text-zinc-400 hover:text-white transition-colors"><Home className="w-6 h-6" /><p className="text-[10px] font-medium uppercase tracking-wider">Home</p></button>
+          <button onClick={() => router.push('/read')} className="flex flex-col items-center gap-1 text-primary"><BookOpen className="w-6 h-6" /><p className="text-[10px] font-medium uppercase tracking-wider">Bible</p></button>
+          <button className="flex flex-col items-center gap-1 text-zinc-400 hover:text-white transition-colors"><Volume2 className="w-6 h-6" /><p className="text-[10px] font-medium uppercase tracking-wider">Chaplain</p></button>
+          <button className="flex flex-col items-center gap-1 text-zinc-400 hover:text-white transition-colors"><Users className="w-6 h-6" /><p className="text-[10px] font-medium uppercase tracking-wider">Community</p></button>
+          <button className="flex flex-col items-center gap-1 text-zinc-400 hover:text-white transition-colors"><MoreHorizontal className="w-6 h-6" /><p className="text-[10px] font-medium uppercase tracking-wider">More</p></button>
         </div>
       </nav>
 
@@ -542,18 +434,13 @@ function ReaderContent() {
           <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden">
             <div className="p-4 border-b border-zinc-800 flex justify-between items-center">
               <h3 className="text-lg font-bold text-slate-100">Select Book</h3>
-              <button onClick={() => setShowBookSelector(false)} className="text-zinc-500 hover:text-white transition-colors">
-                <X className="w-6 h-6" />
-              </button>
+              <button onClick={() => setShowBookSelector(false)} className="text-zinc-500 hover:text-white transition-colors"><X className="w-6 h-6" /></button>
             </div>
             <div className="p-4 max-h-96 overflow-y-auto">
               <div className="grid grid-cols-2 gap-2">
                 {Object.entries(bookNames).map(([code, name]) => (
-                  <button
-                    key={code}
-                    onClick={() => handleBookChange(code.toUpperCase())}
-                    className={`p-3 rounded-lg text-left text-sm transition-colors ${code === bookParam.toLowerCase() ? 'bg-primary text-zinc-950 font-semibold' : 'bg-zinc-800 text-slate-300 hover:bg-zinc-700'}`}
-                  >
+                  <button key={code} onClick={() => handleBookChange(code.toUpperCase())}
+                    className={`p-3 rounded-lg text-left text-sm transition-colors ${code === bookParam.toLowerCase() ? 'bg-primary text-zinc-950 font-semibold' : 'bg-zinc-800 text-slate-300 hover:bg-zinc-700'}`}>
                     {name}
                   </button>
                 ))}
@@ -563,7 +450,29 @@ function ReaderContent() {
         </div>
       )}
 
-      {/* ============ GLOBAL STYLES FOR HIGHLIGHTS ============ */}
+      {/* ============ CHAPTER SELECTOR MODAL ============ */}
+      {showChapterSelector && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden max-h-96">
+            <div className="p-4 border-b border-zinc-800 flex justify-between items-center">
+              <h3 className="text-lg font-bold text-slate-100">Select Chapter - {bookName}</h3>
+              <button onClick={() => setShowChapterSelector(false)} className="text-zinc-500 hover:text-white transition-colors"><X className="w-6 h-6" /></button>
+            </div>
+            <div className="p-4 overflow-y-auto max-h-80">
+              <div className="grid grid-cols-5 gap-2">
+                {Array.from({ length: totalChapters }, (_, i) => i + 1).map(ch => (
+                  <button key={ch} onClick={() => handleChapterSelect(ch)}
+                    className={`p-3 rounded-lg text-sm transition-colors ${ch === chapterParam ? 'bg-primary text-zinc-950 font-semibold' : 'bg-zinc-800 text-slate-300 hover:bg-zinc-700'}`}>
+                    {ch}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============ GLOBAL STYLES ============ */}
       <style jsx global>{`
         .highlight-emerald { background: rgba(16, 183, 127, 0.15); border-left: 3px solid #10b77f; padding-left: 12px; margin-left: -14px; border-radius: 0 4px 4px 0; }
         .highlight-amber { background: rgba(245, 158, 11, 0.15); border-left: 3px solid #f59e0b; padding-left: 12px; margin-left: -14px; border-radius: 0 4px 4px 0; }
