@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useChapter } from '@/lib/bible-loader.client';
-import { ChevronLeft, ChevronRight, Play, Pause, Home, BookOpen, Users, MoreHorizontal, Volume2, Globe, X, StickyNote, Highlighter, Copy, Share2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Play, Pause, Globe, X, StickyNote, Copy, Share2 } from 'lucide-react';
 
 interface Note { id: string; verse: number; text: string; color: string; createdAt: string; }
 interface LanguageOption { code: string; name: string; version: string; flag: string; available: boolean; }
@@ -67,7 +67,7 @@ function ReaderContent() {
     { name: 'Rose', value: 'rose', class: 'highlight-rose', bg: 'bg-rose-400' },
   ];
 
-  const getChapterCount = (b: string) => ({ 'gen':50,'exod':40,'lev':27,'num':36,'deut':34,'josh':24,'judg':21,'ruth':4,'1sam':31,'2sam':24,'1kgs':22,'2kgs':25,'1chr':29,'2chr':36,'ezra':10,'neh':13,'esth':10,'job':42,'ps':150,'prov':31,'eccl':12,'song':8,'isa':66,'jer':52,'lam':5,'ezek':48,'dan':12,'hos':14,'joel':3,'amos':9,'obad':1,'jonah':4,'mic':7,'nah':3,'hab':3,'zeph':3,'hag':2,'zech':14,'mal':4,'matt':28,'mark':16,'luke':24,'john':21,'acts':28,'rom':16,'1cor':16,'2cor':13,'gal':6,'eph':6,'phil':4,'col':4,'1thess':5,'2thess':3,'1tim':6,'2tim':4,'titus':3,'phlm':1,'heb':13,'jas':5,'1pet':5,'2pet':3,'1john':5,'2john':1,'3john':1,'jude':1,'rev':22,'tob':14,'jdt':16,'wis':19,'sir':51,'bar':5,'1macc':16,'2macc':15 } as Record<string,number>)[b] || 1;
+  const getChapterCount = (b: string) => ({'gen':50,'exod':40,'lev':27,'num':36,'deut':34,'josh':24,'judg':21,'ruth':4,'1sam':31,'2sam':24,'1kgs':22,'2kgs':25,'1chr':29,'2chr':36,'ezra':10,'neh':13,'esth':10,'job':42,'ps':150,'prov':31,'eccl':12,'song':8,'isa':66,'jer':52,'lam':5,'ezek':48,'dan':12,'hos':14,'joel':3,'amos':9,'obad':1,'jonah':4,'mic':7,'nah':3,'hab':3,'zeph':3,'hag':2,'zech':14,'mal':4,'matt':28,'mark':16,'luke':24,'john':21,'acts':28,'rom':16,'1cor':16,'2cor':13,'gal':6,'eph':6,'phil':4,'col':4,'1thess':5,'2thess':3,'1tim':6,'2tim':4,'titus':3,'phlm':1,'heb':13,'jas':5,'1pet':5,'2pet':3,'1john':5,'2john':1,'3john':1,'jude':1,'rev':22,'tob':14,'jdt':16,'wis':19,'sir':51,'bar':5,'1macc':16,'2macc':15} as Record<string,number>)[b] || 1;
 
   const bookName = bookNames[bookParam.toLowerCase()] || bookParam;
   const currentLang = LANGUAGES.find(l => l.code === langParam) || LANGUAGES[0];
@@ -82,7 +82,6 @@ function ReaderContent() {
   const saveHighlights = (h: Record<string, string>) => { localStorage.setItem(`highlights-${langParam}`, JSON.stringify(h)); setHighlights(h); };
 
   const { verses, loading, error } = useChapter(bookParam.toLowerCase(), chapterParam, langParam);
-
   const nav = (book: string, ch: number, lang: string) => router.push(`/read?book=${book}&chapter=${ch}&lang=${lang}`);
 
   const handleLangChange = (code: string) => {
@@ -92,7 +91,6 @@ function ReaderContent() {
     nav(bookParam, chapterParam, code);
   };
 
-  // ── LONG PRESS only (500ms) ──
   const handleTouchStart = (verseNum: number, e: React.TouchEvent) => {
     longPressTimer.current = setTimeout(() => {
       const rect = (e.target as HTMLElement).getBoundingClientRect();
@@ -102,11 +100,8 @@ function ReaderContent() {
     }, 500);
   };
 
-  const handleTouchEnd = () => {
-    if (longPressTimer.current) clearTimeout(longPressTimer.current);
-  };
+  const handleTouchEnd = () => { if (longPressTimer.current) clearTimeout(longPressTimer.current); };
 
-  // Right click on desktop
   const handleContextMenu = (verseNum: number, e: React.MouseEvent) => {
     e.preventDefault();
     const rect = (e.target as HTMLElement).getBoundingClientRect();
@@ -173,12 +168,12 @@ function ReaderContent() {
   );
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-slate-100">
+    <div className="bg-zinc-950 text-slate-100">
 
       {/* HEADER */}
       <header className="sticky top-0 z-20 flex items-center bg-zinc-950/95 backdrop-blur-md p-3 border-b border-zinc-800 justify-between">
         <button onClick={() => setShowBookSelector(true)} className="flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 px-3 py-1.5 rounded-lg">
-          <BookOpen className="w-4 h-4 text-primary" />
+          <span className="text-primary text-sm">📖</span>
           <span className="font-semibold text-sm">{bookName}</span>
           <ChevronRight className="w-3 h-3 text-zinc-400" />
         </button>
@@ -209,7 +204,7 @@ function ReaderContent() {
       </header>
 
       {/* CONTENT */}
-      <main className="px-5 py-6 pb-44 max-w-2xl mx-auto">
+      <main className="px-5 py-6 pb-36 max-w-2xl mx-auto">
         <div className="flex items-center gap-2 mb-6">
           <div className="h-px flex-1 bg-zinc-800"></div>
           <span className="text-zinc-500 text-xs uppercase tracking-widest">Chapter {chapterParam}</span>
@@ -228,7 +223,7 @@ function ReaderContent() {
                 onContextMenu={(e) => handleContextMenu(verse.verse, e)}>
                 <span className="text-primary font-bold text-xs align-top mr-1.5">{verse.verse}</span>
                 <span>{verse.text}</span>
-                {vNotes.length > 0 && <span className="text-primary ml-1 text-xs cursor-pointer" onClick={(e) => { e.stopPropagation(); alert(vNotes.map(n=>n.text).join('\n\n')); }}>📌</span>}
+                {vNotes.length > 0 && <span className="text-primary ml-1 text-xs cursor-pointer" onClick={(e) => { e.stopPropagation(); alert(vNotes.map((n: Note) => n.text).join('\n\n')); }}>📌</span>}
               </p>
             );
           })}
@@ -247,7 +242,7 @@ function ReaderContent() {
       {/* TOOLBAR */}
       {showToolbar && selectedVerse !== null && (
         <div className="fixed z-50 w-64 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl"
-          style={{ left: Math.min(Math.max(toolbarPosition.x, 140), window.innerWidth - 140), top: Math.max(toolbarPosition.y, 80), transform: 'translateX(-50%)' }}>
+          style={{ left: Math.min(Math.max(toolbarPosition.x, 140), window.innerWidth-140), top: Math.max(toolbarPosition.y, 80), transform: 'translateX(-50%)' }}>
           <div className="p-2.5 border-b border-zinc-800 flex justify-between items-center">
             <span className="text-xs font-bold text-zinc-400">Verse {selectedVerse}</span>
             <button onClick={() => { setShowToolbar(false); setSelectedVerse(null); }}><X className="w-4 h-4 text-zinc-500" /></button>
@@ -259,7 +254,7 @@ function ReaderContent() {
                   className={`w-7 h-7 rounded-full border-2 ${highlights[`${bookParam}-${chapterParam}-${selectedVerse}`] === c.value ? 'border-white scale-110' : 'border-transparent'} ${c.bg}`} />
               ))}
             </div>
-            <button onClick={handleAddNote} className="w-full flex items-center gap-2 p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-sm">
+            <button onClick={handleAddNote} className="w-full flex items-center gap-2 p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-sm text-slate-200">
               <StickyNote className="w-4 h-4 text-primary" /> Add Note
             </button>
             <div className="grid grid-cols-2 gap-2">
@@ -274,7 +269,7 @@ function ReaderContent() {
         </div>
       )}
 
-      {/* AUDIO PLAYER — small & compact */}
+      {/* AUDIO PLAYER */}
       <div className="fixed bottom-16 left-0 right-0 max-w-sm mx-auto px-4 z-40">
         <div className="bg-zinc-900/95 border border-zinc-800 rounded-full px-3 py-1.5 flex items-center justify-between shadow-lg">
           <button onClick={() => chapterParam > 1 && nav(bookParam, chapterParam-1, langParam)} disabled={chapterParam <= 1} className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-zinc-800 disabled:opacity-30">
@@ -295,33 +290,12 @@ function ReaderContent() {
         </div>
       </div>
 
-      {/* BOTTOM NAV — single, no duplicate */}
-      <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-zinc-900 border-t border-zinc-800 px-4 pb-5 pt-2 z-30">
-        <div className="flex justify-around">
-          <button onClick={() => router.push('/')} className="flex flex-col items-center gap-0.5 text-zinc-400 hover:text-white">
-            <Home className="w-5 h-5" /><span className="text-[9px] uppercase">Home</span>
-          </button>
-          <button onClick={() => router.push('/read')} className="flex flex-col items-center gap-0.5 text-primary">
-            <BookOpen className="w-5 h-5" /><span className="text-[9px] uppercase">Bible</span>
-          </button>
-          <button className="flex flex-col items-center gap-0.5 text-zinc-400 hover:text-white">
-            <Volume2 className="w-5 h-5" /><span className="text-[9px] uppercase">Chaplain</span>
-          </button>
-          <button className="flex flex-col items-center gap-0.5 text-zinc-400 hover:text-white">
-            <Users className="w-5 h-5" /><span className="text-[9px] uppercase">People</span>
-          </button>
-          <button className="flex flex-col items-center gap-0.5 text-zinc-400 hover:text-white">
-            <MoreHorizontal className="w-5 h-5" /><span className="text-[9px] uppercase">More</span>
-          </button>
-        </div>
-      </nav>
-
       {/* BOOK SELECTOR */}
       {showBookSelector && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
             <div className="p-4 border-b border-zinc-800 flex justify-between">
-              <h3 className="font-bold">Select Book</h3>
+              <h3 className="font-bold text-slate-100">Select Book</h3>
               <button onClick={() => setShowBookSelector(false)}><X className="w-5 h-5 text-zinc-500" /></button>
             </div>
             <div className="p-3 max-h-96 overflow-y-auto grid grid-cols-2 gap-2">
@@ -341,7 +315,7 @@ function ReaderContent() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="w-full max-w-sm bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
             <div className="p-4 border-b border-zinc-800 flex justify-between">
-              <h3 className="font-bold">{bookName}</h3>
+              <h3 className="font-bold text-slate-100">{bookName}</h3>
               <button onClick={() => setShowChapterSelector(false)}><X className="w-5 h-5 text-zinc-500" /></button>
             </div>
             <div className="p-3 max-h-72 overflow-y-auto grid grid-cols-6 gap-1.5">
