@@ -1,4 +1,3 @@
-import BottomNav from '@/components/layout/BottomNav';
 import React from 'react';
 
 export default function TabsLayout({
@@ -7,11 +6,10 @@ export default function TabsLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="relative flex flex-col h-screen overflow-hidden bg-zinc-950">
-      <main className="flex-1 overflow-y-auto hide-scrollbar pb-32">
+    <div className="relative flex flex-col min-h-screen bg-zinc-950">
+      <main className="flex-1">
         {children}
       </main>
-      <BottomNav />
     </div>
   );
 }
