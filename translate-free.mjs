@@ -1,67 +1,65 @@
 import fs from 'fs';
-
+const HF_KEY = process.env.HF_KEY;
 const DIR = 'public/bible/split';
-let done_verses = 0;
-
+if (!HF_KEY) { console.error('export HF_KEY karo'); process.exit(1); }
 async function translate(texts) {
-  const results = [];
-  for (const text of texts) {
+  for (let a = 0; a < 3; a++) {
     try {
-      const r = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|hi&de=bibleapp@gmail.com`);
+      const r = await fetch('https://router.huggingface.co/hf-inference/models/Helsinki-NLP/opus-mt-en-hi',{method:'POST',headers:{'Authorization':'Bearer '+HF_KEY,'Content-Type':'application/json'},body:JSON.stringify({inputs:texts}),signal:AbortSignal.timeout(45000)});
+      if (!r.ok) throw new Error(r.status);
       const d = await r.json();
-      results.push(d.responseData?.translatedText || text);
+      if (Array.isArray(d)) return d.map(x => x.translation_text||'');
+      throw new Error('bad');
     } catch(e) {
-      results.push(text);
+      if (a===2) return texts;
+      await new Promise(r=>setTimeout(r,1000*(a+1)));
     }
-    await new Promise(r => setTimeout(r, 200));
   }
-  return results;
+  return texts;
 }
-
 async function doFile(f) {
-  const data = JSON.parse(fs.readFileSync(`${DIR}/${f}`, 'utf8'));
-  const verses = data.verses;
+  const src=`${DIR}/${f}`,tgt=`${DIR}/hin-${f}`;
+  if (!fs.existsSync(src)) return 'skip';
+  const data=JSON.parse(fs.readFileSync(src,'utf8'));
+  const verses=data.verses;
   if (!verses?.length) return 'skip';
-
-  const hi = /[\u0900-\u097F]/;
-  if (verses.every(v => hi.test(v.text))) return 'cached';
-
-  const out = [...verses];
-  for (let i = 0; i < verses.length; i += 10) {
-    const batch = verses.slice(i, i+10);
-    const res = await translate(batch.map(v => v.text));
-    res.forEach((t,j) => out[i+j] = {...verses[i+j], text: t});
-    done_verses += batch.length;
+  const hi=/[\u0900-\u097F]/;
+  let ex={};
+  if (fs.existsSync(tgt)) {
+    try { const d=JSON.parse(fs.readFileSync(tgt,'utf8')); (d.verses||[]).forEach(v=>{if(hi.test(v.text))ex[v.verse]=v.text;}); } catch(e){}
   }
-
-  fs.writeFileSync(`${DIR}/hin-${f}`, JSON.stringify({...data, verses: out}, null, 2));
-  return 'ok:' + verses.length;
+  const need=verses.filter(v=>!ex[v.verse]);
+  if (!need.length) return 'cached';
+  const out=verses.map(v=>({...v,text:ex[v.verse]||v.text}));
+  for (let i=0;i<need.length;i+=50) {
+    const batch=need.slice(i,i+50);
+    const res=await translate(batch.map(v=>v.text));
+    res.forEach((t,j)=>{if(!t||j>=batch.length)return;const idx=out.findIndex(v=>v.verse===batch[j].verse);if(idx!==-1)out[idx]={...batch[j],text:t};});
+  }
+  fs.writeFileSync(tgt,JSON.stringify({...data,verses:out},null,2));
+  return 'ok:'+need.length;
 }
-
+let isExiting=false;
+process.on('SIGINT',()=>{if(isExiting)return;isExiting=true;console.log('\n💾 Saved! node translate-free.mjs se dobara chalo');process.exit(0);});
+async function worker(queue,files,stats) {
+  while(queue.length>0&&!isExiting){
+    const f=queue.shift();if(!f)break;
+    const r=await doFile(f);stats.done++;
+    if(r.startsWith('ok'))stats.tv+=parseInt(r.split(':')[1]);
+    const p=Math.round(stats.done/files.length*100);
+    const b='█'.repeat(Math.floor(p/5))+'░'.repeat(20-Math.floor(p/5));
+    const ic=r==='cached'?'⏭️':r.startsWith('ok')?'✅':'❌';
+    process.stdout.write(`\r[${b}] ${p}% | ${stats.done}/${files.length} | ${ic} ${f.padEnd(20)} | ${stats.tv} verses`);
+  }
+}
 async function main() {
-  const files = fs.readdirSync(DIR)
-    .filter(f => f.endsWith('.json') && f !== 'index.json' && !/^(hin|spa|fra|tam|tel|eng)-/.test(f))
-    .sort();
-
-  console.log(`\n🚀 ${files.length} files | MyMemory FREE API | No card needed!\n`);
-
-  let done=0, tv=0, err=0;
-
-  for (const f of files) {
-    const r = await doFile(f);
-    done++;
-    if (r.startsWith('ok')) tv += parseInt(r.split(':')[1]);
-    if (r.startsWith('error')) err++;
-    const p = Math.round(done/files.length*100);
-    const b = '█'.repeat(Math.floor(p/5))+'░'.repeat(20-Math.floor(p/5));
-    const ic = r.startsWith('error')?'❌':r==='cached'?'⏭️':'✅';
-    process.stdout.write(`\r[${b}] ${p}% | ${done}/${files.length} | ${ic} ${f.padEnd(20)} | ${tv} verses`);
-  }
-
-  console.log(`\n\n✅ Translated : ${tv} verses`);
-  console.log(`❌ Errors     : ${err}`);
-  console.log(`💰 Cost       : ZERO — No card needed ✅`);
-  console.log(`\n🎉 git add -A && git commit -m "Hindi ${tv} verses" && git push\n`);
+  const files=fs.readdirSync(DIR).filter(f=>f.endsWith('.json')&&f!=='index.json'&&!/^(hin|spa|fra|tam|tel|eng)-/.test(f)).sort();
+  const hi=/[\u0900-\u097F]/;
+  let done=0;
+  files.forEach(f=>{const tgt=`${DIR}/hin-${f}`;if(fs.existsSync(tgt)){const d=JSON.parse(fs.readFileSync(tgt,'utf8'));if((d.verses||[]).every(v=>hi.test(v.text)))done++;}});
+  console.log(`\n�� Divine Bible — 3X Translator\n📚 Total: ${files.length} | ✅ Done: ${done} | ❌ Left: ${files.length-done}\n`);
+  const queue=[...files],stats={done:0,tv:0};
+  await Promise.all([worker(queue,files,stats),worker(queue,files,stats),worker(queue,files,stats)]);
+  console.log(`\n\n✅ ${stats.tv} verses translated!\n🎉 git add -A && git commit -m "Hindi ${stats.tv}" && git push\n`);
 }
-
-main().catch(e => { console.error('❌', e.message); process.exit(1); });
+main().catch(e=>{console.error('❌',e.message);process.exit(1);});
