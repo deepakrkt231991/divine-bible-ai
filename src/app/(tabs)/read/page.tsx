@@ -96,7 +96,7 @@ function ReaderContent() {
   // ============ LANGUAGE OPTIONS ============
   const LANGUAGES: LanguageOption[] = [
     { code: 'eng-kjv', name: 'English', version: 'KJV', flag: '🇬🇧', available: true },
-    { code: 'hin-hindi', name: 'Hindi', version: 'IRV', flag: '🇮🇳', available: false },
+    { code: 'hin-hindi', name: 'Hindi', version: 'IRV', flag: '🇮🇳', available: true }, // ✅ Changed to true
     { code: 'spa-spanish', name: 'Spanish', version: 'RVR1909', flag: '🇪🇸', available: false },
     { code: 'fra-french', name: 'French', version: 'LSG', flag: '🇫🇷', available: false },
   ];

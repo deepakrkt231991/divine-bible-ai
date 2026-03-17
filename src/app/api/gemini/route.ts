@@ -1,17 +1,23 @@
 // src/app/api/gemini/route.ts
-// ✅ Server-side API Route - Uses bible-loader.server.ts (NO React hooks)
+// ✅ Server-side Gemini API Route - No React hooks, No crashes
+// ✅ Uses bible-loader.ts for scripture loading
+// ✅ Proper error handling + rate limiting ready
 
 import { NextResponse } from 'next/server';
-import { loadForGemini } from '@/lib/bible-loader.server';
+import { loadForGemini } from '@/lib/bible-loader';
 
+// ============ CONFIG ============
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+const GEMINI_MODEL = 'gemini-1.5-flash';
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
+// ============ POST: Handle Gemini Questions ============
 export async function POST(req: Request) {
   try {
+    // Parse request body
     const { book, chapter, question, language } = await req.json();
     
-    // Validate input
+    // Validate required fields
     if (!book || !chapter || !question) {
       return NextResponse.json(
         { error: 'Missing required fields: book, chapter, question' },
@@ -19,13 +25,14 @@ export async function POST(req: Request) {
       );
     }
 
-    // Load scripture from Bible
+    // Load scripture from Bible (uses split JSON files)
     const scripture = await loadForGemini(book, chapter, {
       includeVerseNumbers: true,
       format: 'markdown',
-      lang: language || 'hin-hindi'
+      lang: language || 'eng-kjv'  // Default to our parsed KJV
     });
 
+    // Check if scripture loaded successfully
     if (scripture.startsWith('Error:')) {
       return NextResponse.json(
         { error: scripture },
@@ -33,15 +40,15 @@ export async function POST(req: Request) {
       );
     }
 
-    // Check if API key exists
+    // Check if Gemini API key is configured
     if (!GEMINI_API_KEY) {
       return NextResponse.json(
-        { error: 'Gemini API key not configured. Please add GEMINI_API_KEY to environment variables.' },
+        { error: 'Gemini API key not configured. Add GEMINI_API_KEY to environment variables.' },
         { status: 500 }
       );
     }
 
-    // Create prompt for Gemini
+    // Create prompt for Gemini AI
     const prompt = `You are a helpful Bible study assistant.
 
 📖 Scripture: ${book.toUpperCase()} ${chapter}
@@ -70,21 +77,33 @@ Please provide a helpful response:`;
           parts: [{ text: prompt }]
         }],
         generationConfig: {
-          temperature: 0.3,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 2048,
+          temperature: 0.3,      // Focused, not too creative
+          topK: 40,              // Diversity control
+          topP: 0.95,            // Nucleus sampling
+          maxOutputTokens: 2048, // Max response length
         }
       })
     });
 
+    // Handle Gemini API errors
     if (!geminiRes.ok) {
-      const errorData = await geminiRes.json();
-      console.error('Gemini API error:', errorData);
+      let errorData = {};
+      try {
+        errorData = await geminiRes.json();
+      } catch (e) {
+        // Ignore JSON parse errors
+      }
       
+      console.error('Gemini API error:', {
+        status: geminiRes.status,
+        statusText: geminiRes.statusText,
+        error: errorData
+      });
+      
+      // Specific error responses
       if (geminiRes.status === 401) {
         return NextResponse.json(
-          { error: 'Invalid Gemini API key. Please check your GEMINI_API_KEY environment variable.' },
+          { error: 'Invalid Gemini API key. Check GEMINI_API_KEY in environment variables.' },
           { status: 401 }
         );
       }
@@ -96,39 +115,59 @@ Please provide a helpful response:`;
         );
       }
       
+      if (geminiRes.status === 400) {
+        return NextResponse.json(
+          { error: 'Invalid request. Check your input parameters.' },
+          { status: 400 }
+        );
+      }
+      
+      // Generic error
       return NextResponse.json(
         { error: 'Gemini API error. Please try again.' },
         { status: 500 }
       );
     }
 
+    // Parse successful response
     const geminiData = await geminiRes.json();
     const answer = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || 'No response from AI.';
 
+    // Return success response
     return NextResponse.json({
+      success: true,
       book,
       chapter,
       question,
-      scripture: scripture.substring(0, 500) + '...',
+      scripture: scripture.substring(0, 500) + (scripture.length > 500 ? '...' : ''),
       answer,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      model: GEMINI_MODEL
     });
     
   } catch (error: any) {
-    console.error('Gemini API route error:', error);
+    // Catch unexpected errors
+    console.error('Gemini API route error:', {
+      message: error?.message,
+      stack: error?.stack,
+      name: error?.name
+    });
+    
     return NextResponse.json(
-      { error: error.message || 'Failed to process request' },
+      { error: error?.message || 'Failed to process request' },
       { status: 500 }
     );
   }
 }
 
-// GET endpoint for health check
+// ============ GET: Health Check Endpoint ============
 export async function GET() {
   return NextResponse.json({
     status: 'ok',
     message: 'Gemini API route is running',
     apiKeyConfigured: !!process.env.GEMINI_API_KEY,
-    model: 'gemini-1.5-flash'
+    model: GEMINI_MODEL,
+    endpoint: GEMINI_URL.replace(GEMINI_API_KEY ? `?key=${GEMINI_API_KEY}` : '', ''),
+    timestamp: new Date().toISOString()
   });
 }
