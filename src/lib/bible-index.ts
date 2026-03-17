@@ -1,99 +1,36 @@
-// src/lib/bible-index.ts
-// ✅ COMPLETE 81 BOOKS BIBLE INDEX - Working Syntax
 
-export const BIBLE_BOOKS = [
-  // OLD TESTAMENT (39)
-  { id: 'genesis', name: 'उत्पत्ति', en: 'Genesis', chapters: 50, code: 'gen' },
-  { id: 'exodus', name: 'निर्गमन', en: 'Exodus', chapters: 40, code: 'exo' },
-  { id: 'leviticus', name: 'लैव्यव्यवस्था', en: 'Leviticus', chapters: 27, code: 'lev' },
-  { id: 'numbers', name: 'गिनती', en: 'Numbers', chapters: 36, code: 'num' },
-  { id: 'deuteronomy', name: 'व्यवस्थाविवरण', en: 'Deuteronomy', chapters: 34, code: 'deu' },
-  { id: 'joshua', name: 'यहोशू', en: 'Joshua', chapters: 24, code: 'jos' },
-  { id: 'judges', name: 'न्यायियों', en: 'Judges', chapters: 21, code: 'jdg' },
-  { id: 'ruth', name: 'रूत', en: 'Ruth', chapters: 4, code: 'rut' },
-  { id: '1-samuel', name: '1 शमूएल', en: '1 Samuel', chapters: 31, code: '1sa' },
-  { id: '2-samuel', name: '2 शमूएल', en: '2 Samuel', chapters: 24, code: '2sa' },
-  { id: '1-kings', name: '1 राजा', en: '1 Kings', chapters: 22, code: '1ki' },
-  { id: '2-kings', name: '2 राजा', en: '2 Kings', chapters: 25, code: '2ki' },
-  { id: '1-chronicles', name: '1 इतिहास', en: '1 Chronicles', chapters: 29, code: '1ch' },
-  { id: '2-chronicles', name: '2 इतिहास', en: '2 Chronicles', chapters: 36, code: '2ch' },
-  { id: 'ezra', name: 'एज्रा', en: 'Ezra', chapters: 10, code: 'ezr' },
-  { id: 'nehemiah', name: 'निहेम्याह', en: 'Nehemiah', chapters: 13, code: 'neh' },
-  { id: 'esther', name: 'एस्तेर', en: 'Esther', chapters: 10, code: 'est' },
-  { id: 'job', name: 'अय्यूब', en: 'Job', chapters: 42, code: 'job' },
-  { id: 'psalms', name: 'भजन', en: 'Psalms', chapters: 150, code: 'psa' },
-  { id: 'proverbs', name: 'नीतिवचन', en: 'Proverbs', chapters: 31, code: 'pro' },
-  { id: 'ecclesiastes', name: 'उपदेशक', en: 'Ecclesiastes', chapters: 12, code: 'ecc' },
-  { id: 'song-of-solomon', name: 'श्रेष्ठगीत', en: 'Song of Solomon', chapters: 8, code: 'sng' },
-  { id: 'isaiah', name: 'यशायाह', en: 'Isaiah', chapters: 66, code: 'isa' },
-  { id: 'jeremiah', name: 'यिर्मयाह', en: 'Jeremiah', chapters: 52, code: 'jer' },
-  { id: 'lamentations', name: 'विलापगीत', en: 'Lamentations', chapters: 5, code: 'lam' },
-  { id: 'ezekiel', name: 'यहेजकेल', en: 'Ezekiel', chapters: 48, code: 'ezk' },
-  { id: 'daniel', name: 'दानीएल', en: 'Daniel', chapters: 12, code: 'dan' },
-  { id: 'hosea', name: 'होशे', en: 'Hosea', chapters: 14, code: 'hos' },
-  { id: 'joel', name: 'योएल', en: 'Joel', chapters: 3, code: 'jol' },
-  { id: 'amos', name: 'आमोस', en: 'Amos', chapters: 9, code: 'amo' },
-  { id: 'obadiah', name: 'ओबद्याह', en: 'Obadiah', chapters: 1, code: 'oba' },
-  { id: 'jonah', name: 'योना', en: 'Jonah', chapters: 4, code: 'jon' },
-  { id: 'micah', name: 'मीका', en: 'Micah', chapters: 7, code: 'mic' },
-  { id: 'nahum', name: 'नहूम', en: 'Nahum', chapters: 3, code: 'nah' },
-  { id: 'habakkuk', name: 'हब्बकूक', en: 'Habakkuk', chapters: 3, code: 'hab' },
-  { id: 'zephaniah', name: 'सफन्याह', en: 'Zephaniah', chapters: 3, code: 'zep' },
-  { id: 'haggai', name: 'हग्गय', en: 'Haggai', chapters: 2, code: 'hag' },
-  { id: 'zechariah', name: 'जकर्याह', en: 'Zechariah', chapters: 14, code: 'zec' },
-  { id: 'malachi', name: 'मलाकी', en: 'Malachi', chapters: 4, code: 'mal' },
+export interface BibleBook {
+  id: string | number;
+  en: string;
+  hi: string;
+  usfm: string;
+  testament: 'old' | 'new' | 'deuterocanon';
+  chapters: number;
+  bollsId: number;
+}
 
-  // NEW TESTAMENT (27)
-  { id: 'matthew', name: 'मत्ती', en: 'Matthew', chapters: 28, code: 'mat' },
-  { id: 'mark', name: 'मरकुस', en: 'Mark', chapters: 16, code: 'mrk' },
-  { id: 'luke', name: 'लूका', en: 'Luke', chapters: 24, code: 'luk' },
-  { id: 'john', name: 'यूहन्ना', en: 'John', chapters: 21, code: 'jhn' },
-  { id: 'acts', name: 'प्रेरित', en: 'Acts', chapters: 28, code: 'act' },
-  { id: 'romans', name: 'रोमियों', en: 'Romans', chapters: 16, code: 'rom' },
-  { id: '1-corinthians', name: '1 कुरिन्थियों', en: '1 Corinthians', chapters: 16, code: '1co' },
-  { id: '2-corinthians', name: '2 कुरिन्थियों', en: '2 Corinthians', chapters: 13, code: '2co' },
-  { id: 'galatians', name: 'गलातियों', en: 'Galatians', chapters: 6, code: 'gal' },
-  { id: 'ephesians', name: 'इफिसियों', en: 'Ephesians', chapters: 6, code: 'eph' },
-  { id: 'philippians', name: 'फिलिप्पियों', en: 'Philippians', chapters: 4, code: 'php' },
-  { id: 'colossians', name: 'कुलुस्सियों', en: 'Colossians', chapters: 4, code: 'col' },
-  { id: '1-thessalonians', name: '1 थिस्सलुनीकियों', en: '1 Thessalonians', chapters: 5, code: '1th' },
-  { id: '2-thessalonians', name: '2 थिस्सलुनीकियों', en: '2 Thessalonians', chapters: 3, code: '2th' },
-  { id: '1-timothy', name: '1 तिमुथियस', en: '1 Timothy', chapters: 6, code: '1ti' },
-  { id: '2-timothy', name: '2 तिमुथियस', en: '2 Timothy', chapters: 4, code: '2ti' },
-  { id: 'titus', name: 'तीतुस', en: 'Titus', chapters: 3, code: 'tit' },
-  { id: 'philemon', name: 'फिलेमोन', en: 'Philemon', chapters: 1, code: 'phm' },
-  { id: 'hebrews', name: 'इब्रानियों', en: 'Hebrews', chapters: 13, code: 'heb' },
-  { id: 'james', name: 'याकूब', en: 'James', chapters: 5, code: 'jas' },
-  { id: '1-peter', name: '1 पतरस', en: '1 Peter', chapters: 5, code: '1pe' },
-  { id: '2-peter', name: '2 पतरस', en: '2 Peter', chapters: 3, code: '2pe' },
-  { id: '1-john', name: '1 यूहन्ना', en: '1 John', chapters: 5, code: '1jn' },
-  { id: '2-john', name: '2 यूहन्ना', en: '2 John', chapters: 1, code: '2jn' },
-  { id: '3-john', name: '3 यूहन्ना', en: '3 John', chapters: 1, code: '3jn' },
-  { id: 'jude', name: 'यहूदा', en: 'Jude', chapters: 1, code: 'jud' },
-  { id: 'revelation', name: 'प्रकाशित', en: 'Revelation', chapters: 22, code: 'rev' },
-
-  // DEUTEROCANON (15)
-  { id: 'tobit', name: 'टोबित', en: 'Tobit', chapters: 14, code: 'tob' },
-  { id: 'judith', name: 'यहूदिथ', en: 'Judith', chapters: 16, code: 'jdt' },
-  { id: 'wisdom', name: 'ज्ञान', en: 'Wisdom', chapters: 19, code: 'wis' },
-  { id: 'sirach', name: 'सिराक', en: 'Sirach', chapters: 51, code: 'sir' },
-  { id: 'baruch', name: 'बारूक', en: 'Baruch', chapters: 6, code: 'bar' },
-  { id: '1-maccabees', name: '1 मक्काबियों', en: '1 Maccabees', chapters: 16, code: '1ma' },
-  { id: '2-maccabees', name: '2 मक्काबियों', en: '2 Maccabees', chapters: 15, code: '2ma' },
-  { id: '3-maccabees', name: '3 मक्काबियों', en: '3 Maccabees', chapters: 6, code: '3ma' },
-  { id: '4-maccabees', name: '4 मक्काबियों', en: '4 Maccabees', chapters: 18, code: '4ma' },
-  { id: 'prayer-of-manasseh', name: 'मनश्शेह प्रार्थना', en: 'Prayer of Manasseh', chapters: 1, code: 'man' },
-  { id: '1-esdras', name: '1 एज्रा', en: '1 Esdras', chapters: 9, code: '1es' },
-  { id: '2-esdras', name: '2 एज्रा', en: '2 Esdras', chapters: 16, code: '2es' },
-  { id: 'additions-to-esther', name: 'एस्तेर अतिरिक्त', en: 'Additions to Esther', chapters: 10, code: 'esg' },
-  { id: 'letter-of-jeremiah', name: 'यिर्मयाह पत्र', en: 'Letter of Jeremiah', chapters: 1, code: 'lje' },
-  { id: 'song-of-three-jews', name: 'तीन युवा गीत', en: 'Song of Three Jews', chapters: 1, code: 's3y' },
-  { id: 'susanna', name: 'सुसन्ना', en: 'Susanna', chapters: 1, code: 'sus' },
-  { id: 'bel-and-dragon', name: 'बेल अजगर', en: 'Bel and the Dragon', chapters: 1, code: 'bel' },
-]; // ✅ ARRAY CLOSED HERE
-
-// ✅ Helper functions
-export const getBookById = (id: string) => BIBLE_BOOKS.find(b => b.id === id);
-export const getBookByCode = (code: string) => BIBLE_BOOKS.find(b => b.code === code);
-export const getTotalBooks = () => BIBLE_BOOKS.length;
-export const getTotalChapters = () => BIBLE_BOOKS.reduce((sum, b) => sum + b.chapters, 0);
+export const BIBLE_BOOKS: BibleBook[] = [
+  // OLD TESTAMENT
+  { id: 1, en: "Genesis", hi: "उत्पत्ति", usfm: "GEN", testament: 'old', chapters: 50, bollsId: 1 },
+  { id: 2, en: "Exodus", hi: "निर्गमन", usfm: "EXO", testament: 'old', chapters: 40, bollsId: 2 },
+  { id: 3, en: "Leviticus", hi: "लैव्यव्यवस्था", usfm: "LEV", testament: 'old', chapters: 27, bollsId: 3 },
+  { id: 4, en: "Numbers", hi: "गिनती", usfm: "NUM", testament: 'old', chapters: 36, bollsId: 4 },
+  { id: 5, en: "Deuteronomy", hi: "व्यवस्थाविवरण", usfm: "DEU", testament: 'old', chapters: 34, bollsId: 5 },
+  { id: 19, en: "Psalms", hi: "भजन संहिता", usfm: "PSA", testament: 'old', chapters: 150, bollsId: 19 },
+  { id: 20, en: "Proverbs", hi: "नीतिवचन", usfm: "PRO", testament: 'old', chapters: 31, bollsId: 20 },
+  
+  // APOCRYPHA (DEUTEROCANON)
+  { id: 67, en: "Tobit", hi: "तोबीत", usfm: "TOB", testament: 'deuterocanon', chapters: 14, bollsId: 67 },
+  { id: 68, en: "Judith", hi: "यूदीत", usfm: "JDT", testament: 'deuterocanon', chapters: 16, bollsId: 68 },
+  { id: 69, en: "Wisdom", hi: "सुलेमान का विवेक", usfm: "WIS", testament: 'deuterocanon', chapters: 19, bollsId: 69 },
+  { id: 70, en: "Sirach", hi: "सिराख", usfm: "SIR", testament: 'deuterocanon', chapters: 51, bollsId: 70 },
+  
+  // NEW TESTAMENT
+  { id: 40, en: "Matthew", hi: "मत्ती", usfm: "MAT", testament: 'new', chapters: 28, bollsId: 40 },
+  { id: 41, en: "Mark", hi: "मरकुस", usfm: "MRK", testament: 'new', chapters: 16, bollsId: 41 },
+  { id: 42, en: "Luke", hi: "लूका", usfm: "LUK", testament: 'new', chapters: 24, bollsId: 42 },
+  { id: 43, en: "John", hi: "यूहन्ना", usfm: "JHN", testament: 'new', chapters: 21, bollsId: 43 },
+  { id: 44, en: "Acts", hi: "प्रेरितों के काम", usfm: "ACT", testament: 'new', chapters: 28, bollsId: 44 },
+  { id: 45, en: "Romans", hi: "रोमियों", usfm: "ROM", testament: 'new', chapters: 16, bollsId: 45 },
+  { id: 66, en: "Revelation", hi: "प्रकाशितवाक्य", usfm: "REV", testament: 'new', chapters: 22, bollsId: 66 },
+];

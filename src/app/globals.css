@@ -19,8 +19,6 @@
     --muted-foreground: 220 10% 65%;
     --accent: 161 93% 38%; /* #07BF7A (Emerald Green) */
     --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
     --border: 220 15% 15%;
     --input: 220 15% 15%;
     --ring: 221 83% 50%;
@@ -29,53 +27,21 @@
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
+  * { @apply border-border; }
   html, body {
     height: 100%;
     margin: 0;
     padding: 0;
     overflow: hidden;
-    @apply bg-[#0B0C0D] text-zinc-100 antialiased selection:bg-primary/30 font-sans;
+    @apply bg-[#0B0C0D] text-zinc-100 antialiased font-sans;
   }
 }
 
-.font-serif {
-  font-family: var(--font-serif), serif;
-}
+.font-serif { font-family: 'Playfair Display', serif; }
+.font-sans { font-family: 'Inter', sans-serif; }
 
-.font-sans {
-  font-family: var(--font-sans), sans-serif;
-}
+main { flex: 1; overflow-y: auto; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; }
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-main {
-  flex: 1;
-  overflow-y: auto;
-  scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch;
-}
-
-.hide-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.hide-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-.glow-blue {
-  box-shadow: 0 0 20px rgba(26, 96, 229, 0.2);
-}
-
-.bible-content p {
-  @apply mb-6 leading-relaxed font-serif italic text-lg text-zinc-300;
-}
-
-.bible-content .verse-num {
-  @apply font-black text-accent mr-3 text-sm opacity-70;
-}
-
-.bible-content h3 {
-  @apply text-2xl font-serif font-bold text-primary mb-6 border-l-4 border-primary pl-4;
-}
+.glow-primary { box-shadow: 0 0 20px rgba(7, 191, 122, 0.2); }
